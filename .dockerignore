@@ -1,0 +1,36 @@
+# ===========================================
+# DOCKER IGNORE - Excluir del contenedor
+# ===========================================
+
+# Entorno virtual local
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos temporales
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Archivos de desarrollo
+requirements_base.txt
+CONTEXTO_PROYECTO.md
+*.md
+!README.md
+
+# Tests (si existieran)
+tests/
+Tests/
