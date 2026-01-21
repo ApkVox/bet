@@ -1,0 +1,8 @@
+RESUMEN DE BACKTESTING CON RESULTADOS REALES
+==================================================
+Periodo: 01/01/2026 - 21/01/2026
+Capital Final: $49,892 COP
+Ganancia Neta: $-108 COP
+ROI: -0.2%
+Win Rate: 56.6%
+Total Apuestas: 53 (W:30 L:23)

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>NBA Vibecoding AI - Sistema Completo</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <!-- Chart.js para Módulo 4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00aaff",
+                        "accent-green": "#00ff9d",
+                        "accent-red": "#ff4d4d"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f1729 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* Tabla de Predicciones */
+        .predictions-table-container {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .predictions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .predictions-table thead {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .predictions-table th {
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.05em;
+        }
+
+        .predictions-table tbody tr {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .predictions-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .predictions-table td {
+            padding: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .ev-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .ev-positive {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .ev-negative {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-analyze {
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            color: #818cf8;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn-analyze:hover {
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .analysis-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <!-- Header -->
+    <header class="glass-panel sticky top-0 z-50 p-4 mb-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-accent-green bg-clip-text text-transparent">
+                🏀 NBA Vibecoding AI
+            </h1>
+
+            <nav class="flex gap-2">
+                <button id="btn-predictions" class="nav-btn active">📊 Predicciones</button>
+                <button id="btn-ladder" class="nav-btn bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30">🔥 Reto Escalera</button>
+                <button id="btn-bankroll" class="nav-btn">💰 Bankroll</button>
+                <button id="btn-performance" class="nav-btn">📈 Rendimiento</button>
+                <button id="btn-live" class="nav-btn">🔴 En Vivo</button>
+                <button id="btn-settings" class="nav-btn">⚙️ Config</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 pb-12">
+        <!-- MÓDULO PHOENIX: RETO ESCALERA -->
+        <section id="ladder-view" class="view-section">
+            <div class="max-w-md mx-auto">
+                <div class="ticket-container bg-[#fdf6e3] text-black p-6 rounded-sm shadow-2xl relative overflow-hidden font-mono transform transition hover:scale-[1.01]" style="min-height: 500px;">
+                    <!-- Perforaciones -->
+                    <div class="absolute top-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSItMTAiIHI9IjgiIGZpbGw9IiMwZjE3MjkiLz48L3N2Zz4=')] opacity-50"></div>
+                    
+                    <div class="text-center mb-6 pt-4 border-b-2 border-black/10 pb-4">
+                        <h2 class="text-2xl font-black tracking-tighter">PROJECT PHOENIX</h2>
+                        <div class="text-sm font-bold opacity-60">RETO ESCALERA - OFICIAL</div>
+                        <div id="ladder-date" class="text-xs mt-1"></div>
+                    </div>
+
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <div class="text-xs uppercase opacity-50 font-bold">CAPITAL ACTUAL</div>
+                            <div class="text-3xl font-black" id="ladder-capital">$???</div>
+                        </div>
+                        <div class="text-right">
+                             <div class="text-xs uppercase opacity-50 font-bold">ESCALÓN</div>
+                             <div class="text-xl font-bold rounded px-2 bg-black text-white" id="ladder-step">#?</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/5 p-4 rounded mb-6 border border-black/10">
+                        <div class="flex justify-between text-sm font-bold mb-2">
+                            <span>APUESTA SUGERIDA</span>
+                            <span>50% STAKE</span>
+                        </div>
+                        <div class="text-4xl font-black tracking-tight" id="ladder-stake">$???</div>
+                    </div>
+
+                    <div class="space-y-4 mb-8" id="ladder-events">
+                        <!-- Eventos generados -->
+                        <div class="animate-pulse flex space-x-4">
+                            <div class="flex-1 space-y-4 py-1">
+                                <div class="h-4 bg-black/10 rounded w-3/4"></div>
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-black/10 rounded"></div>
+                                    <div class="h-4 bg-black/10 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t-2 border-black/10 pt-4 mb-6">
+                        <div class="text-xs font-bold uppercase mb-2">🧠 LÓGICA DE FÉNIX:</div>
+                        <p id="ladder-note" class="text-sm italic opacity-80 leading-relaxed">
+                            "Generando estrategia de supervivencia..."
+                        </p>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="grid grid-cols-2 gap-3" id="ladder-actions">
+                        <button onclick="generateTicket()" class="col-span-2 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 transition">
+                            GENERAR TICKET
+                        </button>
+                    </div>
+
+                    <!-- Fake Barcode -->
+                    <div class="mt-8 opacity-40">
+                         <div class="h-8 w-full bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wYSCQ0u9+2MOQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQ4y2P8//8/AyWAiYFCMAgAw0QB/0z74wEAAAAASUVORK5CYII=')] bg-repeat-x"></div>
+                         <div class="text-center text-[10px] mt-1 font-mono">PHOENIX-SECURE-ID-7734</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 2: Predicciones Diarias -->
+        <section id="daily-predictions-view" class="view-section active">
+            <!-- Filtros -->
+            <div class="glass-panel p-4 mb-6 rounded-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="filter-ev-only" class="rounded">
+                            <span class="text-sm">Solo EV+ (Valor Esperado)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="filter-hide-high-risk" class="rounded">
+                            <span class="text-sm">Ocultar Alto Riesgo ⚠️</span>
+                        </label>
+                    </div>
+                    <div class="text-sm text-slate-400">
+                        <span id="filtered-count">0</span> partidos
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="predictions-table-container">
+                <table class="predictions-table">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Partido</th>
+                            <th>Ganador</th>
+                            <th>Prob</th>
+                            <th>Cuota</th>
+                            <th>EV</th>
+                            <th>Kelly</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictions-table-body">
+                        <!-- Generado dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- MÓDULO 3: Bankroll -->
+        <section id="bankroll-view" class="view-section">
+            <div class="glass-panel p-8 rounded-2xl">
+                <h2 class="text-3xl font-bold mb-6">💰 Gestión de Bankroll</h2>
+
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Capital Total ($)</label>
+                        <input type="number" id="bankroll-total" value="1000"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-2xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Estrategia</label>
+                        <select id="bankroll-strategy"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                            <option value="conservative">Conservadora (1/4 Kelly)</option>
+                            <option value="aggressive">Agresiva (1/2 Kelly)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="recommended-bets-container">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 4: Rendimiento -->
+        <section id="performance-view" class="view-section">
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel p-6 rounded-xl text-center">
+                    <div class="text-5xl font-bold text-green-400" id="kpi-roi">+15.2%</div>
+                    <div class="text-sm text-slate-400 mt-2">ROI Total</div>
+                </div>
+                <div class="glass-panel p-6 rounded-xl text-center">
+                    <div class="text-5xl font-bold text-blue-400" id="kpi-winrate">58%</div>
+                    <div class="text-sm text-slate-400 mt-2">Win Rate</div>
+                </div>
+                <div class="glass-panel p-6 rounded-xl text-center">
+                    <div class="text-5xl font-bold text-purple-400" id="kpi-profit">$152</div>
+                    <div class="text-sm text-slate-400 mt-2">Beneficio Neto</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="glass-panel p-6 runded-xl">
+                    <h3 class="text-xl font-bold mb-4">Bankroll Acumulado</h3>
+                    <canvas id="chart-bankroll"></canvas>
+                </div>
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-4">Aciertos vs Fallos</h3>
+                    <canvas id="chart-winrate"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 5: Análisis en Vivo -->
+        <section id="live-view" class="view-section">
+            <div class="glass-panel p-8 rounded-2xl">
+                <h2 class="text-3xl font-bold mb-6">🔴 Partidos en Vivo</h2>
+                <div id="live-games-container">
+                    <p class="text-slate-400 text-center py-12">
+                        No hay partidos en vivo en este momento
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 6: Configuración -->
+        <section id="settings-view" class="view-section">
+            <div class="glass-panel p-8 rounded-2xl">
+                <h2 class="text-3xl font-bold mb-6">⚙️ Configuración</h2>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Mi Equipo Favorito</label>
+                        <select id="favorite-team"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                            <option value="">-- Seleccionar --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Formato de Cuotas</label>
+                        <select id="odds-format" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                            <option value="american">Americanas (-200, +150)</option>
+                            <option value="decimal">Decimales (1.50, 2.50)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">API Key Groq (Opcional)</label>
+                        <input type="text" id="groq-key" placeholder="gsk_..."
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 font-mono">
+                    </div>
+
+                    <button onclick="saveSettings()"
+                        class="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-semibold">
+                        Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ===========================================
+        // DICCIONARIO DE LOGOS NBA
+        // ===========================================
+        const NBA_LOGOS = {
+            "Atlanta Hawks": "https://cdn.nba.com/logos/nba/1610612737/primary/L/logo.svg",
+            "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
+            "Brooklyn Nets": "https://cdn.nba.com/logos/nba/1610612751/primary/L/logo.svg",
+            "Charlotte Hornets": "https://cdn.nba.com/logos/nba/1610612766/primary/L/logo.svg",
+            "Chicago Bulls": "https://cdn.nba.com/logos/nba/1610612741/primary/L/logo.svg",
+            "Cleveland Cavaliers": "https://cdn.nba.com/logos/nba/1610612739/primary/L/logo.svg",
+            "Dallas Mavericks": "https://cdn.nba.com/logos/nba/1610612742/primary/L/logo.svg",
+            "Denver Nuggets": "https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg",
+            "Detroit Pistons": "https://cdn.nba.com/logos/nba/1610612765/primary/L/logo.svg",
+            "Golden State Warriors": "https://cdn.nba.com/logos/nba/1610612744/primary/L/logo.svg",
+            "Houston Rockets": "https://cdn.nba.com/logos/nba/1610612745/primary/L/logo.svg",
+            "Indiana Pacers": "https://cdn.nba.com/logos/nba/1610612754/primary/L/logo.svg",
+            "LA Clippers": "https://cdn.nba.com/logos/nba/1610612746/primary/L/logo.svg",
+            "Los Angeles Lakers": "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg",
+            "Memphis Grizzlies": "https://cdn.nba.com/logos/nba/1610612763/primary/L/logo.svg",
+            "Miami Heat": "https://cdn.nba.com/logos/nba/1610612748/primary/L/logo.svg",
+            "Milwaukee Bucks": "https://cdn.nba.com/logos/nba/1610612749/primary/L/logo.svg",
+            "Minnesota Timberwolves": "https://cdn.nba.com/logos/nba/1610612750/primary/L/logo.svg",
+            "New Orleans Pelicans": "https://cdn.nba.com/logos/nba/1610612740/primary/L/logo.svg",
+            "New York Knicks": "https://cdn.nba.com/logos/nba/1610612752/primary/L/logo.svg",
+            "Oklahoma City Thunder": "https://cdn.nba.com/logos/nba/1610612760/primary/L/logo.svg",
+            "Orlando Magic": "https://cdn.nba.com/logos/nba/1610612753/primary/L/logo.svg",
+            "Philadelphia 76ers": "https://cdn.nba.com/logos/nba/1610612755/primary/L/logo.svg",
+            "Phoenix Suns": "https://cdn.nba.com/logos/nba/1610612756/primary/L/logo.svg",
+            "Portland Trail Blazers": "https://cdn.nba.com/logos/nba/1610612757/primary/L/logo.svg",
+            "Sacramento Kings": "https://cdn.nba.com/logos/nba/1610612758/primary/L/logo.svg",
+            "San Antonio Spurs": "https://cdn.nba.com/logos/nba/1610612759/primary/L/logo.svg",
+            "Toronto Raptors": "https://cdn.nba.com/logos/nba/1610612761/primary/L/logo.svg",
+            "Utah Jazz": "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg",
+            "Washington Wizards": "https://cdn.nba.com/logos/nba/1610612764/primary/L/logo.svg"
+        };
+
+        // ===========================================
+        // ESTADO GLOBAL
+        // ===========================================
+        let currentPredictions = [];
+        let currentView = 'predictions';
+
+        // ===========================================
+        // NAVEGACIÓN
+        //===========================================
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const viewId = btn.id.replace('btn-', '');
+                switchView(viewId);
+            });
+        });
+
+        function switchView(viewId) {
+            // Actualizar botones
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${viewId}`).classList.add('active');
+
+            // Actualizar vistas
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+
+            const viewMap = {
+                'predictions': 'daily-predictions-view',
+                'ladder': 'ladder-view',
+                'bankroll': 'bankroll-view',
+                'performance': 'performance-view',
+                'live': 'live-view',
+                'settings': 'settings-view'
+            };
+
+            document.getElementById(viewMap[viewId]).classList.add('active');
+            currentView = viewId;
+
+            // Cargar datos específicos de la vista
+            if (viewId === 'performance') loadPerformanceData();
+            if (viewId === 'bankroll') calculateBankroll();
+        }
+
+        // ===========================================
+        // CARGAR PREDICCIONES
+        // ===========================================
+        async function loadPredictions() {
+            try {
+                const response = await fetch('/pronosticos-hoy');
+                const data = await response.json();
+                currentPredictions = data.predictions;
+                renderPredictionsTable(currentPredictions);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('predictions-table-body').innerHTML =
+                    '<tr><td colspan="8" class="text-center text-red-400 py-8">Error cargando predicciones</td></tr>';
+            }
+        }
+
+        function renderPredictionsTable(predictions) {
+            const tbody = document.getElementById('predictions-table-body');
+            tbody.innerHTML = '';
+
+            predictions.forEach((pred, index) => {
+                const row = document.createElement('tr');
+                row.className = 'prediction-row';
+                row.dataset.ev = pred.ev_value || 0;
+                row.dataset.risk = pred.warning_level;
+
+                const winnerOdds = pred.winner === pred.home_team ? pred.market_odds_home : pred.market_odds_away;
+
+                row.innerHTML = `
+                    <td class="text-sm text-slate-400">19:00</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <img src="${NBA_LOGOS[pred.home_team]}" class="w-6 h-6" onerror="this.style.display='none'">
+                            <span class="text-sm">${pred.home_team}</span>
+                            <span class="text-slate-500 text-xs">vs</span>
+                            <img src="${NBA_LOGOS[pred.away_team]}" class="w-6 h-6" onerror="this.style.display='none'">
+                            <span class="text-sm">${pred.away_team}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <img src="${NBA_LOGOS[pred.winner]}" class="w-5 h-5" onerror="this.style.display='none'">
+                            <span class="font-semibold text-sm">${pred.winner}</span>
+                        </div>
+                    </td>
+                    <td><span class="text-lg font-bold ${pred.win_probability > 65 ? 'text-green-400' : 'text-blue-400'}">${pred.win_probability}%</span></td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            ${pred.risk_level === 'EXTREME' ? '<span class="text-red-500 font-bold" title="DO NOT BET">🚩</span>' : ''}
+                            ${pred.warning_level === 'HIGH' ? '<span class="text-yellow-500">⚠️</span>' : ''}
+                            <span class="font-mono text-sm">${winnerOdds > 0 ? '+' : ''}${winnerOdds}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="ev-badge ${pred.ev_value > 0 ? 'ev-positive' : 'ev-negative'}">
+                            ${pred.ev_value > 0 ? '+' : ''}${pred.ev_value}%
+                        </span>
+                    </td>
+                    <td><span class="text-sm font-medium ${pred.kelly_stake_pct > 0 ? 'text-purple-400' : 'text-slate-500'}">${pred.kelly_stake_pct > 0 ? pred.kelly_stake_pct + '%' : 'N/A'}</span></td>
+                    <td>
+                        ${pred.status === 'DO_NOT_BET' ?
+                        '<span class="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded font-bold">NO APOSTAR</span>' :
+                        `<button class="btn-analyze" onclick="showAnalysis(${index})">
+                                Analizar
+                            </button>`
+                    }
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            updateFilteredCount();
+        }
+
+        function showAnalysis(index) {
+            const pred = currentPredictions[index];
+            const modal = document.createElement('div');
+            modal.className = 'analysis-modal';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            modal.innerHTML = `
+                <div class="modal-content glass-panel p-8 rounded-2xl">
+                    <h3 class="text-2xl font-bold mb-4">Análisis de IA</h3>
+                    <div class="text-lg mb-6">${pred.ai_analysis || 'Análisis no disponible'}</div>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="glass-panel p-4 rounded-lg">
+                            <div class="text-sm text-slate-400">Prob. Modelo</div>
+                            <div class="text-2xl font-bold">${pred.win_probability}%</div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-lg">
+                            <div class="text-sm text-slate-400">Prob. Mercado</div>
+                            <div class="text-2xl font-bold">${pred.implied_prob_market}%</div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-lg">
+                            <div class="text-sm text-slate-400">Discrepancia</div>
+                            <div class="text-2xl font-bold ${pred.discrepancy > 15 ? 'text-red-400' : ''}">${pred.discrepancy}%</div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-lg">
+                            <div class="text-sm text-slate-400">Kelly Stake</div>
+                            <div class="text-2xl font-bold text-purple-400">${pred.kelly_stake_pct}%</div>
+                        </div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            class="w-full py-3 bg-white/10 rounded-lg hover:bg-white/20">
+                        Cerrar
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        // ===========================================
+        // FILTROS
+        // ===========================================
+        document.getElementById('filter-ev-only').addEventListener('change', applyFilters);
+        document.getElementById('filter-hide-high-risk').addEventListener('change', applyFilters);
+
+        function applyFilters() {
+            const rows = document.querySelectorAll('.prediction-row');
+            const evOnly = document.getElementById('filter-ev-only').checked;
+            const hideRisk = document.getElementById('filter-hide-high-risk').checked;
+
+            rows.forEach(row => {
+                const ev = parseFloat(row.dataset.ev);
+                const risk = row.dataset.risk;
+
+                let show = true;
+                if (evOnly && ev <= 0) show = false;
+                if (hideRisk && risk === 'HIGH') show = false;
+
+                row.style.display = show ? '' : 'none';
+            });
+
+            updateFilteredCount();
+        }
+
+        function updateFilteredCount() {
+            const visible = document.querySelectorAll('.prediction-row:not([style*="display: none"])').length;
+            document.getElementById('filtered-count').textContent = visible;
+        }
+
+        // ===========================================
+        // BANKROLL
+        // ===========================================
+        function calculateBankroll() {
+            const total = parseFloat(document.getElementById('bankroll-total').value);
+            const strategy = document.getElementById('bankroll-strategy').value;
+            const valueBets = currentPredictions.filter(p => p.ev_value > 0);
+
+            const container = document.getElementById('recommended-bets-container');
+
+            if (valueBets.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-8">No hay apuestas con valor esperado positivo hoy</p>';
+                return;
+            }
+
+            let html = '<h3 class="text-xl font-bold mb-4">Apuestas Recomendadas</h3><div class="space-y-3">';
+            let totalStake = 0;
+
+            valueBets.forEach(bet => {
+                // MVP v1.0: Kelly Fraccional (CPK/4), máximo 2.5%
+                let stakePercent = bet.kelly_stake_pct;
+                stakePercent = Math.min(stakePercent, 2.5);  // Límite de seguridad
+                const stakeAmount = (total * stakePercent / 100).toFixed(2);
+                totalStake += parseFloat(stakeAmount);
+
+                html += `
+                    <div class="glass-panel p-4 rounded-lg flex justify-between items-center">
+                        <div>
+                            <div class="font-semibold">${bet.winner}</div>
+                            <div class="text-sm text-slate-400">${bet.home_team} vs ${bet.away_team}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-green-400">$${stakeAmount}</div>
+                            <div class="text-xs text-slate-400">${stakePercent}% del bankroll</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>
+                <div class="mt-6 p-6 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-xl border border-purple-500/30">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-sm text-slate-300">Total a Apostar</div>
+                            <div class="text-3xl font-bold">${totalStake.toFixed(2)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-slate-300">ROI Esperado</div>
+                            <div class="text-3xl font-bold text-green-400">+${(valueBets.reduce((sum, b) => sum + b.ev_value, 0) / valueBets.length).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                </div>`;
+
+            container.innerHTML = html;
+        }
+
+        // ===========================================
+        // RENDIMIENTO
+        // ===========================================
+        async function loadPerformanceData() {
+            try {
+                const response = await fetch('/performance-stats?days=30');
+                const stats = await response.json();
+
+                document.getElementById('kpi-roi').textContent = (stats.roi > 0 ? '+' : '') + stats.roi + '%';
+                document.getElementById('kpi-winrate').textContent = stats.win_rate + '%';
+                document.getElementById('kpi-profit').textContent = '$' + stats.total_profit;
+
+                // Charts
+                createBankrollChart();
+                createWinrateChart(stats);
+            } catch (error) {
+                console.error('Error loading performance:', error);
+            }
+        }
+
+        function createBankrollChart() {
+            const ctx = document.getElementById('chart-bankroll');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Día 1', 'Día 7', 'Día 14', 'Día 21', 'Día 30'],
+                    datasets: [{
+                        label: 'Bankroll',
+                        data: [1000, 1050, 1100, 1080, 1150],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function createWinrateChart(stats) {
+            const ctx = document.getElementById('chart-winrate');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aciertos', 'Fallos'],
+                    datasets: [{
+                        data: [stats.wins, stats.total_bets - stats.wins],
+                        backgroundColor: ['#22c55e', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+
+        // ===========================================
+        // CONFIGURACIÓN
+        // ===========================================
+        function loadSettings() {
+            document.getElementById('favorite-team').value = localStorage.getItem('favorite-team') || '';
+            document.getElementById('odds-format').value = localStorage.getItem('odds-format') || 'american';
+            document.getElementById('groq-key').value = localStorage.getItem('groq-key') || '';
+        }
+
+        function saveSettings() {
+            localStorage.setItem('favorite-team', document.getElementById('favorite-team').value);
+            localStorage.setItem('odds-format', document.getElementById('odds-format').value);
+            localStorage.setItem('groq-key', document.getElementById('groq-key').value);
+            alert('✅ Configuración guardada');
+        }
+
+        // ===========================================
+        // INICIALIZACIÓN
+        // ===========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPredictions();
+            loadSettings();
+
+            // Poblar selector de equipos
+            const teamSelect = document.getElementById('favorite-team');
+            Object.keys(NBA_LOGOS).forEach(team => {
+                const option = document.createElement('option');
+                option.value = team;
+                option.textContent = team;
+                teamSelect.appendChild(option);
+            });
+                teamSelect.appendChild(option);
+            });
+
+            // LOGICA PHOENIX
+            const hour = new Date().getHours();
+            if (hour >= 18) { // 6 PM
+                 // Si es hora del reto, alertar o cambiar vista
+                 // switchView('ladder'); 
+                 // (Opcional: solo sugerir con toast)
+            }
+            document.getElementById('ladder-date').innerText = new Date().toLocaleDateString();
+        });
+
+        // ===========================================
+        // LOGICA ESCALERA (PHOENIX)
+        // ===========================================
+        async function generateTicket() {
+            const btn = document.querySelector('#ladder-actions button');
+            const container = document.getElementById('ladder-events');
+            
+            btn.innerHTML = 'ANALIZANDO MODELOS...';
+            btn.disabled = true;
+            container.innerHTML = '<div class="text-center py-8 opacity-50">Consultando oráculo...</div>';
+
+            try {
+                const res = await fetch('/ladder/generate-ticket');
+                const data = await res.json();
+                
+                // Actualizar UI
+                document.getElementById('ladder-capital').innerText = '$' + data.capital.toLocaleString();
+                document.getElementById('ladder-step').innerText = '#' + data.step;
+                document.getElementById('ladder-stake').innerText = '$' + data.stake.toLocaleString();
+                document.getElementById('ladder-note').innerText = `"${data.ticket.phoenix_note}"`;
+                
+                // Renderizar Eventos
+                let html = '';
+                data.ticket.events.forEach(ev => {
+                    html += `
+                    <div class="border-b border-black/10 pb-2 mb-2 last:border-0">
+                        <div class="font-bold text-lg">${ev.pick}</div>
+                        <div class="text-xs opacity-70 mb-1">${ev.match}</div>
+                        <div class="text-xs bg-black/5 p-1 rounded inline-block">💡 ${ev.reason}</div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+
+                // Cambiar botones a Outcome
+                const actionsDiv = document.getElementById('ladder-actions');
+                actionsDiv.innerHTML = `
+                    <button onclick="reportOutcome(true)" class="py-3 bg-green-600 text-white font-bold rounded hover:bg-green-700">
+                        ✅ WIN (Victoria)
+                    </button>
+                    <button onclick="reportOutcome(false)" class="py-3 bg-red-600 text-white font-bold rounded hover:bg-red-700">
+                        ❌ LOSS (Derrota)
+                    </button>
+                    <input type="text" id="learning-u" placeholder="Nota de aprendizaje (si perdiste)..." class="col-span-2 mt-2 p-2 text-sm border bg-white/50 rounded text-black">
+                `;
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="text-red-500">Error generando ticket. Intenta de nuevo.</div>';
+                btn.innerText = 'REINTENTAR';
+                btn.disabled = false;
+            }
+        }
+
+        async function reportOutcome(isWin) {
+            const note = document.getElementById('learning-u').value || (isWin ? "Victoria sólida" : "Fallo inesperado");
+            
+            if (!isWin && !document.getElementById('learning-u').value) {
+                alert("Por favor escribe una nota de aprendizaje para el futuro.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/ladder/outcome', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ win: isWin, learning_note: note })
+                });
+                const data = await res.json();
+                
+                alert(isWin ? "¡VICTORIA REGISTRADA! EL FÉNIX SE ELEVA." : "DERROTA REGISTRADA. APRENDEMOS Y RENACEMOS.");
+                
+                // Reset UI reload
+                location.reload();
+            } catch (e) {
+                alert("Error reportando resultado");
+            }
+        }
+    </script>
+</body>
+
+</html>
