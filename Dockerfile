@@ -3,7 +3,7 @@
 # Optimizado para Render (Python 3.10 Slim)
 # ===========================================
 
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Evitar prompts interactivos
 ENV DEBIAN_FRONTEND=noninteractive
