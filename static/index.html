@@ -181,7 +181,9 @@
 
             <nav class="flex gap-2">
                 <button id="btn-predictions" class="nav-btn active">📊 Predicciones</button>
-                <button id="btn-ladder" class="nav-btn bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30">🔥 Reto Escalera</button>
+                <button id="btn-ladder"
+                    class="nav-btn bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30">🔥 Reto
+                    Escalera</button>
                 <button id="btn-bankroll" class="nav-btn">💰 Bankroll</button>
                 <button id="btn-performance" class="nav-btn">📈 Rendimiento</button>
                 <button id="btn-live" class="nav-btn">🔴 En Vivo</button>
@@ -194,10 +196,13 @@
         <!-- MÓDULO PHOENIX: RETO ESCALERA -->
         <section id="ladder-view" class="view-section">
             <div class="max-w-md mx-auto">
-                <div class="ticket-container bg-[#fdf6e3] text-black p-6 rounded-sm shadow-2xl relative overflow-hidden font-mono transform transition hover:scale-[1.01]" style="min-height: 500px;">
+                <div class="ticket-container bg-[#fdf6e3] text-black p-6 rounded-sm shadow-2xl relative overflow-hidden font-mono transform transition hover:scale-[1.01]"
+                    style="min-height: 500px;">
                     <!-- Perforaciones -->
-                    <div class="absolute top-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSItMTAiIHI9IjgiIGZpbGw9IiMwZjE3MjkiLz48L3N2Zz4=')] opacity-50"></div>
-                    
+                    <div
+                        class="absolute top-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSItMTAiIHI9IjgiIGZpbGw9IiMwZjE3MjkiLz48L3N2Zz4=')] opacity-50">
+                    </div>
+
                     <div class="text-center mb-6 pt-4 border-b-2 border-black/10 pb-4">
                         <h2 class="text-2xl font-black tracking-tighter">PROJECT PHOENIX</h2>
                         <div class="text-sm font-bold opacity-60">RETO ESCALERA - OFICIAL</div>
@@ -210,8 +215,8 @@
                             <div class="text-3xl font-black" id="ladder-capital">$???</div>
                         </div>
                         <div class="text-right">
-                             <div class="text-xs uppercase opacity-50 font-bold">ESCALÓN</div>
-                             <div class="text-xl font-bold rounded px-2 bg-black text-white" id="ladder-step">#?</div>
+                            <div class="text-xs uppercase opacity-50 font-bold">ESCALÓN</div>
+                            <div class="text-xl font-bold rounded px-2 bg-black text-white" id="ladder-step">#?</div>
                         </div>
                     </div>
 
@@ -245,15 +250,18 @@
 
                     <!-- Botones de Acción -->
                     <div class="grid grid-cols-2 gap-3" id="ladder-actions">
-                        <button onclick="generateTicket()" class="col-span-2 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 transition">
+                        <button onclick="generateTicket()"
+                            class="col-span-2 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 transition">
                             GENERAR TICKET
                         </button>
                     </div>
 
                     <!-- Fake Barcode -->
                     <div class="mt-8 opacity-40">
-                         <div class="h-8 w-full bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wYSCQ0u9+2MOQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQ4y2P8//8/AyWAiYFCMAgAw0QB/0z74wEAAAAASUVORK5CYII=')] bg-repeat-x"></div>
-                         <div class="text-center text-[10px] mt-1 font-mono">PHOENIX-SECURE-ID-7734</div>
+                        <div
+                            class="h-8 w-full bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wYSCQ0u9+2MOQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQ4y2P8//8/AyWAiYFCMAgAw0QB/0z74wEAAAAASUVORK5CYII=')] bg-repeat-x">
+                        </div>
+                        <div class="text-center text-[10px] mt-1 font-mono">PHOENIX-SECURE-ID-7734</div>
                     </div>
                 </div>
             </div>
@@ -773,15 +781,14 @@
                 option.textContent = team;
                 teamSelect.appendChild(option);
             });
-                teamSelect.appendChild(option);
-            });
+
 
             // LOGICA PHOENIX
             const hour = new Date().getHours();
             if (hour >= 18) { // 6 PM
-                 // Si es hora del reto, alertar o cambiar vista
-                 // switchView('ladder'); 
-                 // (Opcional: solo sugerir con toast)
+                // Si es hora del reto, alertar o cambiar vista
+                // switchView('ladder'); 
+                // (Opcional: solo sugerir con toast)
             }
             document.getElementById('ladder-date').innerText = new Date().toLocaleDateString();
         });
@@ -792,7 +799,7 @@
         async function generateTicket() {
             const btn = document.querySelector('#ladder-actions button');
             const container = document.getElementById('ladder-events');
-            
+
             btn.innerHTML = 'ANALIZANDO MODELOS...';
             btn.disabled = true;
             container.innerHTML = '<div class="text-center py-8 opacity-50">Consultando oráculo...</div>';
@@ -800,13 +807,13 @@
             try {
                 const res = await fetch('/ladder/generate-ticket');
                 const data = await res.json();
-                
+
                 // Actualizar UI
                 document.getElementById('ladder-capital').innerText = '$' + data.capital.toLocaleString();
                 document.getElementById('ladder-step').innerText = '#' + data.step;
                 document.getElementById('ladder-stake').innerText = '$' + data.stake.toLocaleString();
                 document.getElementById('ladder-note').innerText = `"${data.ticket.phoenix_note}"`;
-                
+
                 // Renderizar Eventos
                 let html = '';
                 data.ticket.events.forEach(ev => {
@@ -841,7 +848,7 @@
 
         async function reportOutcome(isWin) {
             const note = document.getElementById('learning-u').value || (isWin ? "Victoria sólida" : "Fallo inesperado");
-            
+
             if (!isWin && !document.getElementById('learning-u').value) {
                 alert("Por favor escribe una nota de aprendizaje para el futuro.");
                 return;
@@ -850,13 +857,13 @@
             try {
                 const res = await fetch('/ladder/outcome', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ win: isWin, learning_note: note })
                 });
                 const data = await res.json();
-                
+
                 alert(isWin ? "¡VICTORIA REGISTRADA! EL FÉNIX SE ELEVA." : "DERROTA REGISTRADA. APRENDEMOS Y RENACEMOS.");
-                
+
                 // Reset UI reload
                 location.reload();
             } catch (e) {
