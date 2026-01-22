@@ -1345,14 +1345,23 @@ async def generate_ladder_ticket():
             max_tokens=400
         )
         ai_response = completion.choices[0].message.content
-        if "```" in ai_response:
-             ai_response = ai_response.split("```")[1].replace("json", "").strip()
-        
-        ticket_data = json.loads(ai_response)
+        # Robust JSON extraction
+        import re
+        match = re.search(r'(\{.*\})', ai_response, re.DOTALL)
+        if match:
+            json_str = match.group(1)
+            # Fix common LLM json errors (newlines in strings)
+            # json_str = json_str.replace('\n', ' ') 
+            ticket_data = json.loads(json_str)
+        else:
+            raise ValueError("No JSON found in response")
         
     except Exception as e:
+        print(f"DEBUG ERROR LADDER: {e}")
+        import traceback
+        traceback.print_exc()
         ticket_data = {
-            "events": [{"match": "Error IA", "pick": "N/A", "reason": "Fallo conexión"}],
+            "events": [{"match": "Error IA", "pick": "N/A", "reason": f"Error: {str(e)}"}],
             "phoenix_note": "Modo de emergencia activado."
         }
     
