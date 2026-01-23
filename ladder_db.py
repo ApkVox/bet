@@ -29,6 +29,16 @@ def init_db():
         )
     ''')
     
+    # Tabla de Tickets Generados
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generated_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            ticket_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     # Inicializar si está vacío
     cursor.execute('SELECT count(*) FROM ladder_state')
     if cursor.fetchone()[0] == 0:
@@ -80,3 +90,39 @@ def get_bad_beats(limit=5):
     rows = cursor.fetchall()
     conn.close()
     return [row['learning_note'] for row in rows]
+
+def save_generated_ticket(ticket_data):
+    """Guarda un ticket generado"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO generated_tickets (date, ticket_json)
+        VALUES (?, ?)
+    ''', (datetime.now().strftime("%Y-%m-%d"), json.dumps(ticket_data)))
+    conn.commit()
+    conn.close()
+
+def get_generated_tickets(limit=10):
+    """Obtiene historial de tickets generados"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM generated_tickets 
+        ORDER BY created_at DESC LIMIT ?
+    ''', (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    tickets = []
+    for row in rows:
+        try:
+            tickets.append({
+                "id": row["id"],
+                "date": row["date"],
+                "ticket": json.loads(row["ticket_json"]),
+                "created_at": row["created_at"]
+            })
+        except:
+            continue
+    return tickets

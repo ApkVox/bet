@@ -1236,6 +1236,7 @@ async def serve_dashboard():
 # ===========================================
 import ladder_db
 import json
+import re
 
 # Inicializar DB al arranque
 ladder_db.init_db()
@@ -1243,6 +1244,11 @@ ladder_db.init_db()
 class LadderOutcomeRequest(BaseModel):
     win: bool
     learning_note: str
+
+@app.get("/ladder/history/generated")
+async def get_ladder_history_generated(limit: int = 10):
+    """Obtiene historial de tickets generados"""
+    return {"tickets": ladder_db.get_generated_tickets(limit)}
 
 @app.post("/ladder/outcome")
 async def report_ladder_outcome(outcome: LadderOutcomeRequest):
@@ -1326,14 +1332,14 @@ async def generate_ladder_ticket():
     TAREA: Selecciona EXACTAMENTE 3 eventos para un Parlay de Alta Seguridad.
     Debes equilibrar la probabilidad numérica con la intuición de "trampas".
     
-    FORMATO JSON RESPUESTA:
+    FORMATO JSON OBLIGATORIO (RESPONDER SOLO CON EL JSON):
     {{
       "events": [
-        {{"match": "Lakers vs Celtics", "pick": "Lakers Win", "reason": "Defensa perimetral superior"}},
-        {{"match": "Heat vs Bucks", "pick": "Over 220.5", "reason": "Ambos equipos top pace"}},
-        ...
+        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}},
+        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}},
+        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}}
       ],
-      "phoenix_note": "Frase motivacional corta tipo 'Hoy renacemos de las cenizas con defensa'."
+      "phoenix_note": "Frase motivacional corta"
     }}
     """
     
@@ -1342,27 +1348,36 @@ async def generate_ladder_ticket():
             model=GROQ_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=400
+            max_tokens=500
         )
         ai_response = completion.choices[0].message.content
-        # Robust JSON extraction
-        import re
-        match = re.search(r'(\{.*\})', ai_response, re.DOTALL)
-        if match:
-            json_str = match.group(1)
-            # Fix common LLM json errors (newlines in strings)
-            # json_str = json_str.replace('\n', ' ') 
+        
+        # Robust JSON extraction with regex
+        # Busca el primer bloque {...} que contenga "events"
+        json_match = re.search(r'(\{.*"events".*\})', ai_response, re.DOTALL)
+        
+        if json_match:
+            json_str = json_match.group(1)
+            # Limpiar posibles markdown backticks
+            if "```" in json_str:
+                json_str = json_str.replace("```json", "").replace("```", "")
+            
             ticket_data = json.loads(json_str)
+            
+            # Guardar en Historial si es válido
+            if "events" in ticket_data and isinstance(ticket_data["events"], list):
+                ladder_db.save_generated_ticket(ticket_data)
+                
         else:
+            print(f"DEBUG: No JSON found in -> {ai_response[:100]}...")
             raise ValueError("No JSON found in response")
         
     except Exception as e:
         print(f"DEBUG ERROR LADDER: {e}")
-        import traceback
-        traceback.print_exc()
+        # Intentar parsear manualmente o devolver error controlado
         ticket_data = {
-            "events": [{"match": "Error IA", "pick": "N/A", "reason": f"Error: {str(e)}"}],
-            "phoenix_note": "Modo de emergencia activado."
+            "events": [{"match": "Error IA", "pick": "Reintentar", "reason": f"Fallo en generación: {str(e)}"}],
+            "phoenix_note": "Error de comunicación con el Oráculo."
         }
     
     return {

@@ -184,6 +184,7 @@
                 <button id="btn-ladder"
                     class="nav-btn bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30">🔥 Reto
                     Escalera</button>
+                <button id="btn-history" class="nav-btn">📜 Historial</button>
                 <button id="btn-bankroll" class="nav-btn">💰 Bankroll</button>
                 <button id="btn-performance" class="nav-btn">📈 Rendimiento</button>
                 <button id="btn-live" class="nav-btn">🔴 En Vivo</button>
@@ -375,6 +376,45 @@
                         No hay partidos en vivo en este momento
                     </p>
                 </div>
+        </section>
+
+        <!-- MÓDULO 7: Historial Completo -->
+        <section id="history-view" class="view-section">
+            <div class="flex gap-4 mb-6">
+                <button onclick="switchHistoryTab('preds')" id="tab-hist-preds"
+                    class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 active-tab font-bold">
+                    Predicciones Pasadas
+                </button>
+                <button onclick="switchHistoryTab('tickets')" id="tab-hist-tickets"
+                    class="px-4 py-2 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10">
+                    Tickets Generados
+                </button>
+            </div>
+
+            <!-- Sub-vista: Predicciones -->
+            <div id="hist-preds-content">
+                <div class="predictions-table-container">
+                    <table class="predictions-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Partido</th>
+                                <th>Predicción</th>
+                                <th>Prob</th>
+                                <th>Resultado</th>
+                                <th>Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <!-- Datos -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub-vista: Tickets -->
+            <div id="hist-tickets-content" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Cards de Tickets -->
             </div>
         </section>
 
@@ -482,6 +522,7 @@
                 'bankroll': 'bankroll-view',
                 'performance': 'performance-view',
                 'live': 'live-view',
+                'history': 'history-view',
                 'settings': 'settings-view'
             };
 
@@ -490,7 +531,9 @@
 
             // Cargar datos específicos de la vista
             if (viewId === 'performance') loadPerformanceData();
+            if (viewId === 'performance') loadPerformanceData();
             if (viewId === 'bankroll') calculateBankroll();
+            if (viewId === 'history') loadHistoryData();
         }
 
         // ===========================================
@@ -794,8 +837,95 @@
         });
 
         // ===========================================
-        // LOGICA ESCALERA (PHOENIX)
+        // LÓGICA DE HISTORIAL
         // ===========================================
+        function switchHistoryTab(tab) {
+            // Estilos botones
+            document.getElementById('tab-hist-preds').className = tab === 'preds' ?
+                "px-4 py-2 rounded-lg bg-white/10 text-white font-bold" :
+                "px-4 py-2 rounded-lg bg-white/5 text-slate-400";
+
+            document.getElementById('tab-hist-tickets').className = tab === 'tickets' ?
+                "px-4 py-2 rounded-lg bg-white/10 text-white font-bold" :
+                "px-4 py-2 rounded-lg bg-white/5 text-slate-400";
+
+            // Mostrar contenido
+            document.getElementById('hist-preds-content').style.display = tab === 'preds' ? 'block' : 'none';
+            document.getElementById('hist-tickets-content').style.display = tab === 'tickets' ? 'grid' : 'none';
+
+            if (tab === 'tickets') loadTicketHistory();
+        }
+
+        async function loadHistoryData() {
+            try {
+                const response = await fetch('/history?days=7');
+                const data = await response.json();
+                const tbody = document.getElementById('history-table-body');
+                tbody.innerHTML = '';
+
+                data.predictions.forEach(p => {
+                    const row = document.createElement('tr');
+                    const profitClass = p.profit > 0 ? 'text-green-400' : (p.profit < 0 ? 'text-red-400' : 'text-slate-400');
+                    const resultBadge = p.result === 'WIN' ? '<span class="text-green-400">WIN</span>' :
+                        (p.result === 'LOSS' ? '<span class="text-red-400">LOSS</span>' : 'PENDING');
+
+                    row.innerHTML = `
+                        <td class="text-slate-400 text-sm">${p.date}</td>
+                        <td class="text-sm">${p.match}</td>
+                        <td class="font-bold">${p.predicted_winner}</td>
+                        <td class="text-blue-400">${p.probability}%</td>
+                        <td>${resultBadge}</td>
+                        <td class="${profitClass} font-mono">${p.profit > 0 ? '+' : ''}${p.profit}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (e) {
+                console.error("Error history:", e);
+            }
+        }
+
+        async function loadTicketHistory() {
+            try {
+                const response = await fetch('/ladder/history/generated');
+                const data = await response.json();
+                const container = document.getElementById('hist-tickets-content');
+                container.innerHTML = '';
+
+                data.tickets.forEach(t => {
+                    const ticket = t.ticket;
+                    const date = t.date;
+
+                    let eventsHtml = '';
+                    ticket.events.forEach(ev => {
+                        eventsHtml += `
+                            <div class="flex justify-between text-sm py-1 border-b border-black/10 last:border-0">
+                                <span class="font-semibold">${ev.pick}</span>
+                                <span class="text-xs text-slate-600 truncate max-w-[100px]">${ev.match}</span>
+                            </div>
+                         `;
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = "bg-[#fdf6e3] text-black p-4 rounded shadow-lg font-mono transform scale-95 opacity-90 hover:scale-100 hover:opacity-100 transition";
+                    card.innerHTML = `
+                        <div class="text-center font-bold text-xs border-b border-black/10 pb-2 mb-2">
+                            PHOENIX TICKET - ${date}
+                        </div>
+                        <div class="space-y-1 mb-4">
+                            ${eventsHtml}
+                        </div>
+                        <div class="text-[10px] italic text-center opacity-70">
+                            "${ticket.phoenix_note || 'Sin nota'}"
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                console.error("Error ticket history:", e);
+            }
+        }
+
+
         async function generateTicket() {
             const btn = document.querySelector('#ladder-actions button');
             const container = document.getElementById('ladder-events');
