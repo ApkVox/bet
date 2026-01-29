@@ -8,8 +8,7 @@
 *.env
 
 # Archivos de desarrollo local
-requirements_base.txt
-CONTEXTO_PROYECTO.md
+# (Anteriormente ignorados, ahora incluidos para contexto)
 
 # Archivos temporales Windows/Mac
 Thumbs.db

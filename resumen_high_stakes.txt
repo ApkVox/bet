@@ -1,4 +1,0 @@
-ESTADO: 💀 QUEBRADO
-Capital Final: $0
-ROI: -100.0%
-Dias: 19

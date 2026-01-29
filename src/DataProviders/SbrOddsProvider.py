@@ -9,8 +9,16 @@ class SbrOddsProvider:
     """
 
     def __init__(self, sportsbook="fanduel"):
-        sb = Scoreboard(sport="NBA")
-        self.games = sb.games if hasattr(sb, 'games') else []
+        print(f"DEBUG: SbrOddsProvider checking sportsbook {sportsbook}...")
+        try:
+            print("DEBUG: Initializing Scoreboard...")
+            sb = Scoreboard(sport="NBA")
+            print("DEBUG: Scoreboard initialized. Accessing games...")
+            self.games = sb.games if hasattr(sb, 'games') else []
+            print(f"DEBUG: Scoreboard games found: {len(self.games)}")
+        except Exception as e:
+            print(f"DEBUG: Error initializing Scoreboard: {e}")
+            self.games = []
         self.sportsbook = sportsbook
 
     def get_odds(self):

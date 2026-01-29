@@ -1,6 +1,6 @@
-# 🏀 NBA VibeCoding Predictor
+# 🏀 NBA VibeCoding Predictor - Project Phoenix
 
-> **Motor híbrido de predicciones NBA:** Combina XGBoost (análisis numérico) con Groq LLM (análisis narrativo) para predicciones inteligentes.
+> **Motor híbrido de predicciones NBA:** Combina XGBoost (análisis numérico) con Groq LLM (análisis narrativo) para predicciones inteligentes y gestión de bankroll optimizada.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green?logo=fastapi)
@@ -11,11 +11,12 @@
 
 ## 📋 Descripción
 
-Este proyecto utiliza un enfoque **VibeCoding** para predicciones de la NBA:
+Este proyecto utiliza un enfoque **VibeCoding** para predicciones de la NBA y gestión de inversiones deportivas:
 
 1. **Motor Numérico (XGBoost):** Modelos pre-entrenados con ~69% de accuracy que analizan estadísticas históricas.
-2. **Motor Narrativo (Groq LLM):** Llama 3.3 70B genera análisis tácticos explicando el "por qué" de cada predicción.
-3. **API REST (FastAPI):** Endpoint simple para obtener predicciones del día.
+2. **Motor Narrativo (Groq LLM):** Llama 3.3 70B genera análisis tácticos explicando el "por qué" de cada predicción y construye tickets optimizados.
+3. **Read-Through Cache:** Optimización de carga instantánea mediante persistencia en SQLite para evitar regeneraciones innecesarias.
+4. **Project Phoenix (Reto Escalera):** Sistema de gestión de bankroll compuesto para maximizar beneficios con riesgo controlado.
 
 ---
 
@@ -48,67 +49,26 @@ pip install -r requirements.txt
 # Copiar el archivo de ejemplo
 cp .env.example .env
 
-# Editar con tu API Key de Groq
-# Obtén tu key en: https://console.groq.com
+# Editar con tu API Key de Groq en .env
 ```
 
 ### 5. Ejecutar la API
 ```bash
-uvicorn main:app --reload
+python main.py
 ```
 
 La API estará disponible en: `http://localhost:8000`
 
 ---
 
-## 📡 Endpoints
+## 📡 Endpoints Principales
 
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
-| `/` | GET | Health check y estado del modelo |
-| `/predict-today` | GET | Predicciones de partidos del día |
-| `/predict-today?include_ai=false` | GET | Solo predicciones numéricas (sin LLM) |
-| `/teams` | GET | Lista de equipos NBA soportados |
-
-### Ejemplo de respuesta `/predict-today`
-
-```json
-{
-  "date": "2026-01-20",
-  "total_games": 3,
-  "predictions": [
-    {
-      "home_team": "Los Angeles Lakers",
-      "away_team": "Boston Celtics",
-      "winner": "Boston Celtics",
-      "win_probability": 58.3,
-      "under_over": "OVER",
-      "ou_line": 224.5,
-      "ou_probability": 54.2,
-      "ai_analysis": "Boston llega con 5 victorias consecutivas..."
-    }
-  ],
-  "model_accuracy": "68.9%",
-  "status": "✅ Predicciones generadas con XGBoost + Groq AI"
-}
-```
-
----
-
-## 🐳 Deploy con Docker
-
-```bash
-# Construir imagen
-docker build -t nba-vibecoding .
-
-# Ejecutar contenedor
-docker run -p 10000:10000 -e GROQ_API_KEY=tu_key nba-vibecoding
-```
-
-### Deploy en Render
-1. Conecta tu repositorio de GitHub
-2. Render detectará el `Dockerfile` automáticamente
-3. Añade la variable `GROQ_API_KEY` en el dashboard
+| `/predict-today` | GET | Predicciones del día (con Cache y AI) |
+| `/history` | GET | Historial de predicciones pasadas |
+| `/ladder/v2/{id}/status` | GET | Estado actual del Reto Escalera |
+| `/ladder/v2/{id}/ticket` | POST | Generar ticket de apuesta para el reto |
 
 ---
 
@@ -116,18 +76,18 @@ docker run -p 10000:10000 -e GROQ_API_KEY=tu_key nba-vibecoding
 
 ```
 📦 nba-vibecoding/
-├── 📄 main.py           # API FastAPI principal
-├── 📄 Dockerfile        # Configuración Docker
-├── 📄 requirements.txt  # Dependencias Python
-├── 📁 src/              # Código fuente original
-│   ├── Predict/         # Runners de predicción
-│   ├── Utils/           # Herramientas y diccionarios
-│   └── DataProviders/   # Proveedores de datos (sbrscrape)
-├── 📁 Data/             # Bases de datos SQLite
-│   ├── TeamData.sqlite  # Estadísticas de equipos
-│   └── OddsData.sqlite  # Datos de apuestas
-└── 📁 Models/           # Modelos pre-entrenados
-    └── XGBoost_Models/  # Modelos ML (68.9% accuracy)
+├── 📄 main.py           # API FastAPI principal (PROCUCCIÓN)
+├── 📄 prediction_api.py # Motor de predicciones XGBoost
+├── 📄 history_db.py     # Gestión de historial y Cache
+├── 📁 ladder/           # Módulo Project Phoenix (Escalera)
+│   ├── main_ladder.py   # Orquestador de ciclos diarios
+│   ├── strategy_engine.py # Lógica de bankroll y selección
+│   └── groq_agent.py    # Agente de IA para tickets
+├── 📁 static/           # Frontend (SPA Dashboard)
+├── 📁 Data/             # Bases de datos 
+│   ├── history.db       # Historial global y cache
+│   └── TeamData.sqlite  # Estadísticas NBA
+└── 📁 Models/           # Modelos pre-entrenados (.json / .pkl)
 ```
 
 ---
@@ -136,11 +96,11 @@ docker run -p 10000:10000 -e GROQ_API_KEY=tu_key nba-vibecoding
 
 | Componente | Tecnología |
 |------------|------------|
-| Backend | FastAPI + Uvicorn |
+| Backend | FastAPI |
 | ML Engine | XGBoost + Scikit-learn |
 | LLM | Groq API (Llama 3.3 70B) |
 | Data | SQLite + Pandas |
-| Deploy | Docker + Render |
+| Frontend | HTML5 + CSS3 (Vanilla) + JS |
 
 ---
 

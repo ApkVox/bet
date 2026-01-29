@@ -39,6 +39,18 @@ def init_db():
         )
     ''')
     
+    # Tabla de Predicciones Diarias
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS daily_predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            predictions_json TEXT NOT NULL, -- Lista de predicciones completa
+            summary_stats TEXT, -- JSON con stats del día (winrate, profit, etc)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(date)
+        )
+    ''')
+    
     # Inicializar si está vacío
     cursor.execute('SELECT count(*) FROM ladder_state')
     if cursor.fetchone()[0] == 0:
@@ -91,26 +103,38 @@ def get_bad_beats(limit=5):
     conn.close()
     return [row['learning_note'] for row in rows]
 
-def save_generated_ticket(ticket_data):
+def save_generated_ticket(ticket_data, date=None):
     """Guarda un ticket generado"""
+    if date is None:
+        date = datetime.now().strftime("%Y-%m-%d")
+        
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO generated_tickets (date, ticket_json)
         VALUES (?, ?)
-    ''', (datetime.now().strftime("%Y-%m-%d"), json.dumps(ticket_data)))
+    ''', (date, json.dumps(ticket_data)))
     conn.commit()
     conn.close()
 
-def get_generated_tickets(limit=10):
+def get_generated_tickets(limit=20, date=None):
     """Obtiene historial de tickets generados"""
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute('''
-        SELECT * FROM generated_tickets 
-        ORDER BY created_at DESC LIMIT ?
-    ''', (limit,))
+    
+    if date:
+        cursor.execute('''
+            SELECT * FROM generated_tickets 
+            WHERE date = ?
+            ORDER BY created_at DESC
+        ''', (date,))
+    else:
+        cursor.execute('''
+            SELECT * FROM generated_tickets 
+            ORDER BY created_at DESC LIMIT ?
+        ''', (limit,))
+        
     rows = cursor.fetchall()
     conn.close()
     
@@ -126,3 +150,49 @@ def get_generated_tickets(limit=10):
         except:
             continue
     return tickets
+
+# ==========================================
+# NUEVAS FUNCIONES PARA HISTORIAL DE PREDICCIONES
+# ==========================================
+def save_daily_predictions(date_str, predictions_list, stats=None):
+    """Guarda o actualiza las predicciones de un día"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    preds_json = json.dumps(predictions_list)
+    stats_json = json.dumps(stats) if stats else "{}"
+    
+    cursor.execute('''
+        INSERT OR REPLACE INTO daily_predictions (date, predictions_json, summary_stats)
+        VALUES (?, ?, ?)
+    ''', (date_str, preds_json, stats_json))
+    
+    conn.commit()
+    conn.close()
+
+def get_predictions_by_date(date_str):
+    """Recupera predicciones de una fecha específica"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM daily_predictions WHERE date = ?', (date_str,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return {
+            "date": row["date"],
+            "predictions": json.loads(row["predictions_json"]),
+            "stats": json.loads(row["summary_stats"]) if row["summary_stats"] else {}
+        }
+    return None
+
+def get_available_dates():
+    """Devuelve lista de fechas con data disponible"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT date FROM daily_predictions ORDER BY date DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
