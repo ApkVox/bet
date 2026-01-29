@@ -1,54 +1,41 @@
-# PROYECTO: NBA VIBECODING PREDICTOR - PROJECT PHOENIX
+# CONTEXTO DEL PROYECTO - NBA VibeCoding Predictor
 
-## 1. OBJETIVO GLOBAL
-Crear una plataforma de predicción e inversión deportiva para la NBA que combina modelos numéricos avanzados (XGBoost) con análisis cualitativo de IA (Groq/Llama), integrando un sistema de gestión de bankroll ("Reto Escalera") y seguimiento histórico.
+## 🎯 Objetivo
+Sistema de predicciones NBA que combina modelos de Machine Learning (XGBoost) con razonamiento de IA (Groq/Llama 3) para ofrecer un dashboard de análisis deportivo.
 
-## 2. ARQUITECTURA DEL SISTEMA
+## 🏗️ Arquitectura Minimalista
 
-### A. Backend (FastAPI)
-- **`main.py`**: Punto de entrada de la API. Gestiona endpoints de predicción, historia y el reto escalera.
-- **`prediction_api.py`**: Capa de abstracción para cargar modelos XGBoost y generar probabilidades base.
-- **`history_db.py`**: Gestión de la base de datos de historial (`Data/history.db`). Implementa **Read-Through Caching** para optimizar velocidad.
-- **`ladder/` (Módulo Phoenix)**:
-  - **`main_ladder.py`**: Orquestador del reto escalera (Ladder V2).
-  - **`strategy_engine.py`**: Lógica de selección de apuestas y gestión de riesgo.
-  - **`groq_agent.py`**: Agente de IA para generar narrativas y tickets.
+### Backend (Python + FastAPI)
+- **`main.py`**: Punto de entrada de la API. Orquesta la carga de modelos, búsqueda de noticias y análisis de IA.
+- **`prediction_api.py`**: Interfaz con los modelos XGBoost. Maneja la extracción de características desde `TeamData.sqlite`.
+- **`history_db.py`**: Gestiona la persistencia en `history.db`. Implementa un **Read-Through Cache** para predicciones diarias.
 
-### B. Datos y Persistencia
-- **`Data/TeamData.sqlite`**: Datos históricos de equipos y estadísticas (Base del modelo XGBoost).
-- **`Data/history.db`**: Historial global de predicciones diarias con resultados (Win/Loss) y Profit.
-- **`ladder_v2.db`**: Persistencia específica para el Reto Escalera (Tickets, Steps, Bankroll).
-- **`Models/XGBoost_Models/`**: Modelos entrenados (.json) y calibradores (.pkl).
+### Frontend (Vanilla JS SPA)
+- Dashboard de una sola página en `static/index.html`.
+- Vistas principales: **Predicciones** (Hoy) e **Historial** (Pasado).
+- Integración visual con logos de la NBA y análisis de IA en tiempo real.
 
-### C. Frontend (Single Page App)
-- **`static/index.html`**: Dashboard interactivo moderno.
-  - **Tablero de Predicciones**: Muestra partidos de hoy con EVs, probs y análisis IA.
-  - **Historial**: Visualización de rendimiento pasado.
-  - **Reto Escalera**: Interfaz dedicada para el seguimiento del reto de inversión.
+### Persistencia (SQLite)
+- **`Data/history.db`**: Almacena el historial de predicciones, resultados y cache diaria.
+- **`Data/TeamData.sqlite`**: Base de datos con estadísticas históricas de equipos para alimentar el modelo.
 
-## 3. FLUJOS PRINCIPALES
+## 🔄 Flujos Críticos
 
-### 1. Predicción Diaria (`/predict-today`)
-1. **Cache Check**: Verifica si ya existen predicciones para hoy en `history.db`.
-2. **Generación (Cache Miss)**:
-   - Descarga partidos de SBR (Scraper).
-   - Ejecuta modelos XGBoost.
-   - Enriquece con análisis de noticias (Groq + DuckDuckGo).
-   - Guarda en `history.db` como 'PENDING'.
-3. **Respuesta**: Devuelve objetos `MatchPrediction` al frontend.
+1.  **Carga de Predicciones**:
+    - El cliente solicita `/predict-today`.
+    - El sistema busca en `history.db`.
+    - Si no existe (MISS), ejecuta el motor XGBoost, busca noticias en DuckDuckGo, aplica análisis con Groq, y guarda el resultado.
+    - Si existe (HIT), devuelve el cache instantáneamente (<100ms).
 
-### 2. Reto Escalera (Project Phoenix)
-- Genera tickets diarios optimizados (Parlays de 2-3 patas o apuestas directas de alto valor).
-- Gestiona el bankroll y los pasos de la escalera.
-- Almacena y visualiza tickets históricos.
+2.  **Sincronización de Resultados**:
+    - Se invoca `/update-history`.
+    - El sistema compara predicciones pendientes con resultados reales y actualiza el estado (`WIN`/`LOSS`).
 
-## 4. REGLAS Y MANTENIMIENTO
-1. **Modelos**: Los modelos XGBoost deben estar en `Models/`.
-2. **Entorno**: Requiere `.env` con `GROQ_API_KEY`.
-3. **Limpieza**: Scripts temporales deben eliminarse. Mantener la raíz limpia.
-4. **Dependencias**: `requirements.txt` define el entorno Python.
+## 🛠️ Reglas de Desarrollo
+- **Backend**: Mantener `main.py` limpio de lógica de base de datos directa (usar `history_db.py`).
+- **Frontend**: Usar CSS Vanilla y evitar dependencias externas pesadas.
+- **Limpieza Absoluta**: Se han eliminado todos los módulos no funcionales: **Escalera, Live, Bankroll, Rendimiento, Configuración**. La app es estrictamente predictiva.
 
-## 5. ESTADO ACTUAL (Enero 2026)
-- **Optimización**: Carga de predicciones instantánea (<500ms) gracias al cache DB.
-- **Historial**: Backfill completo para Enero 2026.
-- **Frontend**: Totalmente funcional con modo oscuro y diseño responsivo.
+---
+**Estado**: Ultra-Minimalista / Funcional
+**Última actualización**: 2026-01-29

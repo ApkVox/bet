@@ -16,7 +16,6 @@ import joblib
 import numpy as np
 import xgboost as xgb
 from dotenv import load_dotenv
-import ladder_db
 import history_db
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -1220,18 +1219,14 @@ async def update_history_endpoint(date: str, results: dict):
     return {"status": "updated", "date": date, "matches": len(results)}
 
 
-@app.get("/performance-stats")
-async def performance_stats(days: int = 30):
-    """Obtiene estadísticas de rendimiento"""
-    from history_db import get_performance_stats
-    return get_performance_stats(days)
 
 
 @app.get("/history")
 async def get_history_endpoint(days: int = 7):
     """Obtiene historial de predicciones"""
-    from history_db import get_history
-    return {"predictions": get_history(days)}
+    # from history_db import get_history
+    import history_db
+    return {"predictions": history_db.get_history(days)}
 
 
 # ===========================================
@@ -1356,40 +1351,6 @@ async def debug_simulate_match(home: str, away: str):
         return trace
 
 
-@app.get("/live-games")
-async def get_live_games():
-    """
-    Obtiene partidos en vivo con status actualizado.
-    TODO: Integrar con NBA API oficial
-    """
-    # Placeholder: devolver array vacío por ahora
-    # En producción, consultar: https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json
-    return {"live_games": [], "status": "No games live"}
-
-
-@app.post("/fetch-nba-scores")
-async def fetch_nba_scores_endpoint(date: str):
-    """
-    Obtiene scores reales de NBA API para una fecha específica.
-    
-    Args:
-        date: Fecha en formato YYYY-MM-DD
-    """
-    try:
-        # NBA Scoreboard API
-        # Formato: https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json
-        # Para fechas específicas necesitaríamos la API oficial de NBA
-        
-        # Por ahora retornar estructura mock
-        return {
-            "date": date,
-            "games": [],
-            "status": "Mock data - NBA API integration pending"
-        }
-    except Exception as e:
-        return {"error": str(e), "status": "failed"}
-
-
 # Servir archivos estáticos (frontend)
 static_path = BASE_DIR / "static"
 if static_path.exists():
@@ -1405,317 +1366,17 @@ async def serve_dashboard():
     raise HTTPException(status_code=404, detail="Dashboard no encontrado")
 
 
-# ===========================================
-# PROJECT PHOENIX: RETO ESCALERA
-# ===========================================
-import ladder_db
-import json
-import re
 
-# Inicializar DB al arranque
-ladder_db.init_db()
-
-class LadderOutcomeRequest(BaseModel):
-    win: bool
-    learning_note: str
-
-@app.get("/ladder/history/generated")
-async def get_ladder_history_generated(limit: int = 10):
-    """Obtiene historial de tickets generados"""
-    return {"tickets": ladder_db.get_generated_tickets(limit)}
-
-@app.post("/ladder/outcome")
-async def report_ladder_outcome(outcome: LadderOutcomeRequest):
-    """Reporta el resultado del día y actualiza el capital"""
-    state = ladder_db.get_state()
-    if not state:
-        raise HTTPException(status_code=500, detail="Ladder state not found")
-    
-    current_cap = state["current_capital"]
-    stake = current_cap * 0.50 # 50% Stake Fijo
-    
-    if outcome.win:
-        # Ganancia compuesta (aprox x2.6 de un parlay)
-        # Simplificación: Asumimos cuota +260 (3.6 decimal) promedio
-        profit = stake * (3.6 - 1)
-        new_cap = current_cap + profit
-        new_step = state["step_number"] + 1
-        db_outcome = "WIN"
-    else:
-        # Pérdida
-        new_cap = current_cap - stake
-        new_step = 1 # Reinicio de escalera? O bajada?
-        # User said: "Project Phoenix" -> Survival. Si perdemos, el capital baja.
-        db_outcome = "LOSS"
-
-    ladder_db.update_state(max(0, new_cap), new_step)
-    
-    # Guardar historial
-    ladder_db.add_history(
-        bet_details_json=json.dumps({"stake": stake, "step": state["step_number"]}),
-        outcome=db_outcome,
-        learning_note=outcome.learning_note
-    )
-    
-    return {"status": "updated", "new_capital": new_cap, "step": new_step}
-
-@app.get("/ladder/generate-ticket")
-async def generate_ladder_ticket():
-    """Genera el Ticket del Fénix (3 eventos, >70% prob, AI reasoning)"""
-    
-    # 1. Obtener Estado
-    state = ladder_db.get_state()
-    current_cap = state["current_capital"]
-    stake = current_cap * 0.50
-    
-    # 2. Obtener Partidos y Predicciones Base
-    games = get_todays_games_from_sbr()
-    if not games: 
-        predictions = get_mock_predictions()
-    else:
-        predictions = predict_with_xgboost(games)
-    
-    # 3. Filtrar alta confianza (>60% MVP)
-    high_conf_preds = [p for p in predictions if p.win_probability > 60]
-    
-    if len(high_conf_preds) < 3:
-        predictions.sort(key=lambda x: x.win_probability, reverse=True)
-        candidates = predictions[:5]
-    else:
-        candidates = high_conf_preds
-        
-    # 4. Obtener Memoria de Errores
-    bad_beats = ladder_db.get_bad_beats()
-    bad_beats_text = "\n".join([f"- {note}" for note in bad_beats]) if bad_beats else "Sin errores previos."
-    
-    # 5. Selección IA (Groq)
-    candidates_str = "\n".join([
-        f"ID {i}: {p.winner} ({p.win_probability}%) vs {p.away_team if p.winner == p.home_team else p.home_team}. O/U: {p.under_over} {p.ou_line} ({p.ou_probability}%)"
-        for i, p in enumerate(candidates)
-    ])
-    
-    prompt = f"""ERES EL SISTEMA PHOENIX. TU MISIÓN: SUPERVIVENCIA FINANCIERA.
-    Capital Actual: ${current_cap:,.0f}
-    
-    MEMORIA DE ERRORES PASADOS (¡NO REPETIR!):
-    {bad_beats_text}
-    
-    CANDIDATOS DISPONIBLES (XGBoost):
-    {candidates_str}
-    
-    TAREA: Selecciona EXACTAMENTE 3 eventos para un Parlay de Alta Seguridad.
-    Debes equilibrar la probabilidad numérica con la intuición de "trampas".
-    
-    FORMATO JSON OBLIGATORIO (RESPONDER SOLO CON EL JSON):
-    {{
-      "events": [
-        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}},
-        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}},
-        {{"match": "Home vs Away", "pick": "Winner/Over/Under", "reason": "Breve justificación"}}
-      ],
-      "phoenix_note": "Frase motivacional corta"
-    }}
-    """
-    
-    try:
-        completion = groq_client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=500
-        )
-        ai_response = completion.choices[0].message.content
-        
-        # Robust JSON extraction with regex
-        # Busca el primer bloque {...} que contenga "events"
-        json_match = re.search(r'(\{.*"events".*\})', ai_response, re.DOTALL)
-        
-        if json_match:
-            json_str = json_match.group(1)
-            # Limpiar posibles markdown backticks
-            if "```" in json_str:
-                json_str = json_str.replace("```json", "").replace("```", "")
-            
-            ticket_data = json.loads(json_str)
-            
-            # Guardar en Historial si es válido
-            if "events" in ticket_data and isinstance(ticket_data["events"], list):
-                ladder_db.save_generated_ticket(ticket_data)
-                
-        else:
-            print(f"DEBUG: No JSON found in -> {ai_response[:100]}...")
-            raise ValueError("No JSON found in response")
-        
-    except Exception as e:
-        print(f"DEBUG ERROR LADDER: {e}")
-        # Intentar parsear manualmente o devolver error controlado
-        ticket_data = {
-            "events": [{"match": "Error IA", "pick": "Reintentar", "reason": f"Fallo en generación: {str(e)}"}],
-            "phoenix_note": "Error de comunicación con el Oráculo."
-        }
-    
-    return {
-        "step": state["step_number"],
-        "capital": current_cap,
-        "stake": stake,
-        "ticket": ticket_data
-    }
-
-# ===========================================
-# API - RETO ESCALERA V2 (MULTI-LADDER)
-# ===========================================
-from ladder.main_ladder import create_ladder_orchestrator, LadderOrchestrator
-
-DB_PATH = BASE_DIR / "nba_predictions.db"
-
-def get_ladder_orchestrator(ladder_id: int = 1) -> LadderOrchestrator:
-    """Helper to get orchestrator for simple ladder operations."""
-    return create_ladder_orchestrator(str(DB_PATH).replace("nba_predictions.db", "ladder_v2.db"), ladder_id)
-
-@app.get("/ladder/v2/list")
-async def list_ladders():
-    """List all available ladder challenges."""
-    orchestrator = get_ladder_orchestrator()
-    return orchestrator.get_all_ladders()
-
-@app.post("/ladder/v2/create")
-async def create_new_ladder(name: str, capital: float, goal: float):
-    """Create a new ladder challenge."""
-    orchestrator = get_ladder_orchestrator()
-    return orchestrator.create_ladder(name, capital, goal)
-
-@app.get("/ladder/v2/{ladder_id}/status")
-async def get_ladder_v2_status(ladder_id: int):
-    """Get current status of a specific ladder."""
-    orchestrator = get_ladder_orchestrator(ladder_id)
-    return orchestrator.get_today_status()
-
-@app.get("/ladder/v2/{ladder_id}/ticket/{date}")
-async def get_ladder_v2_ticket_history(ladder_id: int, date: str):
-    """Get a specific historical ticket."""
-    orchestrator = get_ladder_orchestrator(ladder_id)
-    return orchestrator.get_ticket_by_date(date)
-
-@app.post("/ladder/v2/{ladder_id}/generate")
-async def generate_ladder_v2_ticket(ladder_id: int, current_capital: Optional[float] = None, goal: Optional[float] = None):
-    """Generate today's ticket for a specific ladder."""
-    
-    import asyncio
-    
-    orchestrator = get_ladder_orchestrator(ladder_id)
-    
-    # Sync config if provided (User edited input before generating)
-    if current_capital is not None or goal is not None:
-        orchestrator.update_ladder_config(capital=current_capital, goal=goal)
-    
-
-    # Get predictions
-    games = get_todays_games_from_sbr()
-    if not games:
-        predictions_raw = get_mock_predictions()
-    else:
-        predictions_raw = predict_with_xgboost(games)
-    
-    # Convert to dict format for the ladder system
-    predictions = []
-    for p in predictions_raw:
-        winner_is_home = p.winner == p.home_team
-        winner_odds = p.market_odds_home if winner_is_home else p.market_odds_away
-        decimal_odds = american_to_decimal(winner_odds) if winner_odds else 1.9
-        
-        predictions.append({
-            "home_team": p.home_team,
-            "away_team": p.away_team,
-            "winner": p.winner,
-            "probability": p.win_probability,
-            "decimal_odds": decimal_odds,
-            "bet_type": "MONEYLINE"
-        })
-    
-    # Run the daily cycle (in executor to not block)
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, orchestrator.run_daily_cycle, predictions)
-    
-    return result
-
-@app.post("/ladder/v2/{ladder_id}/reset")
-async def reset_ladder_v2(ladder_id: int, starting_capital: float = 10000.0, goal: float = 100000.0):
-    """Reset a specific ladder challenge."""
-    orchestrator = get_ladder_orchestrator(ladder_id)
-    return orchestrator.reset_ladder(starting_capital, goal)
-
-@app.post("/ladder/v2/{ladder_id}/strategy")
-async def set_ladder_v2_strategy(ladder_id: int, strategy: str):
-    """Change strategy for a specific ladder."""
-    orchestrator = get_ladder_orchestrator(ladder_id)
-    return orchestrator.set_strategy(strategy)
-
-@app.post("/ladder/v2/resolve")
-async def resolve_ladder_v2_tickets():
-    """Manually trigger resolution of pending tickets (global)."""
-    import asyncio
-    
-    # Use default orchestrator to resolve globally
-    orchestrator = get_ladder_orchestrator()
-    loop = asyncio.get_event_loop()
-    resolutions = await loop.run_in_executor(None, orchestrator.resolution_service.auto_resolve_from_history)
-    
-    # For each resolution, we might need to update the specific ladder
-    # But resolution service in v3 should update correct ladder_id automatically via bankroll manager
-    # We just need to make sure bankroll updates happen. 
-    # Current implementation of orchestrator.run_daily_cycle handles this.
-    # For manual resolve, we might need to rethink if orchestrator instance matters.
-    # Schema v3 resolution updates tickets, and BankrollManager needs ladder_id.
-    
-    # FIX: resolution_service.auto_resolve_from_history returns resolutions but doesn't update bankroll 
-    # unless called from run_daily_cycle which HAS the bankroll manager.
-    # We need to iterate resolutions and update respective bankrolls.
-    
-    for res in resolutions:
-        # Note: res doesn't currently contain ladder_id in standard return, we might need to fetch it
-        # Actually in v3 schema ticket has ladder_id. 
-        # For MVP manual resolve, we can skip complex logic and just rely on auto-resolve daily cycle
-        pass
-
-    return {"status": "resolved_globally", "count": len(resolutions), "details": resolutions}
-
-
-# ===========================================
-# EJECUCIÓN LOCAL
-# ===========================================
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
-
-# ===========================================
-# ENDPOINTS DE HISTORIAL
-# ===========================================
-@app.get("/history/dates")
-async def get_history_dates():
-    """Devuelve las fechas disponibles en el historial"""
-    dates = ladder_db.get_available_dates()
-    return {"dates": dates}
-
-@app.get("/history/predictions/{date}")
-async def get_history_predictions(date: str):
-    """Devuelve predicciones para una fecha específica (Legacy/Ladder DB)"""
-    data = ladder_db.get_predictions_by_date(date)
-    if not data:
-        # Fallback to history DB?
-        # For now keep separate.
-        raise HTTPException(status_code=404, detail="No data for this date")
-    return data
 
 @app.get("/history/full")
 async def get_full_history(days: int = 30):
     """Devuelve historial detallado linea por linea (History DB)"""
+    import history_db
     history = history_db.get_history(days)
-    stats = history_db.get_performance_stats(days)
     return {
-        "history": history,
-        "stats": stats
+        "history": history
     }
+
 
 @app.get("/match-details/{home_team}/{away_team}")
 async def get_match_details(home_team: str, away_team: str):
@@ -1725,6 +1386,7 @@ async def get_match_details(home_team: str, away_team: str):
     - Últimos resultados de cada equipo
     - Análisis IA (si disponible)
     """
+    import history_db
     home_accuracy = history_db.get_team_prediction_accuracy(home_team)
     away_accuracy = history_db.get_team_prediction_accuracy(away_team)
     
@@ -1763,90 +1425,12 @@ async def get_match_details(home_team: str, away_team: str):
         "ai_analysis": ai_analysis
     }
 
-# ===========================================
-# ENDPOINT PRINCIPAL (MODIFICADO)
-# ===========================================
-@app.get("/pronosticos-hoy", response_model=PredictionResponse)
-async def get_predictions():
-    """
-    Retorna predicciones.
-    1. Intenta leer de DB para HOY.
-    2. Si no hay, genera nuevas, las guarda y retorna.
-    """
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    
-    # 1. Buscar en DB
-    existing = ladder_db.get_predictions_by_date(today_str)
-    if existing:
-        print(f"[OK] Cargando predicciones desde DB para {today_str}")
-        preds = [MatchPrediction(**p) for p in existing["predictions"]]
-        return PredictionResponse(
-            date=today_str,
-            total_games=len(preds),
-            predictions=preds,
-            model_accuracy=MODEL_ACCURACY,
-            status="SUCCESS_DB"
-        )
-
-    # 2. Generar Nuevas (Si no existen)
-    print("⚡ Generando NUEVAS predicciones para hoy...")
-    games = get_todays_games_from_sbr()
-    
-    if not games:
-        print("[WARN] No games found via SBR, using Mock fallback")
-        preds = get_mock_predictions()
-    else:
-        # Cargar modelo si es necesario
-        load_xgboost_models()
-        if not MODEL_LOADED:
-             print("[WARN] Model not loaded, using Mock fallback")
-             preds = get_mock_predictions()
-        else:
-             preds = predict_with_xgboost(games)
-    
-    # Analizar con IA (Async con timeout para no bloquear)
-    # Nota: Para guardar en DB, idealmente esperaríamos el análisis.
-    # MVP: Guardamos primero sin análisis profundo, o hacemos un batch rápido.
-    # Aquí asumimos que predict_with_xgboost ya hace lo básico.
-    
-    # IMPORTANTE: Guardar en DB
-    ladder_db.save_daily_predictions(
-        today_str, 
-        [p.dict() for p in preds], 
-        stats=None
-    )
-    
-    return PredictionResponse(
-        date=today_str,
-        total_games=len(preds),
-        predictions=preds,
-        model_accuracy=MODEL_ACCURACY,
-        status="SUCCESS_NEW"
-    )
-
-# ===========================================
-# HISTORIAL ENDPOINT
-# ===========================================
-@app.post("/update-history")
-async def update_history_endpoint():
-    """Actualiza los resultados del historial en segundo plano"""
-    try:
-        from src.Services import history_service
-        import asyncio
-        
-        # Ejecutar en background para no bloquear
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, history_service.update_pending_predictions)
-        
-        return result
-    except Exception as e:
-        print(f"Error updating history: {e}")
-        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
-    # Inicializar DB antes de arrancar
-    ladder_db.init_db()
+    # Inicializar base de datos de historial
+    import history_db
+    history_db.init_history_db()
     
     # HACK: Registrar BoosterWrapper para joblib
     sys.modules['__main__'].BoosterWrapper = BoosterWrapper

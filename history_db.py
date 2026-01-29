@@ -128,31 +128,6 @@ def update_results(date: str, results: dict):
         conn.commit()
 
 
-def get_performance_stats(days: int = 30) -> dict:
-    """Obtiene estadísticas de rendimiento"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT 
-                COUNT(*) as total_bets,
-                SUM(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
-                SUM(profit) as total_profit,
-                AVG(CASE WHEN result != 'PENDING' THEN profit END) as avg_profit
-            FROM predictions
-            WHERE date >= date('now', '-' || ? || ' days')
-            AND result != 'PENDING'
-        """, (days,))
-        
-        row = cursor.fetchone()
-        total, wins, total_profit, avg_profit = row
-        
-        return {
-            "total_bets": total or 0,
-            "wins": wins or 0,
-            "win_rate": round((wins / total * 100) if total > 0 else 0, 1),
-            "total_profit": round(total_profit or 0, 2),
-            "avg_profit": round(avg_profit or 0, 2),
-            "roi": round((total_profit / total * 100) if total > 0 else 0, 1)
-        }
 
 
 def get_history(days: int = 7) -> list[dict]:
