@@ -216,7 +216,7 @@ def get_predictions_by_date(date: str) -> list[dict]:
                 "ev_value": row[7],
                 "kelly_stake_pct": row[8],
                 "warning_level": row[9],
-                # 'result': row[10] # Not used in MatchPrediction but useful for status
+                "result": row[10]  # Include result for cache status
             }
             predictions.append(p)
             
