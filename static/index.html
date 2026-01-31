@@ -413,20 +413,31 @@
         async function loadPredictions() {
             try {
                 const response = await fetch('/pronosticos-hoy?include_ai=false');
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 currentPredictions = data.predictions;
 
                 // Update model accuracy display
                 const accuracyEl = document.getElementById('model-accuracy-display');
                 if (accuracyEl && data.model_accuracy) {
-                    accuracyEl.textContent = `Modelo XGBoost: ${data.model_accuracy} Accuracy`;
+                    accuracyEl.textContent = `Modelo XGBoost: ${data.model_accuracy || 'N/A'} Accuracy`;
+                }
+
+                if (currentPredictions.length === 0 && data.status && data.status.startsWith('❌')) {
+                     document.getElementById('predictions-table-body').innerHTML = 
+                        `<tr><td colspan="6" class="text-center text-red-400 py-8 font-bold">${data.status}</td></tr>`;
+                     updateFilteredCount();
+                     return;
                 }
 
                 renderPredictionsTable(currentPredictions);
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('predictions-table-body').innerHTML =
-                    '<tr><td colspan="6" class="text-center text-red-400 py-8">Error cargando predicciones</td></tr>';
+                    `<tr><td colspan="6" class="text-center text-red-400 py-8">Error cargando predicciones: ${error.message}</td></tr>`;
             }
         }
 

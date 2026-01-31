@@ -24,9 +24,18 @@ from fastapi.responses import FileResponse
 from groq import Groq
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 # Cargar variables de entorno
 load_dotenv()
+
+# ===========================================
+# SCHEDULER GLOBAL
+# ===========================================
+scheduler = AsyncIOScheduler()
+LAST_UPDATE_TIME = None
+UPDATE_RESULTS = []
 
 # ===========================================
 # BOOSTERWRAPPER - Necesaria para deserializar modelos calibrados
@@ -994,6 +1003,40 @@ def refresh_games_cache():
         return []
 
 
+# ===========================================
+# BACKGROUND JOB: Auto-update pending predictions
+# ===========================================
+def run_pending_updates():
+    """
+    Background job that runs every 30 minutes.
+    Updates pending predictions with real scores from SBR.
+    """
+    global LAST_UPDATE_TIME, UPDATE_RESULTS
+    from datetime import datetime
+    
+    print("[SCHEDULER] Running automatic pending predictions update...")
+    
+    try:
+        from src.Services.history_service import update_pending_predictions
+        result = update_pending_predictions()
+        LAST_UPDATE_TIME = datetime.now().isoformat()
+        UPDATE_RESULTS.append({
+            "timestamp": LAST_UPDATE_TIME,
+            "result": result
+        })
+        # Keep only last 10 results
+        if len(UPDATE_RESULTS) > 10:
+            UPDATE_RESULTS = UPDATE_RESULTS[-10:]
+        print(f"[SCHEDULER] Update complete: {result}")
+    except Exception as e:
+        print(f"[SCHEDULER] Error in background update: {e}")
+        LAST_UPDATE_TIME = datetime.now().isoformat()
+        UPDATE_RESULTS.append({
+            "timestamp": LAST_UPDATE_TIME,
+            "result": {"status": "error", "message": str(e)}
+        })
+
+
 @app.on_event("startup")
 async def startup_event():
     """Cargar modelos al iniciar la API"""
@@ -1006,6 +1049,31 @@ async def startup_event():
     # Inicializar base de datos de historial
     from history_db import init_history_db
     init_history_db()
+    
+    # Iniciar scheduler para actualización automática de scores
+    # Ejecuta cada 30 minutos
+    scheduler.add_job(
+        run_pending_updates,
+        IntervalTrigger(minutes=30),
+        id='update_pending_predictions',
+        name='Auto-update pending predictions',
+        replace_existing=True
+    )
+    scheduler.start()
+    print("[SCHEDULER] Background scheduler started - Updates every 30 minutes")
+    
+    # Ejecutar una vez al inicio (después de 5 segundos para dar tiempo a cargar todo)
+    import asyncio
+    await asyncio.sleep(5)
+    run_pending_updates()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Shutdown scheduler gracefully"""
+    if scheduler.running:
+        scheduler.shutdown()
+        print("[SCHEDULER] Background scheduler stopped")
 
 
 @app.get("/")
@@ -1098,57 +1166,70 @@ async def predict_today(include_ai: bool = True):
             )
 
     # 2. Si no hay cache, generar (CACHE MISS)
-    if not MODEL_LOADED:
-        load_xgboost_models()
-    
-    games = get_todays_games_from_sbr()
-    
-    if not games or not MODEL_LOADED:
-        predictions = get_mock_predictions()
-        return PredictionResponse(
+    try:
+        if not MODEL_LOADED:
+            load_xgboost_models()
+        
+        games = get_todays_games_from_sbr()
+        
+        if not games or not MODEL_LOADED:
+            predictions = get_mock_predictions()
+            return PredictionResponse(
+                date=today,
+                total_games=len(predictions),
+                predictions=predictions,
+                model_accuracy="N/A (Mock Data)",
+                status="⚠️ Usando datos simulados"
+            )
+        
+        predictions = predict_with_xgboost(games)
+        
+        if include_ai and groq_client:
+            import asyncio
+            tasks = [analyze_single_prediction(pred) for pred in predictions]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for i, result in enumerate(results):
+                if not isinstance(result, Exception):
+                    predictions[i] = result
+        
+        # 3. GUARDAR en Historial (Write-Through)
+        try:
+            for pred in predictions:
+                save_prediction({
+                    'date': today,
+                    'match_id': f"{pred.home_team} vs {pred.away_team}",
+                    'home_team': pred.home_team,
+                    'away_team': pred.away_team,
+                    'winner': pred.winner,
+                    'win_probability': pred.win_probability,
+                    'market_odds': pred.market_odds_home if pred.winner == pred.home_team else pred.market_odds_away,
+                    'ev_value': pred.ev_value,
+                    'kelly_stake_pct': pred.kelly_stake_pct,
+                    'warning_level': pred.warning_level
+                })
+        except Exception as e:
+            print(f"Error auto-saving predictions: {e}")
+
+        response = PredictionResponse(
             date=today,
             total_games=len(predictions),
             predictions=predictions,
-            model_accuracy="N/A (Mock Data)",
-            status="⚠️ Usando datos simulados"
+            model_accuracy=MODEL_ACCURACY,
+            status="✅ Predicciones Generadas y Guardadas"
         )
-    
-    predictions = predict_with_xgboost(games)
-    
-    if include_ai and groq_client:
-        import asyncio
-        tasks = [analyze_single_prediction(pred) for pred in predictions]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for i, result in enumerate(results):
-            if not isinstance(result, Exception):
-                predictions[i] = result
-    
-    # 3. GUARDAR en Historial (Write-Through)
-    try:
-        for pred in predictions:
-            save_prediction({
-                'date': today,
-                'match_id': f"{pred.home_team} vs {pred.away_team}",
-                'home_team': pred.home_team,
-                'away_team': pred.away_team,
-                'winner': pred.winner,
-                'win_probability': pred.win_probability,
-                'market_odds': pred.market_odds_home if pred.winner == pred.home_team else pred.market_odds_away,
-                'ev_value': pred.ev_value,
-                'kelly_stake_pct': pred.kelly_stake_pct,
-                'warning_level': pred.warning_level
-            })
-    except Exception as e:
-        print(f"Error auto-saving predictions: {e}")
+        return response
 
-    response = PredictionResponse(
-        date=today,
-        total_games=len(predictions),
-        predictions=predictions,
-        model_accuracy=MODEL_ACCURACY,
-        status="✅ Predicciones Generadas y Guardadas"
-    )
-    return response
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[ERROR] Critical error in predict_today: {e}")
+        return PredictionResponse(
+            date=today,
+            total_games=0,
+            predictions=[],
+            model_accuracy="ERROR",
+            status=f"❌ Error Interno: {str(e)}"
+        )
 
 
 @app.get("/teams")
@@ -1227,6 +1308,46 @@ async def get_history_endpoint(days: int = 7):
     # from history_db import get_history
     import history_db
     return {"predictions": history_db.get_history(days)}
+
+
+# ===========================================
+# SCHEDULER ENDPOINTS: Manual trigger and status
+# ===========================================
+@app.get("/api/update-pending")
+async def trigger_update_pending():
+    """
+    Fuerza la actualización de predicciones pendientes.
+    Ejecuta manualmente lo que el scheduler hace automáticamente.
+    """
+    run_pending_updates()
+    return {
+        "status": "completed",
+        "last_update": LAST_UPDATE_TIME,
+        "message": "Pending predictions update triggered manually"
+    }
+
+
+@app.get("/api/scheduler-status")
+async def get_scheduler_status():
+    """
+    Muestra el estado del scheduler y las últimas actualizaciones.
+    Útil para monitoreo y debugging.
+    """
+    jobs = []
+    if scheduler.running:
+        for job in scheduler.get_jobs():
+            jobs.append({
+                "id": job.id,
+                "name": job.name,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None
+            })
+    
+    return {
+        "scheduler_running": scheduler.running,
+        "jobs": jobs,
+        "last_update_time": LAST_UPDATE_TIME,
+        "recent_updates": UPDATE_RESULTS[-5:] if UPDATE_RESULTS else []
+    }
 
 
 # ===========================================
