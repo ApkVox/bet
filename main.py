@@ -1051,16 +1051,16 @@ async def startup_event():
     init_history_db()
     
     # Iniciar scheduler para actualización automática de scores
-    # Ejecuta cada 30 minutos
+    # Ejecuta cada 15 minutos para actualizar partidos finalizados
     scheduler.add_job(
         run_pending_updates,
-        IntervalTrigger(minutes=30),
+        IntervalTrigger(minutes=15),
         id='update_pending_predictions',
         name='Auto-update pending predictions',
         replace_existing=True
     )
     scheduler.start()
-    print("[SCHEDULER] Background scheduler started - Updates every 30 minutes")
+    print("[SCHEDULER] Background scheduler started - Updates every 15 minutes")
     
     # Ejecutar una vez al inicio (después de 5 segundos para dar tiempo a cargar todo)
     import asyncio

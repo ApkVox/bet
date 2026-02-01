@@ -29,7 +29,7 @@ def update_pending_predictions():
         cursor = conn.execute("""
             SELECT DISTINCT date FROM predictions 
             WHERE result = 'PENDING' 
-            AND date < date('now')
+            AND date <= date('now')
         """)
         pending_dates = [row[0] for row in cursor.fetchall()]
         
