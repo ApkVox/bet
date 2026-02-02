@@ -1148,7 +1148,7 @@ async def predict_today(include_ai: bool = True):
                     implied_prob_market=0.0,
                     discrepancy=0.0,
                     ai_analysis="✅ Cargado del historial (Guardado previamente)", 
-                    game_status=p.get('result', 'PENDING'),
+                    game_status=p.get('result', 'PENDIENTE'),
                     home_score=0,
                     away_score=0
                 )
@@ -1323,7 +1323,7 @@ async def trigger_update_pending():
     return {
         "status": "completed",
         "last_update": LAST_UPDATE_TIME,
-        "message": "Pending predictions update triggered manually"
+        "message": "Actualización de predicciones pendientes activada manualmente"
     }
 
 

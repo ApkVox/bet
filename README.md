@@ -1,6 +1,6 @@
 # 🏀 NBA Predictor AI
 
-> **Motor híbrido de predicciones NBA:** Combina XGBoost (análisis numérico) con Groq LLM (análisis narrativo) para predicciones inteligentes.
+> **Motor híbrido de predicciones NBA:** Combina XGBoost (análisis numérico) con Groq LLM (análisis inteligente) para predicciones de alta calidad.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green?logo=fastapi)
@@ -11,11 +11,11 @@
 
 ## 📋 Descripción
 
-Este proyecto utiliza un enfoque de **IA híbrida** para predicciones de la NBA:
+Este proyecto utiliza un enfoque de **IA híbrida** para predecir resultados de la NBA:
 
-1. **Motor Numérico (XGBoost):** Modelos pre-entrenados con ~69% de accuracy que analizan estadísticas históricas de los equipos.
-2. **Motor Narrativo (Groq LLM):** Llama 3.3 70B genera análisis tácticos explicando el "por qué" de cada predicción.
-3. **Read-Through Cache:** Optimización de carga instantánea mediante persistencia en SQLite para evitar regeneraciones innecesarias y mejorar la velocidad de respuesta (<500ms).
+1. **Motor Numérico (XGBoost):** Modelos entrenados con ~69% de efectividad que analizan estadísticas históricas.
+2. **Motor Inteligente (Groq LLM):** Llama 3.3 70B genera análisis detallados explicando el "por qué" de cada recomendación.
+3. **Carga Ultrarrápida:** Optimización con memoria persistente (SQLite) para cargar resultados en menos de 500ms.
 
 ---
 
@@ -58,14 +58,14 @@ La API estará disponible en: `http://localhost:8000`
 
 ---
 
-## 📡 Endpoints Principales
+## 📡 Funciones Principales
 
-| Endpoint | Método | Descripción |
+| Función | Método | Descripción |
 |----------|--------|-------------|
-| `/predict-today` | GET | Predicciones del día (con Cache y AI) |
-| `/history/full` | GET | Historial detallado de predicciones pasadas |
-| `/history` | GET | Historial de predicciones (versión corta) |
-| `/update-history` | POST | Sincroniza resultados de partidos pendientes |
+| `/predict-today` | GET | Predicciones del día (con IA) |
+| `/history/full` | GET | Historial detallado de aciertos |
+| `/history` | GET | Historial resumido |
+| `/update-history` | POST | Sincroniza resultados reales |
 
 ---
 
@@ -73,33 +73,33 @@ La API estará disponible en: `http://localhost:8000`
 
 ```
 📦 nba-predictor-ai/
-├── 📄 main.py           # API FastAPI principal
-├── 📄 prediction_api.py # Motor de predicciones XGBoost
-├── 📄 history_db.py     # Gestión de historial y Cache
-├── 📁 static/           # Frontend (SPA Dashboard)
-├── 📁 Data/             # Bases de datos 
-│   ├── history.db       # Historial global y cache
-│   └── TeamData.sqlite  # Estadísticas NBA
-└── 📁 Models/           # Modelos pre-entrenados (.json / .pkl)
+├── 📄 main.py           # API principal (FastAPI)
+├── 📄 prediction_api.py # Motor de IA XGBoost
+├── 📄 history_db.py     # Base de datos e historial
+├── 📁 static/           # Panel de Control (Frontend)
+├── 📁 Data/             # Almacenamiento
+│   ├── history.db       # Historial de aciertos
+│   └── TeamData.sqlite  # Base de datos de equipos
+└── 📁 Models/           # Modelos de inteligencia artificial
 ```
 
 ---
 
-## ⚙️ Stack Tecnológico
+## ⚙️ Tecnologías Usadas
 
 | Componente | Tecnología |
 |------------|------------|
 | Backend | FastAPI |
-| ML Engine | XGBoost + Scikit-learn |
-| LLM | Groq API (Llama 3.3 70B) |
-| Data | SQLite + Pandas |
-| Frontend | HTML5 + CSS3 (Vanilla) + JS |
+| Motor de IA | XGBoost + Scikit-learn |
+| Analista IA | Groq API (Llama 3.3 70B) |
+| Datos | SQLite + Pandas |
+| Panel | HTML5 + CSS3 + JS (Vainilla) |
 
 ---
 
-## 📝 Licencia
+## 📝 Nota Legal
 
-Este proyecto es para fines educativos y de entretenimiento. Las predicciones no garantizan resultados y no deben usarse para apuestas reales.
+Este proyecto es para fines educativos y de entretenimiento. Las predicciones NO garantizan ganancias y no deben usarse para apuestas reales. Juéguelo con responsabilidad.
 
 ---
 

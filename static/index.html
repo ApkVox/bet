@@ -345,15 +345,15 @@
                     <div class="flex items-center gap-3">
                         <span class="text-2xl">🤖</span>
                         <div>
-                            <div class="font-bold text-green-400" id="model-accuracy-display">Modelo XGBoost: 68.9%
-                                Accuracy</div>
-                            <div class="text-xs text-slate-400">Predicciones basadas en estadisticas reales de equipos
-                            </div>
+                            <div class="font-bold text-green-400" id="model-accuracy-display">Modelo Inteligente: 68.9%
+                                Efectividad</div>
+                            <div class="text-xs text-slate-400">Predocciones basadas en estadísticas reales de los
+                                equipos</div>
                         </div>
                     </div>
                     <div id="data-source-badge"
                         class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                        ⚠️ CUOTAS SIMULADAS
+                        ⚠️ CUOTAS ESTIMADAS
                     </div>
                 </div>
             </div>
@@ -367,7 +367,7 @@
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" id="filter-ev-only" class="rounded">
-                            <span class="text-sm">Solo EV+</span>
+                            <span class="text-sm">Solo mejores oportunidades (Valor+)</span>
                         </label>
                     </div>
                 </div>
@@ -379,11 +379,11 @@
                     <thead>
                         <tr>
                             <th>Partido</th>
-                            <th>Ganador Predicho</th>
+                            <th>Ganador Probable</th>
                             <th>Probabilidad</th>
-                            <th>O/U</th>
-                            <th>Cuota (Decimal)</th>
-                            <th>Detalles</th>
+                            <th>Puntos (Altas/Bajas)</th>
+                            <th>Pago (Multiplicador)</th>
+                            <th>Más Datos</th>
                         </tr>
                     </thead>
                     <tbody id="predictions-table-body">
@@ -624,7 +624,7 @@
                         </div>
                     </td>
                     <td>
-                        <span class="text-sm ${pred.under_over === 'OVER' ? 'text-blue-400' : 'text-purple-400'}">${pred.under_over || 'N/A'}</span>
+                        <span class="text-sm ${pred.under_over === 'OVER' ? 'text-blue-400' : 'text-purple-400'}">${pred.under_over === 'OVER' ? 'ALTA' : (pred.under_over === 'UNDER' ? 'BAJA' : 'N/A')}</span>
                         <span class="text-xs text-slate-500 ml-1">${pred.ou_line || ''}</span>
                     </td>
                     <td>
@@ -632,7 +632,7 @@
                     </td>
                     <td>
                         <button class="btn-analyze text-xs" onclick="showAnalysis(${index})">
-                            Ver Detalles
+                            Más Datos
                         </button>
                     </td>
                 `;
@@ -651,24 +651,24 @@
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
             modal.innerHTML = `
-                <div class="modal-content glass-panel p-8 rounded-2xl">
-                    <h3 class="text-2xl font-bold mb-4">Análisis de IA</h3>
+                 <div class="modal-content glass-panel p-8 rounded-2xl">
+                    <h3 class="text-2xl font-bold mb-4">Análisis Inteligente</h3>
                     <div class="text-lg mb-6">${pred.ai_analysis || 'Análisis no disponible'}</div>
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Prob. Modelo</div>
+                            <div class="text-sm text-slate-400">Prob. Inteligencia Artificial</div>
                             <div class="text-2xl font-bold">${pred.win_probability}%</div>
                         </div>
                         <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Prob. Mercado</div>
+                            <div class="text-sm text-slate-400">Prob. Casas de Apuesta</div>
                             <div class="text-2xl font-bold">${pred.implied_prob_market}%</div>
                         </div>
                         <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Discrepancia</div>
+                            <div class="text-sm text-slate-400">Diferencia de Opinión</div>
                             <div class="text-2xl font-bold ${pred.discrepancy > 15 ? 'text-red-400' : ''}">${pred.discrepancy}%</div>
                         </div>
                         <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Kelly Stake</div>
+                            <div class="text-sm text-slate-400">Apuesta Recomendada (%)</div>
                             <div class="text-2xl font-bold text-purple-400">${pred.kelly_stake_pct}%</div>
                         </div>
                     </div>
@@ -781,8 +781,8 @@
                         <div class="flex items-center justify-between mb-3 px-2 mt-6">
                             <h3 class="text-lg font-bold text-slate-200">${date}</h3>
                             <div class="flex gap-4 text-xs font-mono">
-                                <span class="text-slate-400">Wins: <span class="text-white">${winRate}%</span></span>
-                                <span class="text-slate-400">P/L: <span class="${dayProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${dayProfit >= 0 ? '+' : ''}${dayProfit.toFixed(2)}</span></span>
+                                <span class="text-slate-400">Efectividad: <span class="text-white">${winRate}%</span></span>
+                                <span class="text-slate-400">Balance: <span class="${dayProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${dayProfit >= 0 ? '+' : ''}${dayProfit.toFixed(2)}</span></span>
                             </div>
                         </div>
                         <div class="predictions-table-container overflow-hidden rounded-xl border border-white/10 bg-black/20">
@@ -790,10 +790,10 @@
                                 <thead class="bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
                                     <tr>
                                         <th class="px-4 py-2 text-left">Partido</th>
-                                        <th class="px-4 py-2 text-left">Pick</th>
+                                        <th class="px-4 py-2 text-left">Selección</th>
                                         <th class="px-4 py-2 text-center">Prob</th>
-                                        <th class="px-4 py-2 text-center">Result</th>
-                                        <th class="px-4 py-2 text-right">Profit</th>
+                                        <th class="px-4 py-2 text-center">Resultado</th>
+                                        <th class="px-4 py-2 text-right">Ganancia</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -803,7 +803,7 @@
                                             <td class="px-4 py-3 font-bold text-white text-sm">${item.predicted_winner}</td>
                                             <td class="px-4 py-3 text-center text-sm"><span class="${item.probability > 60 ? 'text-green-400' : 'text-blue-400'}">${item.probability}%</span></td>
                                             <td class="px-4 py-3 text-center text-xs">
-                                                <span class="px-2 py-0.5 rounded border ${item.result === 'WIN' ? 'bg-green-500/10 text-green-400 border-green-500/20' : (item.result === 'LOSS' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20')}">${item.result}</span>
+                                                <span class="px-2 py-0.5 rounded border ${item.result === 'WIN' ? 'bg-green-500/10 text-green-400 border-green-500/20' : (item.result === 'LOSS' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20')}">${item.result === 'WIN' ? 'GANADO' : (item.result === 'LOSS' ? 'PERDIDO' : 'PENDIENTE')}</span>
                                             </td>
                                             <td class="px-4 py-3 text-right font-mono font-bold text-sm ${item.profit > 0 ? 'text-green-400' : (item.profit < 0 ? 'text-red-400' : 'text-slate-500')}">
                                                 ${item.profit > 0 ? '+' : ''}${item.profit.toFixed(2)}
@@ -870,7 +870,7 @@
                     <div class="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
                         <div class="flex items-center gap-2 mb-3">
                             <span class="text-blue-400">🤖</span>
-                            <span class="font-bold text-white">Análisis IA</span>
+                            <span class="font-bold text-white">Análisis Inteligente</span>
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed">${data.ai_analysis || 'Análisis no disponible'}</p>
                     </div>
@@ -892,16 +892,16 @@
                     <!-- Value Stats -->
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">EV</div>
+                            <div class="text-xs text-slate-500">Valor</div>
                             <div class="font-bold ${pred.ev_value > 0 ? 'text-green-400' : 'text-red-400'}">${pred.ev_value > 0 ? '+' : ''}${pred.ev_value?.toFixed(1) || 'N/A'}%</div>
                         </div>
                         <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">Kelly</div>
+                            <div class="text-xs text-slate-500">Sugerencia</div>
                             <div class="font-bold text-blue-400">${pred.kelly_stake_pct?.toFixed(1) || 'N/A'}%</div>
                         </div>
                         <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">Riesgo</div>
-                            <div class="font-bold ${pred.warning_level === 'HIGH' ? 'text-red-400' : (pred.warning_level === 'MEDIUM' ? 'text-amber-400' : 'text-green-400')}">${pred.warning_level || 'N/A'}</div>
+                            <div class="text-xs text-slate-500">Nivel Riesgo</div>
+                            <div class="font-bold ${pred.warning_level === 'HIGH' ? 'text-red-400' : (pred.warning_level === 'MEDIUM' ? 'text-amber-400' : 'text-green-400')}">${pred.warning_level === 'HIGH' ? 'ALTO' : (pred.warning_level === 'MEDIUM' ? 'MEDIO' : 'BAJO')}</div>
                         </div>
                     </div>
                 `;
