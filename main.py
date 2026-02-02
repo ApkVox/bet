@@ -965,6 +965,26 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# ===========================================
+# SECURITY: CORS Configuration
+# ===========================================
+# Dominios permitidos (agregar tu dominio en produccion)
+ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",  # Frontend en desarrollo
+    # Agregar aqui tu dominio de produccion, ej:
+    # "https://tu-app.onrender.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 # Global cache for today's games
 TODAYS_GAMES_CACHE = []
 GAMES_CACHE_DATE = None
@@ -1223,12 +1243,13 @@ async def predict_today(include_ai: bool = True):
         import traceback
         traceback.print_exc()
         print(f"[ERROR] Critical error in predict_today: {e}")
+        # SECURITY: No exponer detalles del error al cliente
         return PredictionResponse(
             date=today,
             total_games=0,
             predictions=[],
             model_accuracy="ERROR",
-            status=f"❌ Error Interno: {str(e)}"
+            status="❌ Error interno del servidor. Intente nuevamente más tarde."
         )
 
 
@@ -1351,10 +1372,22 @@ async def get_scheduler_status():
 
 
 # ===========================================
-# MVP v1.0: ENDPOINT DE DEBUGGING - TRACE COMPLETO
+# MVP v1.0: ENDPOINT DE DEBUGGING - SOLO EN MODO DESARROLLO
 # ===========================================
+# SECURITY: Este endpoint solo funciona si DEBUG_MODE=true en variables de entorno
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
+
 @app.get("/debug/simulate-match")
 async def debug_simulate_match(home: str, away: str):
+    """
+    ONLY AVAILABLE IN DEBUG MODE.
+    Set DEBUG_MODE=true environment variable to enable.
+    """
+    if not DEBUG_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Debug endpoint disabled in production. Set DEBUG_MODE=true to enable."
+        )
     """
     MVP v1.0: Simula el pipeline completo para UN partido y devuelve trace detallado.
     

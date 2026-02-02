@@ -18,6 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# ===========================================
+# SECURITY: Crear usuario no-root
+# ===========================================
+RUN useradd --create-home --shell /bin/bash appuser
+
 # Directorio de trabajo
 WORKDIR /app
 
@@ -28,6 +33,12 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Copiar TODO el proyecto (incluye src/, Data/, Models/)
 COPY . .
+
+# Cambiar ownership al usuario no-root
+RUN chown -R appuser:appuser /app
+
+# Cambiar a usuario no-root
+USER appuser
 
 # Puerto de Render
 EXPOSE 10000
