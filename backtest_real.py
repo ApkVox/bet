@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-NBA VIBECODING - BACKTESTING "TOTAL WAR" (50% STAKE)
+NBA PREDICTOR AI - BACKTESTING "TOTAL WAR" (50% STAKE)
 Inluye: Moneyline, Spread y Over/Under.
 Estrategia: Portfolio completo con 50% de riesgo diario.
 """

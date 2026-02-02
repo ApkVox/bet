@@ -1,4 +1,4 @@
-# 🏀 NBA VibeCoding Predictor
+# 🏀 NBA Predictor AI
 
 > **Motor híbrido de predicciones NBA:** Combina XGBoost (análisis numérico) con Groq LLM (análisis narrativo) para predicciones inteligentes.
 
@@ -11,7 +11,7 @@
 
 ## 📋 Descripción
 
-Este proyecto utiliza un enfoque **VibeCoding** para predicciones de la NBA:
+Este proyecto utiliza un enfoque de **IA híbrida** para predicciones de la NBA:
 
 1. **Motor Numérico (XGBoost):** Modelos pre-entrenados con ~69% de accuracy que analizan estadísticas históricas de los equipos.
 2. **Motor Narrativo (Groq LLM):** Llama 3.3 70B genera análisis tácticos explicando el "por qué" de cada predicción.
@@ -23,8 +23,8 @@ Este proyecto utiliza un enfoque **VibeCoding** para predicciones de la NBA:
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/tu-usuario/nba-vibecoding.git
-cd nba-vibecoding
+git clone https://github.com/ApkVox/bet.git
+cd bet
 ```
 
 ### 2. Crear entorno virtual
@@ -72,7 +72,7 @@ La API estará disponible en: `http://localhost:8000`
 ## 📁 Estructura del Proyecto
 
 ```
-📦 nba-vibecoding/
+📦 nba-predictor-ai/
 ├── 📄 main.py           # API FastAPI principal
 ├── 📄 prediction_api.py # Motor de predicciones XGBoost
 ├── 📄 history_db.py     # Gestión de historial y Cache
@@ -104,5 +104,5 @@ Este proyecto es para fines educativos y de entretenimiento. Las predicciones no
 ---
 
 <p align="center">
-  <strong>Hecho con ❤️ y VibeCoding</strong>
+  <strong>Hecho con ❤️ y Machine Learning</strong>
 </p>

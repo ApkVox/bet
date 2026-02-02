@@ -1,4 +1,4 @@
-# CONTEXTO DEL PROYECTO - NBA VibeCoding Predictor
+# CONTEXTO DEL PROYECTO - NBA Predictor AI
 
 ## 🎯 Objetivo
 Sistema de predicciones NBA que combina modelos de Machine Learning (XGBoost) con razonamiento de IA (Groq/Llama 3) para ofrecer un dashboard de análisis deportivo.

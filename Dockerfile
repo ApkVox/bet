@@ -1,5 +1,5 @@
 # ===========================================
-# NBA VIBECODING PREDICTOR - DOCKERFILE
+# NBA PREDICTOR AI - DOCKERFILE
 # Optimizado para Render (Python 3.10 Slim)
 # ===========================================
 

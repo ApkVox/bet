@@ -1,6 +1,6 @@
 """
 ===========================================
-NBA VIBECODING PREDICTOR - MAIN API
+NBA PREDICTOR AI - MAIN API
 ===========================================
 Motor híbrido: XGBoost (numérico) + Groq LLM (narrativo)
 """
@@ -960,7 +960,7 @@ def predict_with_xgboost(games: list) -> list[MatchPrediction]:
 # FASTAPI APP
 # ===========================================
 app = FastAPI(
-    title="🏀 NBA VibeCoding Predictor",
+    title="🏀 NBA Predictor AI",
     description="API de predicciones NBA usando XGBoost + Groq LLM",
     version="1.0.0"
 )
@@ -1085,7 +1085,7 @@ async def serve_index():
     # Fallback al health check si no hay frontend
     return {
         "status": "online",
-        "service": "NBA VibeCoding Predictor",
+        "service": "NBA Predictor AI",
         "message": "Frontend no encontrado. Usa /predict-today para la API."
     }
 
@@ -1095,7 +1095,7 @@ async def health_check():
     """Health check para monitoreo"""
     return {
         "status": "online",
-        "service": "NBA VibeCoding Predictor",
+        "service": "NBA Predictor AI",
         "model_loaded": MODEL_LOADED,
         "model_accuracy": MODEL_ACCURACY,
         "groq_configured": bool(GROQ_API_KEY)

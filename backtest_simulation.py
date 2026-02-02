@@ -1,6 +1,6 @@
 """
 ===========================================
-NBA VIBECODING - SIMULACIÓN DE BACKTESTING
+NBA PREDICTOR AI - SIMULACIÓN DE BACKTESTING
 ===========================================
 Simula el rendimiento del modelo desde el 1 de enero 2026 hasta hoy.
 
@@ -119,7 +119,7 @@ def calcular_ganancia(stake: float, odds: int, gano: bool) -> float:
 # ===========================================
 def ejecutar_simulacion():
     print("=" * 60)
-    print("🏀 NBA VIBECODING - SIMULACIÓN DE BACKTESTING")
+    print("🏀 NBA PREDICTOR AI - SIMULACIÓN DE BACKTESTING")
     print("=" * 60)
     print(f"📅 Período: {FECHA_INICIO.strftime('%d/%m/%Y')} - {FECHA_FIN.strftime('%d/%m/%Y')}")
     print(f"💰 Capital inicial: ${CAPITAL_INICIAL:,.0f} COP")
