@@ -972,7 +972,8 @@ app = FastAPI(
 ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "http://localhost:3000",  # Frontend en desarrollo
+    "http://localhost:3000",
+    "https://bet-7b8l.onrender.com",  # Producción en Render
     # Agregar aqui tu dominio de produccion, ej:
     # "https://tu-app.onrender.com",
 ]
