@@ -1,0 +1,15 @@
+waitress
+fastapi
+uvicorn
+requests
+pandas
+numpy
+xgboost
+joblib
+scikit-learn
+beautifulsoup4
+lxml
+python-multipart
+jinja2
+python-jose[cryptography]
+passlib[bcrypt]
