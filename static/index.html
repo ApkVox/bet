@@ -981,9 +981,9 @@
             tbody.innerHTML = filtered.map(h => `
                 <tr>
                     <td>${h.date}</td>
-                    <td>${h.match_id}</td>
-                    <td><strong>${h.winner}</strong></td>
-                    <td>${h.win_probability}%</td>
+                    <td>${h.match}</td>
+                    <td><strong>${h.predicted_winner}</strong></td>
+                    <td>${h.probability}%</td>
                     <td>
                         <span class="result-badge ${h.result?.toLowerCase() || 'pending'}">
                             ${h.result === 'WIN' ? '✓ Ganada' : h.result === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}
