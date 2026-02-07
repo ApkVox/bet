@@ -1,902 +1,1029 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
 
 <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>NBA Predictor AI - Predicciones Inteligentes</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Predictor AI</title>
+    <meta name="description" content="Predicciones NBA con Machine Learning e Inteligencia Artificial">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-        rel="stylesheet" />
-
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#00aaff",
-                        "accent-green": "#00ff9d",
-                        "accent-red": "#ff4d4d"
-                    }
-                }
-            }
-        }
-    </script>
-
+        href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
+        /* ==========================================
+           CSS VARIABLES - THEME SYSTEM
+           ========================================== */
+        :root {
+            /* Light Theme (Default) */
+            --bg-primary: #f5f5f7;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #fafafa;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --text-tertiary: #6e6e73;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --warning: #ff9500;
+            --border: rgba(0, 0, 0, 0.08);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 28px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #000000;
+            --bg-secondary: #1c1c1e;
+            --bg-card: #1c1c1e;
+            --bg-card-hover: #2c2c2e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #98989d;
+            --text-tertiary: #8e8e93;
+            --accent: #0a84ff;
+            --accent-hover: #409cff;
+            --success: #30d158;
+            --danger: #ff453a;
+            --warning: #ff9f0a;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ==========================================
+           BASE STYLES
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f1729 0%, #1e293b 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        /* ==========================================
+           HEADER
+           ========================================== */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
-        .nav-btn {
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
-            color: rgba(255, 255, 255, 0.7);
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-card);
+            color: var(--text-primary);
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* ==========================================
+           NAVIGATION
+           ========================================== */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
             font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .nav-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .nav-tab.active {
+            background: var(--accent);
             color: white;
-            border-color: transparent;
         }
 
-        .view-section {
+        .nav-tab:hover:not(.active) {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        /* ==========================================
+           MAIN CONTAINER
+           ========================================== */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .section {
             display: none;
         }
 
-        .view-section.active {
+        .section.active {
             display: block;
         }
 
-        /* Tabla de Predicciones */
-        .predictions-table-container {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            overflow: hidden;
+        /* ==========================================
+           BENTO GRID - STATS
+           ========================================== */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
         }
 
-        .predictions-table {
+        .bento-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .bento-card.accent {
+            background: linear-gradient(135deg, var(--accent), #5856d6);
+            color: white;
+            border: none;
+        }
+
+        .bento-card.accent .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        /* ==========================================
+           PREDICTIONS GRID
+           ========================================== */
+        .predictions-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .predictions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+
+        /* ==========================================
+           PREDICTION CARD
+           ========================================== */
+        .prediction-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .prediction-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .match-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .team-logo {
+            width: 56px;
+            height: 56px;
+            margin-bottom: 8px;
+            object-fit: contain;
+        }
+
+        .team-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .vs-badge {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+
+        .prediction-result {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .predicted-winner {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+
+        .probability {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .probability-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .prediction-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .meta-tag.positive {
+            background: rgba(52, 199, 89, 0.15);
+            color: var(--success);
+        }
+
+        .meta-tag.negative {
+            background: rgba(255, 59, 48, 0.15);
+            color: var(--danger);
+        }
+
+        /* ==========================================
+           HISTORY TABLE
+           ========================================== */
+        .history-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .history-table-container {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .history-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .predictions-table thead {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .predictions-table th {
-            padding: 1rem;
+        .history-table th {
             text-align: left;
-            font-size: 0.75rem;
+            padding: 16px 20px;
+            font-size: 12px;
             font-weight: 600;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.6);
             letter-spacing: 0.05em;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
         }
 
-        .predictions-table tbody tr {
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background 0.2s;
+        .history-table td {
+            padding: 16px 20px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .predictions-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.03);
+        .history-table tr:last-child td {
+            border-bottom: none;
         }
 
-        .predictions-table td {
-            padding: 1rem;
-            color: rgba(255, 255, 255, 0.9);
+        .history-table tr:hover {
+            background: var(--bg-card-hover);
         }
 
-        .ev-badge {
+        .result-badge {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: 600;
         }
 
-        .ev-positive {
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
+        .result-badge.win {
+            background: rgba(52, 199, 89, 0.15);
+            color: var(--success);
         }
 
-        .ev-negative {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+        .result-badge.loss {
+            background: rgba(255, 59, 48, 0.15);
+            color: var(--danger);
         }
 
-        .btn-analyze {
-            padding: 0.5rem 1rem;
-            background: rgba(99, 102, 241, 0.15);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 0.5rem;
-            color: #818cf8;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: all 0.2s;
+        .result-badge.pending {
+            background: rgba(255, 149, 0, 0.15);
+            color: var(--warning);
         }
 
-        .btn-analyze:hover {
-            background: rgba(99, 102, 241, 0.25);
-        }
-
-        .analysis-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+        /* ==========================================
+           LOADING & EMPTY STATES
+           ========================================== */
+        .loading {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            padding: 60px 20px;
+            color: var(--text-secondary);
         }
 
-        .modal-content {
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
         }
 
-        /* Hide spin buttons */
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
-        input[type=number] {
-            appearance: textfield;
-            -moz-appearance: textfield;
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
         }
 
-        /* Smooth transition for dynamic values */
-        .dynamic-value {
-            transition: all 0.3s ease;
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
         }
 
-        /* ===== RESPONSIVE DESIGN ===== */
-
-        /* Tablet (768px and below) */
+        /* ==========================================
+           MOBILE RESPONSIVE
+           ========================================== */
         @media (max-width: 768px) {
-            header .max-w-7xl {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
+            .header-content {
+                padding: 12px 16px;
             }
 
-            header nav {
-                width: 100%;
+            .logo-text {
+                display: none;
+            }
+
+            .nav-tabs {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                border-radius: 0;
+                padding: 8px 16px;
                 justify-content: center;
+                background: var(--bg-secondary);
+                border-top: 1px solid var(--border);
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
             }
 
-            header h1 {
-                font-size: 1.5rem;
-            }
-
-            .nav-btn {
-                padding: 0.625rem 1rem;
-                font-size: 0.8rem;
-            }
-
-            .predictions-table-container {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .predictions-table th,
-            .predictions-table td {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.8rem;
-            }
-
-            .glass-panel.p-4 {
-                padding: 1rem;
-            }
-
-            main {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-        }
-
-        /* Mobile (480px and below) */
-        @media (max-width: 480px) {
-            header {
-                padding: 0.75rem;
-                margin-bottom: 1rem;
-            }
-
-            header h1 {
-                font-size: 1.25rem;
-            }
-
-            header nav {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .nav-btn {
+            .nav-tab {
                 flex: 1;
-                min-width: 45%;
-                padding: 0.75rem 0.5rem;
-                font-size: 0.75rem;
                 text-align: center;
+                padding: 12px 8px;
             }
 
-            .predictions-table th {
-                font-size: 0.65rem;
-                padding: 0.5rem 0.25rem;
+            .main {
+                padding: 16px;
+                padding-bottom: 100px;
             }
 
-            .predictions-table td {
-                padding: 0.5rem 0.25rem;
-                font-size: 0.75rem;
+            .bento-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
             }
 
-            .predictions-table td img {
-                width: 1.25rem;
-                height: 1.25rem;
+            .bento-card {
+                padding: 16px;
             }
 
-            .btn-analyze {
-                padding: 0.5rem 0.75rem;
-                font-size: 0.7rem;
+            .stat-value {
+                font-size: 24px;
             }
 
-            .modal-content {
-                width: 95%;
-                max-height: 90vh;
-                margin: 1rem;
-            }
-
-            .modal-content .p-8 {
-                padding: 1rem;
-            }
-
-            .modal-content .grid-cols-2 {
+            .predictions-grid {
                 grid-template-columns: 1fr;
             }
 
-            main {
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
-                padding-bottom: 2rem;
+            .prediction-card {
+                padding: 20px;
             }
 
-            #model-accuracy-display {
-                font-size: 0.875rem;
+            .team-logo {
+                width: 48px;
+                height: 48px;
             }
 
-            #data-source-badge {
-                font-size: 0.625rem;
-                padding: 0.25rem 0.5rem;
+            .history-table th,
+            .history-table td {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .section-title {
+                font-size: 20px;
             }
         }
 
-        /* Touch-friendly improvements */
-        @media (hover: none) and (pointer: coarse) {
-
-            .nav-btn,
-            .btn-analyze,
-            button {
-                min-height: 44px;
+        @media (max-width: 480px) {
+            .bento-grid {
+                grid-template-columns: 1fr 1fr;
             }
 
-            .predictions-table tbody tr:active {
-                background: rgba(255, 255, 255, 0.08);
+            .stat-value {
+                font-size: 20px;
             }
+
+            .stat-label {
+                font-size: 12px;
+            }
+
+            .probability {
+                font-size: 24px;
+            }
+        }
+
+        /* ==========================================
+           MODAL
+           ========================================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .analysis-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
         }
     </style>
 </head>
 
-<body class="text-white">
-    <!-- Header -->
-    <header class="glass-panel sticky top-0 z-50 p-4 mb-8">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-accent-green bg-clip-text text-transparent">
-                🏀 NBA Predictor AI
-            </h1>
-
-            <nav class="flex gap-2">
-                <button id="btn-predictions" class="nav-btn active">📊 Predicciones</button>
-                <button id="btn-history" class="nav-btn">📜 Historial</button>
-            </nav>
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🏀</span>
+                <span class="logo-text">NBA Predictor AI</span>
+            </div>
+            <div class="header-actions">
+                <nav class="nav-tabs">
+                    <button class="nav-tab active" data-section="predictions">Predicciones</button>
+                    <button class="nav-tab" data-section="history">Historial</button>
+                </nav>
+                <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+                    🌙
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 pb-12">
-        <!-- MÓDULO PHOENIX: RETO ESCALERA V2 -->
-
-        <!-- MÓDULO 2: Predicciones Diarias -->
-        <section id="daily-predictions-view" class="view-section active">
-
-
-            <!-- Filtros Simplificados -->
-            <div class="glass-panel p-4 mb-6 rounded-xl">
-                <div class="flex justify-between items-center">
-                    <div class="text-sm text-slate-400">
-                        <span id="filtered-count">0</span> partidos encontrados
-                    </div>
-                    <div class="flex gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="filter-ev-only" class="rounded">
-                            <span class="text-sm">Solo mejores oportunidades (Valor+)</span>
-                        </label>
-                    </div>
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <!-- PREDICTIONS SECTION -->
+        <section id="predictions" class="section active">
+            <!-- Bento Stats Grid -->
+            <div class="bento-grid">
+                <div class="bento-card accent">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value" id="accuracy-stat">--</div>
+                    <div class="stat-label">Precisión</div>
+                </div>
+                <div class="bento-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="total-predictions">--</div>
+                    <div class="stat-label">Predicciones</div>
+                </div>
+                <div class="bento-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="wins-stat">--</div>
+                    <div class="stat-label">Aciertos</div>
+                </div>
+                <div class="bento-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-value" id="games-today">--</div>
+                    <div class="stat-label">Partidos Hoy</div>
                 </div>
             </div>
 
-            <!-- Tabla Simplificada -->
-            <div class="predictions-table-container">
-                <table class="predictions-table">
+            <!-- Predictions Header -->
+            <div class="predictions-header">
+                <h2 class="section-title">Partidos de Hoy</h2>
+            </div>
+
+            <!-- Predictions Grid -->
+            <div class="predictions-grid" id="predictionsGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span>Cargando predicciones...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- HISTORY SECTION -->
+        <section id="history" class="section">
+            <div class="predictions-header">
+                <h2 class="section-title">Historial de Predicciones</h2>
+            </div>
+
+            <div class="history-filters">
+                <button class="filter-btn active" data-filter="all">Todas</button>
+                <button class="filter-btn" data-filter="win">Ganadas</button>
+                <button class="filter-btn" data-filter="loss">Perdidas</button>
+                <button class="filter-btn" data-filter="pending">Pendientes</button>
+            </div>
+
+            <div class="history-table-container">
+                <table class="history-table">
                     <thead>
                         <tr>
+                            <th>Fecha</th>
                             <th>Partido</th>
-                            <th>Ganador Probable</th>
-                            <th>Probabilidad</th>
-                            <th>Puntos (Altas/Bajas)</th>
-                            <th>Pago (Multiplicador)</th>
-                            <th>Más Datos</th>
+                            <th>Predicción</th>
+                            <th>Prob.</th>
+                            <th>Resultado</th>
                         </tr>
                     </thead>
-                    <tbody id="predictions-table-body">
-                        <!-- Generado dinámicamente -->
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </section>
-
-
-        <!-- MÓDULO 5: Análisis en Vivo -->
-
-        <!-- MÓDULO 7: Historial Completo -->
-        <section id="history-view" class="view-section">
-            <div class="flex gap-4 mb-6">
-                <h2 class="text-xl font-bold text-white">📜 Historial de Predicciones</h2>
-            </div>
-
-            <!-- Filtros de Historial -->
-            <div id="history-filters"
-                class="flex flex-wrap gap-4 mb-6 bg-white/5 p-4 rounded-xl border border-white/10">
-                <div class="flex-1 min-w-[200px]">
-                    <input type="text" id="hist-search" placeholder="Buscar equipo..."
-                        class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                        oninput="filterHistory()">
-                </div>
-                <select id="hist-filter-result"
-                    class="bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none"
-                    onchange="filterHistory()">
-                    <option value="ALL">Todos los Resultados</option>
-                    <option value="WIN">Solo GANADOS</option>
-                    <option value="LOSS">Solo PERDIDOS</option>
-                </select>
-                <button onclick="loadHistoryData()"
-                    class="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-4 py-2 rounded-lg text-sm font-bold border border-blue-500/30 transition-all">
-                    🔄 Refrescar
-                </button>
-            </div>
-
-            <!-- Sub-vista: Predicciones (Agrupadas) -->
-            <div id="hist-preds-content">
-                <div id="history-grouped-container" class="space-y-8">
-                    <!-- Los grupos por fecha se cargarán aquí -->
-                    <div class="flex justify-center py-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    </div>
-                </div>
-            </div>
-
-
-        </section>
-
     </main>
 
-    <!-- MODAL: Match Details -->
-    <div id="match-details-modal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div
-            class="bg-slate-900 border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div
-                class="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-white/10 p-4 flex justify-between items-center">
-                <h2 id="modal-title" class="text-xl font-bold text-white">Detalles del Partido</h2>
-                <button onclick="closeMatchModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Análisis del Partido</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
             </div>
-
-            <div id="modal-content" class="p-6 space-y-6">
-                <div class="flex justify-center py-12">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                </div>
+            <div class="modal-body" id="modalBody">
+                <p class="analysis-text">Cargando análisis...</p>
             </div>
         </div>
     </div>
 
-    <!-- Create Ladder Modal -->
     <script>
-        // ===========================================
-        // DICCIONARIO DE LOGOS NBA
-        // ===========================================
+        // ==========================================
+        // NBA TEAM LOGOS
+        // ==========================================
         const NBA_LOGOS = {
-            "Atlanta Hawks": "https://cdn.nba.com/logos/nba/1610612737/primary/L/logo.svg",
-            "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
-            "Brooklyn Nets": "https://cdn.nba.com/logos/nba/1610612751/primary/L/logo.svg",
-            "Charlotte Hornets": "https://cdn.nba.com/logos/nba/1610612766/primary/L/logo.svg",
-            "Chicago Bulls": "https://cdn.nba.com/logos/nba/1610612741/primary/L/logo.svg",
-            "Cleveland Cavaliers": "https://cdn.nba.com/logos/nba/1610612739/primary/L/logo.svg",
-            "Dallas Mavericks": "https://cdn.nba.com/logos/nba/1610612742/primary/L/logo.svg",
-            "Denver Nuggets": "https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg",
-            "Detroit Pistons": "https://cdn.nba.com/logos/nba/1610612765/primary/L/logo.svg",
-            "Golden State Warriors": "https://cdn.nba.com/logos/nba/1610612744/primary/L/logo.svg",
-            "Houston Rockets": "https://cdn.nba.com/logos/nba/1610612745/primary/L/logo.svg",
-            "Indiana Pacers": "https://cdn.nba.com/logos/nba/1610612754/primary/L/logo.svg",
-            "LA Clippers": "https://cdn.nba.com/logos/nba/1610612746/primary/L/logo.svg",
-            "Los Angeles Lakers": "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg",
-            "Memphis Grizzlies": "https://cdn.nba.com/logos/nba/1610612763/primary/L/logo.svg",
-            "Miami Heat": "https://cdn.nba.com/logos/nba/1610612748/primary/L/logo.svg",
-            "Milwaukee Bucks": "https://cdn.nba.com/logos/nba/1610612749/primary/L/logo.svg",
-            "Minnesota Timberwolves": "https://cdn.nba.com/logos/nba/1610612750/primary/L/logo.svg",
-            "New Orleans Pelicans": "https://cdn.nba.com/logos/nba/1610612740/primary/L/logo.svg",
-            "New York Knicks": "https://cdn.nba.com/logos/nba/1610612752/primary/L/logo.svg",
-            "Oklahoma City Thunder": "https://cdn.nba.com/logos/nba/1610612760/primary/L/logo.svg",
-            "Orlando Magic": "https://cdn.nba.com/logos/nba/1610612753/primary/L/logo.svg",
-            "Philadelphia 76ers": "https://cdn.nba.com/logos/nba/1610612755/primary/L/logo.svg",
-            "Phoenix Suns": "https://cdn.nba.com/logos/nba/1610612756/primary/L/logo.svg",
-            "Portland Trail Blazers": "https://cdn.nba.com/logos/nba/1610612757/primary/L/logo.svg",
-            "Sacramento Kings": "https://cdn.nba.com/logos/nba/1610612758/primary/L/logo.svg",
-            "San Antonio Spurs": "https://cdn.nba.com/logos/nba/1610612759/primary/L/logo.svg",
-            "Toronto Raptors": "https://cdn.nba.com/logos/nba/1610612761/primary/L/logo.svg",
-            "Utah Jazz": "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg",
-            "Washington Wizards": "https://cdn.nba.com/logos/nba/1610612764/primary/L/logo.svg"
+            "Atlanta Hawks": "https://cdn.nba.com/logos/nba/1610612737/global/L/logo.svg",
+            "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg",
+            "Brooklyn Nets": "https://cdn.nba.com/logos/nba/1610612751/global/L/logo.svg",
+            "Charlotte Hornets": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg",
+            "Chicago Bulls": "https://cdn.nba.com/logos/nba/1610612741/global/L/logo.svg",
+            "Cleveland Cavaliers": "https://cdn.nba.com/logos/nba/1610612739/global/L/logo.svg",
+            "Dallas Mavericks": "https://cdn.nba.com/logos/nba/1610612742/global/L/logo.svg",
+            "Denver Nuggets": "https://cdn.nba.com/logos/nba/1610612743/global/L/logo.svg",
+            "Detroit Pistons": "https://cdn.nba.com/logos/nba/1610612765/global/L/logo.svg",
+            "Golden State Warriors": "https://cdn.nba.com/logos/nba/1610612744/global/L/logo.svg",
+            "Houston Rockets": "https://cdn.nba.com/logos/nba/1610612745/global/L/logo.svg",
+            "Indiana Pacers": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg",
+            "LA Clippers": "https://cdn.nba.com/logos/nba/1610612746/global/L/logo.svg",
+            "Los Angeles Lakers": "https://cdn.nba.com/logos/nba/1610612747/global/L/logo.svg",
+            "Memphis Grizzlies": "https://cdn.nba.com/logos/nba/1610612763/global/L/logo.svg",
+            "Miami Heat": "https://cdn.nba.com/logos/nba/1610612748/global/L/logo.svg",
+            "Milwaukee Bucks": "https://cdn.nba.com/logos/nba/1610612749/global/L/logo.svg",
+            "Minnesota Timberwolves": "https://cdn.nba.com/logos/nba/1610612750/global/L/logo.svg",
+            "New Orleans Pelicans": "https://cdn.nba.com/logos/nba/1610612740/global/L/logo.svg",
+            "New York Knicks": "https://cdn.nba.com/logos/nba/1610612752/global/L/logo.svg",
+            "Oklahoma City Thunder": "https://cdn.nba.com/logos/nba/1610612760/global/L/logo.svg",
+            "Orlando Magic": "https://cdn.nba.com/logos/nba/1610612753/global/L/logo.svg",
+            "Philadelphia 76ers": "https://cdn.nba.com/logos/nba/1610612755/global/L/logo.svg",
+            "Phoenix Suns": "https://cdn.nba.com/logos/nba/1610612756/global/L/logo.svg",
+            "Portland Trail Blazers": "https://cdn.nba.com/logos/nba/1610612757/global/L/logo.svg",
+            "Sacramento Kings": "https://cdn.nba.com/logos/nba/1610612758/global/L/logo.svg",
+            "San Antonio Spurs": "https://cdn.nba.com/logos/nba/1610612759/global/L/logo.svg",
+            "Toronto Raptors": "https://cdn.nba.com/logos/nba/1610612761/global/L/logo.svg",
+            "Utah Jazz": "https://cdn.nba.com/logos/nba/1610612762/global/L/logo.svg",
+            "Washington Wizards": "https://cdn.nba.com/logos/nba/1610612764/global/L/logo.svg"
         };
 
-        // ===========================================
-        // ESTADO GLOBAL
-        // ===========================================
-        let currentPredictions = [];
-        let currentView = 'predictions';
+        // ==========================================
+        // THEME MANAGEMENT
+        // ==========================================
+        const themeToggle = document.getElementById('themeToggle');
 
-        // ===========================================
-        // NAVEGACIÓN
-        //===========================================
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const viewId = btn.id.replace('btn-', '');
-                switchView(viewId);
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved) {
+                setTheme(saved);
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                setTheme('dark');
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        initTheme();
+
+        // ==========================================
+        // NAVIGATION
+        // ==========================================
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.section).classList.add('active');
             });
         });
 
-        function switchView(viewId) {
-            // Actualizar botones
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${viewId}`).classList.add('active');
+        // ==========================================
+        // HISTORY FILTERS
+        // ==========================================
+        let allHistory = [];
 
-            // Actualizar vistas
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderHistory(btn.dataset.filter);
+            });
+        });
 
-            const viewMap = {
-                'predictions': 'daily-predictions-view',
-                'history': 'history-view'
-            };
+        // ==========================================
+        // DATA LOADING
+        // ==========================================
+        let currentPredictions = [];
 
-            document.getElementById(viewMap[viewId]).classList.add('active');
-            currentView = viewId;
-
-            // Cargar datos específicos de la vista
-            if (viewId === 'history') loadHistoryData();
-        }
-
-        // ===========================================
-        // CARGAR PREDICCIONES
-        // ===========================================
         async function loadPredictions() {
             try {
-                const response = await fetch('/pronosticos-hoy?include_ai=false');
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
-
+                const response = await fetch('/predict-today');
                 const data = await response.json();
-                currentPredictions = data.predictions;
+                currentPredictions = data.predictions || [];
 
-                // Update model accuracy display
-                const accuracyEl = document.getElementById('model-accuracy-display');
-                if (accuracyEl && data.model_accuracy) {
-                    accuracyEl.textContent = `Modelo XGBoost: ${data.model_accuracy || 'N/A'} Accuracy`;
-                }
-
-                if (currentPredictions.length === 0 && data.status && data.status.startsWith('❌')) {
-                    document.getElementById('predictions-table-body').innerHTML =
-                        `<tr><td colspan="6" class="text-center text-red-400 py-8 font-bold">${data.status}</td></tr>`;
-                    updateFilteredCount();
-                    return;
-                }
-
-                renderPredictionsTable(currentPredictions);
+                document.getElementById('games-today').textContent = currentPredictions.length;
+                renderPredictions(currentPredictions);
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('predictions-table-body').innerHTML =
-                    `<tr><td colspan="6" class="text-center text-red-400 py-8">Error cargando predicciones: ${error.message}</td></tr>`;
-            }
-        }
-
-        // Helper: Convert American odds to Decimal
-        function americanToDecimal(americanOdds) {
-            if (!americanOdds) return null;
-            if (americanOdds >= 100) {
-                return (americanOdds / 100) + 1;
-            } else {
-                return (100 / Math.abs(americanOdds)) + 1;
-            }
-        }
-
-        function renderPredictionsTable(predictions) {
-            const tbody = document.getElementById('predictions-table-body');
-            tbody.innerHTML = '';
-
-            predictions.forEach((pred, index) => {
-                const row = document.createElement('tr');
-                row.className = 'prediction-row';
-                row.dataset.ev = pred.ev_value || 0;
-                row.dataset.risk = pred.warning_level;
-
-                const winnerOdds = pred.winner === pred.home_team ? pred.market_odds_home : pred.market_odds_away;
-                const decimalOdds = americanToDecimal(winnerOdds);
-                const probColor = pred.win_probability > 60 ? 'text-green-400' : (pred.win_probability > 55 ? 'text-blue-400' : 'text-slate-300');
-
-                row.innerHTML = `
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <img src="${NBA_LOGOS[pred.home_team]}" class="w-6 h-6" onerror="this.style.display='none'">
-                            <span class="text-sm font-medium">${pred.home_team}</span>
-                            <span class="text-slate-500 text-xs px-2">vs</span>
-                            <img src="${NBA_LOGOS[pred.away_team]}" class="w-6 h-6" onerror="this.style.display='none'">
-                            <span class="text-sm font-medium">${pred.away_team}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <img src="${NBA_LOGOS[pred.winner]}" class="w-5 h-5" onerror="this.style.display='none'">
-                            <span class="font-bold text-sm">${pred.winner}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="flex flex-col">
-                            <span class="text-xl font-bold ${probColor}">${pred.win_probability}%</span>
-                             ${pred.game_status && pred.game_status !== 'Scheduled'
-                        ? `<span class="text-[10px] font-mono text-amber-400 bg-amber-400/10 px-1 rounded border border-amber-400/20 w-fit mt-1">${pred.home_score || 0} - ${pred.away_score || 0}</span>`
-                        : ''}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="text-sm ${pred.under_over === 'OVER' ? 'text-blue-400' : 'text-purple-400'}">${pred.under_over === 'OVER' ? 'ALTA' : (pred.under_over === 'UNDER' ? 'BAJA' : 'N/A')}</span>
-                        <span class="text-xs text-slate-500 ml-1">${pred.ou_line || ''}</span>
-                    </td>
-                    <td>
-                        <span class="font-mono text-sm text-green-400 font-bold">${decimalOdds ? decimalOdds.toFixed(2) : 'N/A'}</span>
-                    </td>
-                    <td>
-                        <button class="btn-analyze text-xs" onclick="showAnalysis(${index})">
-                            Más Datos
-                        </button>
-                    </td>
-                `;
-
-                tbody.appendChild(row);
-            });
-
-            updateFilteredCount();
-        }
-
-
-        function showAnalysis(index) {
-            const pred = currentPredictions[index];
-            const modal = document.createElement('div');
-            modal.className = 'analysis-modal';
-            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-            modal.innerHTML = `
-                 <div class="modal-content glass-panel p-8 rounded-2xl">
-                    <h3 class="text-2xl font-bold mb-4">Análisis Inteligente</h3>
-                    <div class="text-lg mb-6">${pred.ai_analysis || 'Análisis no disponible'}</div>
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Prob. Inteligencia Artificial</div>
-                            <div class="text-2xl font-bold">${pred.win_probability}%</div>
-                        </div>
-                        <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Prob. Casas de Apuesta</div>
-                            <div class="text-2xl font-bold">${pred.implied_prob_market}%</div>
-                        </div>
-                        <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Diferencia de Opinión</div>
-                            <div class="text-2xl font-bold ${pred.discrepancy > 15 ? 'text-red-400' : ''}">${pred.discrepancy}%</div>
-                        </div>
-                        <div class="glass-panel p-4 rounded-lg">
-                            <div class="text-sm text-slate-400">Apuesta Recomendada (%)</div>
-                            <div class="text-2xl font-bold text-purple-400">${pred.kelly_stake_pct}%</div>
-                        </div>
+                console.error('Error loading predictions:', error);
+                document.getElementById('predictionsGrid').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <p>Error cargando predicciones</p>
                     </div>
-                    <button onclick="this.parentElement.parentElement.remove()" 
-                            class="w-full py-3 bg-white/10 rounded-lg hover:bg-white/20">
-                        Cerrar
-                    </button>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
+                `;
+            }
         }
 
-        // ===========================================
-        // FILTROS
-        // ===========================================
-        document.getElementById('filter-ev-only').addEventListener('change', applyFilters);
-        // Only add listener if element exists
-        const hideRiskEl = document.getElementById('filter-hide-high-risk');
-        if (hideRiskEl) hideRiskEl.addEventListener('change', applyFilters);
-
-        function applyFilters() {
-            const rows = document.querySelectorAll('.prediction-row');
-            const evOnly = document.getElementById('filter-ev-only').checked;
-            const hideRiskEl = document.getElementById('filter-hide-high-risk');
-            const hideRisk = hideRiskEl ? hideRiskEl.checked : false;
-
-            rows.forEach(row => {
-                const ev = parseFloat(row.dataset.ev);
-                const risk = row.dataset.risk;
-
-                let show = true;
-                if (evOnly && ev <= 0) show = false;
-                if (hideRisk && risk === 'HIGH') show = false;
-
-                row.style.display = show ? '' : 'none';
-            });
-
-            updateFilteredCount();
-        }
-
-        function updateFilteredCount() {
-            const visible = document.querySelectorAll('.prediction-row:not([style*="display: none"])').length;
-            document.getElementById('filtered-count').textContent = visible;
-        }
-
-
-        // ===========================================
-        // HISTORIAL COMPLETO
-        // ===========================================
-        let fullHistoryData = [];
-        async function loadHistoryData() {
-            // Trigger automatic update in background
-            try {
-                fetch('/update-history', { method: 'POST' })
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res.updated_count > 0) {
-                            console.log(`Updated ${res.updated_count} predictions`);
-                            // Reload recent data to show new results if any updated
-                            loadHistoryData();
-                        }
-                    })
-                    .catch(e => console.error("Auto-update failed", e));
-            } catch (e) { console.error("Update trigger error", e); }
-
+        async function loadHistory() {
             try {
                 const response = await fetch('/history/full?days=30');
                 const data = await response.json();
-                fullHistoryData = data.history;
-                renderGroupedHistory(fullHistoryData);
+                allHistory = data.history || [];
+
+                // Calculate stats
+                const wins = allHistory.filter(h => h.result === 'WIN').length;
+                const losses = allHistory.filter(h => h.result === 'LOSS').length;
+                const total = wins + losses;
+                const accuracy = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+                document.getElementById('accuracy-stat').textContent = accuracy + '%';
+                document.getElementById('total-predictions').textContent = allHistory.length;
+                document.getElementById('wins-stat').textContent = wins;
+
+                renderHistory('all');
             } catch (error) {
                 console.error('Error loading history:', error);
             }
         }
 
-        function filterHistory() {
-            const searchTerm = document.getElementById('hist-search').value.toLowerCase();
-            const resultFilter = document.getElementById('hist-filter-result').value;
-            const filtered = fullHistoryData.filter(item => {
-                const matchesSearch = item.match.toLowerCase().includes(searchTerm) ||
-                    item.predicted_winner.toLowerCase().includes(searchTerm);
-                const matchesResult = resultFilter === 'ALL' || item.result === resultFilter;
-                return matchesSearch && matchesResult;
-            });
-            renderGroupedHistory(filtered);
-        }
+        // ==========================================
+        // RENDER FUNCTIONS
+        // ==========================================
+        function renderPredictions(predictions) {
+            const grid = document.getElementById('predictionsGrid');
 
-        function renderGroupedHistory(historyItems) {
-            const container = document.getElementById('history-grouped-container');
-            if (!container) return;
-            if (historyItems.length === 0) {
-                container.innerHTML = `<div class="text-center py-12 text-slate-400 bg-white/5 rounded-2xl border border-dashed border-white/10">No se encontraron resultados.</div>`;
+            if (!predictions.length) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🏀</div>
+                        <p>No hay partidos programados para hoy</p>
+                    </div>
+                `;
                 return;
             }
-            const groups = historyItems.reduce((acc, item) => {
-                if (!acc[item.date]) acc[item.date] = [];
-                acc[item.date].push(item);
-                return acc;
-            }, {});
-            const sortedDates = Object.keys(groups).sort().reverse();
-            container.innerHTML = sortedDates.map(date => {
-                const items = groups[date];
-                const dayProfit = items.reduce((sum, item) => sum + item.profit, 0);
-                const dayWins = items.filter(i => i.result === 'WIN').length;
-                const totalPlayed = items.filter(i => i.result !== 'PENDING').length;
-                const winRate = totalPlayed > 0 ? Math.round((dayWins / totalPlayed) * 100) : 0;
-                return `
-                    <div class="history-day-group">
-                        <div class="flex items-center justify-between mb-3 px-2 mt-6">
-                            <h3 class="text-lg font-bold text-slate-200">${date}</h3>
-                            <div class="flex gap-4 text-xs font-mono">
-                                <span class="text-slate-400">Efectividad: <span class="text-white">${winRate}%</span></span>
-                                <span class="text-slate-400">Balance: <span class="${dayProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${dayProfit >= 0 ? '+' : ''}${dayProfit.toFixed(2)}</span></span>
-                            </div>
+
+            grid.innerHTML = predictions.map((pred, idx) => `
+                <div class="prediction-card" onclick="showDetails(${idx})">
+                    <div class="match-header">
+                        <div class="team">
+                            <img class="team-logo" src="${NBA_LOGOS[pred.home_team] || ''}" alt="${pred.home_team}" onerror="this.style.display='none'">
+                            <span class="team-name">${pred.home_team}</span>
                         </div>
-                        <div class="predictions-table-container overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                            <table class="predictions-table w-full">
-                                <thead class="bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left">Partido</th>
-                                        <th class="px-4 py-2 text-left">Selección</th>
-                                        <th class="px-4 py-2 text-center">Prob</th>
-                                        <th class="px-4 py-2 text-center">Resultado</th>
-                                        <th class="px-4 py-2 text-right">Ganancia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${items.map(item => `
-                                        <tr class="border-t border-white/5 hover:bg-white/5 transition-colors">
-                                            <td class="px-4 py-3 font-medium text-slate-300 text-sm">${item.match}</td>
-                                            <td class="px-4 py-3 font-bold text-white text-sm">${item.predicted_winner}</td>
-                                            <td class="px-4 py-3 text-center text-sm"><span class="${item.probability > 60 ? 'text-green-400' : 'text-blue-400'}">${item.probability}%</span></td>
-                                            <td class="px-4 py-3 text-center text-xs">
-                                                <span class="px-2 py-0.5 rounded border ${item.result === 'WIN' ? 'bg-green-500/10 text-green-400 border-green-500/20' : (item.result === 'LOSS' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20')}">${item.result === 'WIN' ? 'GANADO' : (item.result === 'LOSS' ? 'PERDIDO' : 'PENDIENTE')}</span>
-                                            </td>
-                                            <td class="px-4 py-3 text-right font-mono font-bold text-sm ${item.profit > 0 ? 'text-green-400' : (item.profit < 0 ? 'text-red-400' : 'text-slate-500')}">
-                                                ${item.profit > 0 ? '+' : ''}${item.profit.toFixed(2)}
-                                            </td>
-                                        </tr>`).join('')}
-                                </tbody>
-                            </table>
+                        <span class="vs-badge">VS</span>
+                        <div class="team">
+                            <img class="team-logo" src="${NBA_LOGOS[pred.away_team] || ''}" alt="${pred.away_team}" onerror="this.style.display='none'">
+                            <span class="team-name">${pred.away_team}</span>
                         </div>
-                    </div>`;
-            }).join('');
+                    </div>
+                    <div class="prediction-result">
+                        <div class="predicted-winner">${pred.winner}</div>
+                        <div class="probability">${pred.win_probability}%</div>
+                        <div class="probability-label">Probabilidad de victoria</div>
+                    </div>
+                    <div class="prediction-meta">
+                        ${pred.ev_value > 0 ? `<span class="meta-tag positive">EV +${pred.ev_value?.toFixed(1)}%</span>` : ''}
+                        ${pred.kelly_stake_pct > 0 ? `<span class="meta-tag">Kelly ${pred.kelly_stake_pct?.toFixed(1)}%</span>` : ''}
+                        ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">⚠️ Alto Riesgo</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
         }
 
+        function renderHistory(filter) {
+            const tbody = document.getElementById('historyTableBody');
+            let filtered = allHistory;
 
-        // ===========================================
-        // MODAL DE DETALLES DEL PARTIDO
-        // ===========================================
-        async function showAnalysis(index) {
+            if (filter !== 'all') {
+                filtered = allHistory.filter(h => h.result?.toLowerCase() === filter);
+            }
+
+            if (!filtered.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-icon">📭</div>
+                            <p>No hay registros</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(h => `
+                <tr>
+                    <td>${h.date}</td>
+                    <td>${h.match_id}</td>
+                    <td><strong>${h.winner}</strong></td>
+                    <td>${h.win_probability}%</td>
+                    <td>
+                        <span class="result-badge ${h.result?.toLowerCase() || 'pending'}">
+                            ${h.result === 'WIN' ? '✓ Ganada' : h.result === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ==========================================
+        // MODAL
+        // ==========================================
+        function showDetails(index) {
             const pred = currentPredictions[index];
             if (!pred) return;
 
-            const modal = document.getElementById('match-details-modal');
-            const content = document.getElementById('modal-content');
-            const title = document.getElementById('modal-title');
-
-            title.textContent = `${pred.home_team} vs ${pred.away_team}`;
-            modal.classList.remove('hidden');
-
-            // Show loading
-            content.innerHTML = `
-                <div class="flex justify-center py-12">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div style="margin-bottom: 16px;">
+                    <strong style="color: var(--accent);">${pred.winner}</strong> gana con <strong>${pred.win_probability}%</strong> de probabilidad
                 </div>
+                <p class="analysis-text">${pred.ai_analysis || 'Análisis no disponible'}</p>
             `;
-
-            try {
-                const response = await fetch(`/match-details/${encodeURIComponent(pred.home_team)}/${encodeURIComponent(pred.away_team)}`);
-                const data = await response.json();
-
-                const homeLogo = NBA_LOGOS[pred.home_team] || '';
-                const awayLogo = NBA_LOGOS[pred.away_team] || '';
-
-                content.innerHTML = `
-                    <!-- Teams Header -->
-                    <div class="flex items-center justify-between gap-4 p-4 bg-white/5 rounded-xl mb-6">
-                        <div class="flex items-center gap-3">
-                            <img src="${homeLogo}" class="w-12 h-12" alt="${pred.home_team}">
-                            <span class="font-bold text-white">${pred.home_team}</span>
-                        </div>
-                        <span class="text-2xl font-bold text-blue-400">VS</span>
-                        <div class="flex items-center gap-3">
-                            <span class="font-bold text-white">${pred.away_team}</span>
-                            <img src="${awayLogo}" class="w-12 h-12" alt="${pred.away_team}">
-                        </div>
-                    </div>
-
-                    <!-- Prediction -->
-                    <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-4 border border-blue-500/30 mb-6">
-                        <div class="text-xs uppercase text-blue-400 mb-1">Motor Predice</div>
-                        <div class="text-2xl font-bold text-white">${pred.winner}</div>
-                        <div class="text-sm text-slate-400">Probabilidad: <span class="text-green-400 font-bold">${pred.win_probability}%</span></div>
-                    </div>
-
-                    <!-- AI Analysis -->
-                    <div class="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="text-blue-400">🤖</span>
-                            <span class="font-bold text-white">Análisis Inteligente</span>
-                        </div>
-                        <p class="text-sm text-slate-300 leading-relaxed">${data.ai_analysis || 'Análisis no disponible'}</p>
-                    </div>
-
-                    <!-- Prediction Accuracy -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                            <div class="text-xs uppercase text-slate-500 mb-2">Precisión: ${pred.home_team}</div>
-                            <div class="text-2xl font-bold ${data.home_accuracy.accuracy >= 50 ? 'text-green-400' : 'text-red-400'}">${data.home_accuracy.accuracy}%</div>
-                            <div class="text-xs text-slate-500">${data.home_accuracy.correct}/${data.home_accuracy.total_predictions} aciertos</div>
-                        </div>
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                            <div class="text-xs uppercase text-slate-500 mb-2">Precisión: ${pred.away_team}</div>
-                            <div class="text-2xl font-bold ${data.away_accuracy.accuracy >= 50 ? 'text-green-400' : 'text-red-400'}">${data.away_accuracy.accuracy}%</div>
-                            <div class="text-xs text-slate-500">${data.away_accuracy.correct}/${data.away_accuracy.total_predictions} aciertos</div>
-                        </div>
-                    </div>
-
-                    <!-- Value Stats -->
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">Valor</div>
-                            <div class="font-bold ${pred.ev_value > 0 ? 'text-green-400' : 'text-red-400'}">${pred.ev_value > 0 ? '+' : ''}${pred.ev_value?.toFixed(1) || 'N/A'}%</div>
-                        </div>
-                        <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">Sugerencia</div>
-                            <div class="font-bold text-blue-400">${pred.kelly_stake_pct?.toFixed(1) || 'N/A'}%</div>
-                        </div>
-                        <div class="bg-white/5 rounded-lg p-3 text-center">
-                            <div class="text-xs text-slate-500">Nivel Riesgo</div>
-                            <div class="font-bold ${pred.warning_level === 'HIGH' ? 'text-red-400' : (pred.warning_level === 'MEDIUM' ? 'text-amber-400' : 'text-green-400')}">${pred.warning_level === 'HIGH' ? 'ALTO' : (pred.warning_level === 'MEDIUM' ? 'MEDIO' : 'BAJO')}</div>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Error fetching match details:', error);
-                content.innerHTML = `
-                    <div class="text-center py-12 text-red-400">
-                        Error cargando detalles del partido
-                    </div>
-                `;
-            }
+            document.getElementById('modal').classList.add('active');
         }
 
-        function closeMatchModal() {
-            document.getElementById('match-details-modal').classList.add('hidden');
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
         }
 
-        // ===========================================
-        // INICIALIZACIÓN
-        // ===========================================
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // ==========================================
+        // INIT
+        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             loadPredictions();
+            loadHistory();
         });
     </script>
 </body>
