@@ -1615,51 +1615,39 @@ class FootballMatchPrediction(BaseModel):
 @app.get("/predict-football", response_model=list[FootballMatchPrediction])
 async def predict_football(league: Optional[str] = None):
     """
-    Obtiene predicciones de fútbol para el día actual.
+    Obtiene predicciones de fútbol usando Poisson distribution.
     """
-    # 1. Obtener fixtures
-    fixtures = football_api.football_api.get_fixtures()
+    # Get all predictions from football API (uses Poisson predictor)
+    predictions = football_api.football_api.get_all_predictions(league)
     
-    # Mock data for MVP if no fixtures found (or scraper failed)
-    if not fixtures:
-        # Mocking a few games for UI testing
-        mock_games = [
-            {"home": "Manchester City", "away": "Liverpool", "league": "ENG-Premier League"},
-            {"home": "Real Madrid", "away": "Barcelona", "league": "ESP-La Liga"},
-            {"home": "Juventus", "away": "AC Milan", "league": "ITA-Serie A"}
-        ]
+    result = []
+    for pred in predictions:
+        f_pred = FootballMatchPrediction(
+            date=datetime.now().strftime("%Y-%m-%d"),
+            league=pred['league'],
+            match_id=f"{pred['home_team']} vs {pred['away_team']}",
+            home_team=pred['home_team'],
+            away_team=pred['away_team'],
+            prediction=pred['prediction'],
+            prob_home=pred['probs']['home'],
+            prob_draw=pred['probs']['draw'],
+            prob_away=pred['probs']['away'],
+            odd_home=None,
+            odd_draw=None,
+            odd_away=None,
+            status="PENDING"
+        )
         
-        predictions = []
-        for game in mock_games:
-            if league and league not in game['league']:
-                continue
-                
-            pred = football_api.football_api.predict_match(game['home'], game['away'], game['league'])
-            
-            # Create Pydantic model
-            f_pred = FootballMatchPrediction(
-                date=datetime.now().strftime("%Y-%m-%d"),
-                league=game['league'],
-                match_id=f"{game['home']} vs {game['away']}",
-                home_team=game['home'],
-                away_team=game['away'],
-                prediction=pred['prediction'],
-                prob_home=pred['probs']['home'],
-                prob_draw=pred['probs']['draw'],
-                prob_away=pred['probs']['away'],
-                odd_home=2.1,
-                odd_draw=3.4,
-                odd_away=3.2,
-                status="PENDING"
-            )
-            
-            # Save to DB
+        # Save to DB
+        try:
             history_db.save_football_prediction(f_pred.dict())
-            predictions.append(f_pred)
+        except Exception as e:
+            print(f"Error saving football prediction: {e}")
             
-        return predictions
+        result.append(f_pred)
+        
+    return result
 
-    return []
 
 @app.get("/history/football")
 async def get_football_history_endpoint(limit: int = 50):
