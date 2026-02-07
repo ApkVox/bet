@@ -339,24 +339,7 @@
 
         <!-- MÓDULO 2: Predicciones Diarias -->
         <section id="daily-predictions-view" class="view-section active">
-            <!-- Model Accuracy Banner -->
-            <div class="glass-panel p-4 mb-4 rounded-xl border border-green-500/30 bg-green-500/10">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🤖</span>
-                        <div>
-                            <div class="font-bold text-green-400" id="model-accuracy-display">Modelo Inteligente: 68.9%
-                                Efectividad</div>
-                            <div class="text-xs text-slate-400">Predocciones basadas en estadísticas reales de los
-                                equipos</div>
-                        </div>
-                    </div>
-                    <div id="data-source-badge"
-                        class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                        ⚠️ CUOTAS ESTIMADAS
-                    </div>
-                </div>
-            </div>
+
 
             <!-- Filtros Simplificados -->
             <div class="glass-panel p-4 mb-6 rounded-xl">
@@ -399,14 +382,7 @@
         <!-- MÓDULO 7: Historial Completo -->
         <section id="history-view" class="view-section">
             <div class="flex gap-4 mb-6">
-                <button onclick="switchHistoryTab('preds')" id="tab-hist-preds"
-                    class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 active-tab font-bold">
-                    Predicciones Pasadas
-                </button>
-                <button onclick="switchHistoryTab('tickets')" id="tab-hist-tickets"
-                    class="px-4 py-2 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10">
-                    Tickets Generados
-                </button>
+                <h2 class="text-xl font-bold text-white">📜 Historial de Predicciones</h2>
             </div>
 
             <!-- Filtros de Historial -->
@@ -440,10 +416,7 @@
                 </div>
             </div>
 
-            <!-- Sub-vista: Tickets -->
-            <div id="hist-tickets-content" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Cards de Tickets -->
-            </div>
+
         </section>
 
     </main>
