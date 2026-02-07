@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+# [FROZEN] DO NOT MODIFY: Core ML Logic verified in Phase 2
 import sqlite3
 import sys
 import time
@@ -69,7 +70,11 @@ def fetch_data(url, date_pointer, start_year, season_key):
 def backfill_season(con, url, season_key, value, existing_dates, today):
     start_date = datetime.strptime(value["start_date"], "%Y-%m-%d").date()
     end_date = datetime.strptime(value["end_date"], "%Y-%m-%d").date()
-    fetch_end = min(today - timedelta(days=1), end_date)
+    
+    # SAFETY: Only fetch up to yesterday to prevent same-day data leakage
+    yesterday = today - timedelta(days=1)
+    fetch_end = min(yesterday, end_date)
+    
     missing_dates = [
         date_pointer
         for date_pointer in iter_dates(start_date, fetch_end)
@@ -77,11 +82,16 @@ def backfill_season(con, url, season_key, value, existing_dates, today):
     ]
 
     if not missing_dates:
-        print(f"No missing dates for season {season_key}.")
+        print(f"No missing dates for season {season_key} (Safety Limit: {yesterday}).")
         return
 
     print(f"Backfilling {len(missing_dates)} dates for season {season_key}.")
     for date_pointer in missing_dates:
+        # Extra safety check
+        if date_pointer >= today:
+            print(f"[SKIP] Skipping {date_pointer} to prevent leakage (>= {today})")
+            continue
+            
         print("Getting data:", date_pointer)
         df = fetch_data(url, date_pointer, value["start_year"], season_key)
         if df.empty:
@@ -95,8 +105,6 @@ def backfill_season(con, url, season_key, value, existing_dates, today):
 
         time.sleep(random.randint(MIN_DELAY_SECONDS, MAX_DELAY_SECONDS))
 
-        # TODO: Add tests
-
 
 def main(config=None, db_path=DB_PATH, today=None, backfill=False, season=None):
     if config is None:
@@ -104,6 +112,9 @@ def main(config=None, db_path=DB_PATH, today=None, backfill=False, season=None):
     url = config["data_url"]
     if today is None:
         today = datetime.today().date()
+        
+    print(f"Update script running. Reference date (Today): {today}")
+    print(f"Safety Policy: Fetching data ONLY up to {today - timedelta(days=1)}")
 
     with sqlite3.connect(db_path) as con:
         existing_dates = set(get_table_dates(con))
@@ -116,7 +127,7 @@ def main(config=None, db_path=DB_PATH, today=None, backfill=False, season=None):
                 if not season_items:
                     print("Season not found in config:", season)
                     return
-
+            
             for season_key, value in season_items:
                 backfill_season(con, url, season_key, value, existing_dates, today)
             return
@@ -126,16 +137,21 @@ def main(config=None, db_path=DB_PATH, today=None, backfill=False, season=None):
             print("No current season found for today:", today)
             return
 
-        fetch_end = min(today, end_date)
+        # SAFETY: Only fetch up to yesterday to prevent same-day data leakage
+        yesterday = today - timedelta(days=1)
+        fetch_end = min(yesterday, end_date)
+        
         season_dates = [
             date_value for date_value in existing_dates
             if start_date <= date_value <= fetch_end
         ]
         latest_date = max(season_dates) if season_dates else None
+        
+        # If no data exists, start from season start. Otherwise start day after latest.
         fetch_start = start_date if latest_date is None else latest_date + timedelta(days=1)
 
         if fetch_start > fetch_end:
-            print("No new dates to fetch. Latest date:", latest_date)
+            print(f"No new dates to fetch. Latest available: {latest_date} (fetch_end={fetch_end})")
             return
 
         for date_pointer in iter_dates(fetch_start, fetch_end):

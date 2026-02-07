@@ -1,4 +1,5 @@
 import argparse
+# [FROZEN] DO NOT MODIFY: Core ML Logic verified in Phase 2
 import sqlite3
 from pathlib import Path
 

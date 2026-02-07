@@ -17,6 +17,7 @@ import xgboost as xgb
 import joblib
 
 from src.Utils.Dictionaries import team_index_current
+from src.Services.shadow_bettor import get_shadow_bettor
 
 
 # ===========================================
@@ -108,30 +109,72 @@ def get_model_accuracy() -> str:
 
 
 # ===========================================
-# FEATURE EXTRACTION
+# FEATURE EXTRACTION (POINT-IN-TIME SAFE)
 # ===========================================
-# Simple cache for team data
+# Cache for team data with date tracking
 _team_data_cache = {
     "df": None,
-    "date": None
+    "data_date": None,  # Date of the snapshot used
+    "target_date": None  # Target date it was fetched for
 }
 
-def _get_latest_team_data(team_db_path: Path = TEAM_DB_PATH) -> Optional[pd.DataFrame]:
+
+class DataLeakageError(Exception):
+    """Raised when data selection would cause temporal leakage."""
+    pass
+
+
+def _get_available_table_dates(team_db_path: Path = TEAM_DB_PATH) -> list:
+    """Get all available snapshot dates from TeamData.sqlite."""
+    try:
+        with sqlite3.connect(team_db_path) as con:
+            cursor = con.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            dates = []
+            for (name,) in cursor.fetchall():
+                try:
+                    table_date = pd.to_datetime(name).date()
+                    dates.append(table_date)
+                except ValueError:
+                    continue
+            return sorted(dates)
+    except Exception as e:
+        print(f"[ERROR] Could not list table dates: {e}")
+        return []
+
+
+def _get_team_data_for_date(
+    target_date: date,
+    team_db_path: Path = TEAM_DB_PATH
+) -> tuple[Optional[pd.DataFrame], Optional[date]]:
     """
-    Get the most recent team statistics table from TeamData.sqlite.
-    Tables are named by date (e.g. '2026-01-26').
-    Cached to avoid repeated DB reads per request.
+    POINT-IN-TIME SAFE: Get team statistics snapshot from BEFORE the target date.
+    
+    This prevents data leakage by ensuring we only use information that
+    would have been available before the game occurred.
+    
+    Args:
+        target_date: The date of the game being predicted (uses data < this date)
+        team_db_path: Path to TeamData.sqlite
+    
+    Returns:
+        Tuple of (DataFrame with team stats, date of the snapshot used)
+        Returns (None, None) if no valid snapshot exists
+    
+    Raises:
+        DataLeakageError: If attempting to use same-day or future data
     """
     global _team_data_cache
     
-    # Return cache if valid and recent (optional check, for now simple exists check)
-    if _team_data_cache["df"] is not None:
-        return _team_data_cache["df"]
-
+    # Check cache - reuse if same target_date
+    if (_team_data_cache["df"] is not None and 
+        _team_data_cache["target_date"] == target_date):
+        print(f"[CACHE HIT] Reusing data from {_team_data_cache['data_date']} for target {target_date}")
+        return _team_data_cache["df"], _team_data_cache["data_date"]
+    
     try:
-        print(f"[DEBUG] Connecting to DB: {team_db_path}")
+        print(f"[POINT-IN-TIME] Fetching data for game date: {target_date}")
+        
         with sqlite3.connect(team_db_path) as con:
-            # Get all table names
             cursor = con.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = []
             for (name,) in cursor.fetchall():
@@ -142,22 +185,73 @@ def _get_latest_team_data(team_db_path: Path = TEAM_DB_PATH) -> Optional[pd.Data
                     continue
             
             if not tables:
-                print("[WARN] No team data tables found in TeamData.sqlite")
-                return None
+                print("[ERROR] No team data tables found in TeamData.sqlite")
+                return None, None
             
-            # Get the most recent table
-            tables.sort(key=lambda x: x[1], reverse=True)
-            latest_table = tables[0][0]
+            # CRITICAL: Filter to only tables with date STRICTLY BEFORE target_date
+            valid_tables = [(name, d) for name, d in tables if d < target_date]
             
-            df = pd.read_sql_query(f'SELECT * FROM "{latest_table}"', con)
-            print(f"[DATA] Using team data from: {latest_table} ({len(df)} teams)")
+            if not valid_tables:
+                available_dates = sorted([d for _, d in tables])
+                print(f"[ERROR] No valid snapshots before {target_date}.")
+                print(f"[ERROR] Available dates: {available_dates[:5]}...{available_dates[-5:]}")
+                raise DataLeakageError(
+                    f"No team data available before {target_date}. "
+                    f"Earliest available: {min(available_dates) if available_dates else 'N/A'}"
+                )
             
+            # Select the most recent valid table (closest to but before target_date)
+            valid_tables.sort(key=lambda x: x[1], reverse=True)
+            selected_table, selected_date = valid_tables[0]
+            
+            # Calculate data freshness
+            data_age_days = (target_date - selected_date).days
+            
+            df = pd.read_sql_query(f'SELECT * FROM "{selected_table}"', con)
+            
+            # Log with clear visibility
+            print(f"[POINT-IN-TIME] ✓ Using snapshot: {selected_date}")
+            print(f"[POINT-IN-TIME]   Game date: {target_date}")
+            print(f"[POINT-IN-TIME]   Data age: {data_age_days} day(s)")
+            print(f"[POINT-IN-TIME]   Teams loaded: {len(df)}")
+            
+            # Warn if data is stale (more than 3 days old)
+            if data_age_days > 3:
+                print(f"[WARNING] Data is {data_age_days} days old! Consider updating TeamData.sqlite")
+            
+            # Update cache
             _team_data_cache["df"] = df
-            return df
+            _team_data_cache["data_date"] = selected_date
+            _team_data_cache["target_date"] = target_date
             
+            return df, selected_date
+            
+    except DataLeakageError:
+        raise  # Re-raise leakage errors
     except Exception as e:
         print(f"[ERROR] Error loading team data: {e}")
-        return None
+        return None, None
+
+
+def _get_latest_team_data(team_db_path: Path = TEAM_DB_PATH) -> Optional[pd.DataFrame]:
+    """
+    DEPRECATED: Use _get_team_data_for_date() instead for point-in-time safety.
+    
+    This function is kept for backwards compatibility but now defaults to
+    using yesterday's date to prevent same-day leakage.
+    """
+    # Default to yesterday to prevent same-day leakage
+    yesterday = date.today() - timedelta(days=1)
+    print(f"[DEPRECATED] _get_latest_team_data called without date. Using {yesterday} as cutoff.")
+    df, _ = _get_team_data_for_date(yesterday, team_db_path)
+    return df
+
+
+def clear_team_data_cache():
+    """Clear the team data cache. Useful for testing or forcing a refresh."""
+    global _team_data_cache
+    _team_data_cache = {"df": None, "data_date": None, "target_date": None}
+    print("[CACHE] Team data cache cleared")
 
 
 def _build_game_features(team_df: pd.DataFrame, home_team: str, away_team: str) -> Optional[np.ndarray]:
@@ -206,66 +300,66 @@ def _build_game_features(team_df: pd.DataFrame, home_team: str, away_team: str) 
 # ===========================================
 # PREDICTION FUNCTIONS
 # ===========================================
-def predict_game(home_team: str, away_team: str, ou_line: float = 220.0) -> dict:
+def predict_game(
+    home_team: str,
+    away_team: str,
+    ou_line: float = 220.0,
+    game_date: Optional[date] = None,
+    home_odds: Optional[float] = None,
+    away_odds: Optional[float] = None
+) -> dict:
     """
     Predict the outcome of a single NBA game using the trained XGBoost model.
+    Also executes ShadowBettor pipeline to log decision.
     
     Args:
         home_team: Home team full name
         away_team: Away team full name
         ou_line: Over/Under line (default 220.0)
+        game_date: Date of the game (defaults to today).
+        home_odds: Optional decimal odds for Home Win
+        away_odds: Optional decimal odds for Away Win
     
     Returns:
-        Dictionary with prediction results
+        Dictionary with prediction results and bet recommendations.
     """
     # Ensure models are loaded
     load_models()
     
-    # Get team statistics
-    team_df = _get_latest_team_data()
+    # Default to today if no game_date provided
+    if game_date is None:
+        game_date = date.today()
+    
+    # Get team data (POINT-IN-TIME SAFE)
+    try:
+        team_df, data_snapshot_date = _get_team_data_for_date(game_date)
+    except DataLeakageError as e:
+        return _mock_response(home_team, str(e))
+    
     if team_df is None:
-        return {
-            "error": "No team data available",
-            "winner": home_team,
-            "home_win_probability": 50.0,
-            "away_win_probability": 50.0,
-            "under_over": "OVER",
-            "ou_probability": 50.0,
-            "is_mock": True
-        }
+        return _mock_response(home_team, "No team data available")
     
     # Build features
     features = _build_game_features(team_df, home_team, away_team)
     if features is None:
-        return {
-            "error": f"Cannot build features for {home_team} vs {away_team}",
-            "winner": home_team,
-            "home_win_probability": 50.0,
-            "away_win_probability": 50.0,
-            "under_over": "OVER",
-            "ou_probability": 50.0,
-            "is_mock": True
-        }
+        return _mock_response(home_team, f"Cannot build features for {home_team} vs {away_team}")
     
     # ML Prediction (Moneyline)
     features_2d = features.reshape(1, -1)
     
-    # Try calibrator first, fall back to raw XGBoost if sklearn version mismatch
     try:
         if _models_cache["ml_calibrator"] is not None:
             ml_probs = _models_cache["ml_calibrator"].predict_proba(features_2d)[0]
         else:
-            raise ValueError("No calibrator")
+            ml_probs = _models_cache["ml_model"].predict(xgb.DMatrix(features_2d))[0]
     except Exception:
-        # Sklearn version mismatch - use raw XGBoost
-        dmatrix = xgb.DMatrix(features_2d)
-        ml_probs = _models_cache["ml_model"].predict(dmatrix)[0]
+        ml_probs = _models_cache["ml_model"].predict(xgb.DMatrix(features_2d))[0]
     
-    # ml_probs[0] = away win prob, ml_probs[1] = home win prob
-    away_prob = float(ml_probs[0]) * 100
-    home_prob = float(ml_probs[1]) * 100
+    away_prob_raw = float(ml_probs[0])
+    home_prob_raw = float(ml_probs[1])
+    away_prob = away_prob_raw * 100
+    home_prob = home_prob_raw * 100
     
-    # Determine winner
     if home_prob > away_prob:
         winner = home_team
         win_prob = home_prob
@@ -273,21 +367,40 @@ def predict_game(home_team: str, away_team: str, ou_line: float = 220.0) -> dict
         winner = away_team
         win_prob = away_prob
     
+    # Shadow Bettor Integration (Audit Decisions)
+    shadow = get_shadow_bettor()
+    
+    # Home Bet Evaluation
+    home_decision = None
+    if home_odds:
+        home_decision = shadow.process_game(
+            game_id=f"{game_date}_{home_team}_HOME",
+            probability=home_prob_raw,
+            odds=home_odds,
+            game_date=datetime(game_date.year, game_date.month, game_date.day) # Convert to datetime
+        )
+
+    # Away Bet Evaluation
+    away_decision = None
+    if away_odds:
+        away_decision = shadow.process_game(
+            game_id=f"{game_date}_{away_team}_AWAY",
+            probability=away_prob_raw,
+            odds=away_odds,
+            game_date=datetime(game_date.year, game_date.month, game_date.day)
+        )
+    
     # O/U Prediction
-    # Need to add OU column to features for O/U model
     features_with_ou = np.append(features, ou_line).reshape(1, -1)
     
     try:
         if _models_cache["uo_calibrator"] is not None:
             ou_probs = _models_cache["uo_calibrator"].predict_proba(features_with_ou)[0]
         else:
-            raise ValueError("No calibrator")
+            ou_probs = _models_cache["uo_model"].predict(xgb.DMatrix(features_with_ou))[0]
     except Exception:
-        # Sklearn version mismatch - use raw XGBoost
-        dmatrix_ou = xgb.DMatrix(features_with_ou)
-        ou_probs = _models_cache["uo_model"].predict(dmatrix_ou)[0]
+        ou_probs = _models_cache["uo_model"].predict(xgb.DMatrix(features_with_ou))[0]
     
-    # ou_probs[0] = under, ou_probs[1] = over
     under_prob = float(ou_probs[0]) * 100
     over_prob = float(ou_probs[1]) * 100
     
@@ -310,16 +423,44 @@ def predict_game(home_team: str, away_team: str, ou_line: float = 220.0) -> dict
         "ou_probability": round(ou_probability, 1),
         "model_accuracy": _models_cache["ml_accuracy"],
         "is_mock": False,
-        "error": None
+        "error": None,
+        "data_snapshot_date": str(data_snapshot_date) if data_snapshot_date else None,
+        "game_date": str(game_date),
+        "bet_analysis": {
+            "home": {
+                "decision": home_decision.decision if home_decision else "N/A",
+                "stake_units": home_decision.stake_units if home_decision else 0,
+                "reason": home_decision.reason if home_decision else ""
+            },
+            "away": {
+                "decision": away_decision.decision if away_decision else "N/A",
+                "stake_units": away_decision.stake_units if away_decision else 0,
+                "reason": away_decision.reason if away_decision else ""
+            }
+        }
+    }
+
+def _mock_response(home_team, error_msg):
+    return {
+        "error": error_msg,
+        "winner": home_team,
+        "home_win_probability": 50.0,
+        "away_win_probability": 50.0,
+        "under_over": "OVER",
+        "ou_probability": 50.0,
+        "is_mock": True,
+        "data_snapshot_date": None,
+        "bet_analysis": {}
     }
 
 
-def predict_games(games: list) -> list:
+def predict_games(games: list, default_game_date: Optional[date] = None) -> list:
     """
     Predict outcomes for multiple games.
     
     Args:
-        games: List of dicts with 'home_team', 'away_team', optional 'ou_line'
+        games: List of dicts with 'home_team', 'away_team', optional 'ou_line', optional 'game_date'
+        default_game_date: Default date to use if individual games don't specify one
     
     Returns:
         List of prediction dictionaries
@@ -330,12 +471,18 @@ def predict_games(games: list) -> list:
         away = game.get("away_team")
         ou_line = game.get("ou_line", 220.0)
         
+        # Support game_date from individual game or use default
+        game_date = game.get("game_date", default_game_date)
+        if isinstance(game_date, str):
+            game_date = pd.to_datetime(game_date).date()
+        
         if not home or not away:
             results.append({"error": "Missing team names"})
             continue
         
-        prediction = predict_game(home, away, ou_line if ou_line else 220.0)
+        prediction = predict_game(home, away, ou_line if ou_line else 220.0, game_date)
         results.append(prediction)
+    
     
     return results
 

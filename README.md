@@ -2,11 +2,11 @@
 
 > **Tu Analista Deportivo Inteligente:** Un sistema avanzado que fusiona Machine Learning con Inteligencia Artificial Generativa para ofrecer predicciones de la NBA con profundidad táctica y precisión estadística.
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-FF6B6B?style=for-the-badge&logo=xgboost&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-Llama_3_70B-f55036?style=for-the-badge&logo=meta&logoColor=white)
-![Status](https://img.shields.io/badge/Estado-Activo-success?style=for-the-badge)
+![Groq](https://img.shields.io/badge/Groq-Llama_3.3-f55036?style=for-the-badge&logo=meta&logoColor=white)
+![Status](https://img.shields.io/badge/Estado-Producción-success?style=for-the-badge)
 
 ---
 
@@ -14,152 +14,149 @@
 
 - [Descripción General](#-descripción-general)
 - [Características Principales](#-características-principales)
-- [Arquitectura del Sistema](#-arquitectura-del-sistema)
-- [Instalación y Configuración](#-instalación-y-configuración)
-- [Uso de la Aplicación](#-uso-de-la-aplicación)
-- [API Reference](#-api-reference)
-- [Stack Tecnológico](#-stack-tecnológico)
-- [Licencia](#-licencia)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Instalación](#-instalación)
+- [Uso](#-uso)
+- [API](#-api)
+- [Despliegue](#-despliegue)
 
 ---
 
 ## 📋 Descripción General
 
-**NBA Predictor AI** no es solo otro modelo de predicción. Es un ecosistema completo que resuelve el problema de la "caja negra" en las apuestas deportivas. Mientras que los modelos tradicionales solo te dan un número (ej. "Lakers 60%"), nuestro sistema te explica el **POR QUÉ**.
+**NBA Predictor AI** es un ecosistema completo de predicción deportiva que combina:
 
-Utilizamos un enfoque híbrido:
-1.  **Cerebro Numérico (XGBoost):** Analiza miles de puntos de datos históricos (eficiencia ofensiva, ritmo, rebotes, historial de enfrentamientos) para calcular probabilidades matemáticas puras.
-2.  **Cerebro Analítico (Llama 3.3 vía Groq):** Actúa como un experto comentarista deportivo, analizando factores cualitativos como lesiones de último minuto, narrativas de "revancha", fatiga por viajes y dinámica de vestuario.
+1. **Motor ML (XGBoost):** Modelo entrenado con 68.9% de precisión en datos históricos NBA.
+2. **IA Narrativa (Llama 3.3 vía Groq):** Análisis contextual de lesiones, rachas y factores cualitativos.
+3. **Gestión de Riesgo:** Criterio de Kelly, filtros de EV y protección de bankroll.
 
 ---
 
 ## ✨ Características Principales
 
-### 🧠 Predicciones Híbridas
-Combina la precisión de los datos duros con la intuición del análisis de texto. El modelo numérico sugiere **quién** ganará, y la IA explica **cómo** y **por qué**.
-
-### 📊 Dashboard Interactivo (SPA)
-Una interfaz moderna y responsiva construida con Vanilla JS para máxima velocidad.
-- **Vista de Predicciones:** Tarjetas detalladas con probabilidades, cuotas estimadas y análisis.
-- **Modo Oscuro:** Diseño "Glassmorphism" elegante y cómodo para la vista.
-- **Responsive:** Funciona perfectamente en móviles, tablets y escritorio.
-
-### 💰 Gestión de Bankroll (Criterio de Kelly)
-No solo te dice a quién apostar, sino **cuánto**. El sistema calcula el "Valor Esperado" (EV) y sugiere el tamaño de la apuesta óptimo basado en tu ventaja matemática, protegiendo tu capital.
-
-### ⚡ Rendimiento Extremo
-- **Cache Inteligente (SQLite):** Los resultados se guardan para evitar recálculos, ofreciendo tiempos de carga instantáneos (<500ms).
-- **Actualización en Tiempo Real:** Sistema capaz de refrescar datos y ajustar predicciones según nueva información.
-
-### 📱 Diseño "Mobile-First"
-Interfaz optimizada para dedos, con navegación inferior en móviles, tablas con scroll horizontal y modales adaptables.
+| Característica | Descripción |
+|:---|:---|
+| 🧠 **Predicciones Híbridas** | ML + IA para predicciones explicables |
+| 📊 **Dashboard Interactivo** | Interfaz glassmorphism, responsive, dark mode |
+| 💰 **Gestión de Bankroll** | Kelly Criterion, EV, stake óptimo |
+| 📜 **Historial Completo** | Tracking de predicciones con WIN/LOSS/ROI |
+| ⚡ **Cache Inteligente** | Respuestas < 500ms con SQLite |
+| 🔒 **Shadow Mode** | Validación sin riesgo antes de ir live |
 
 ---
 
-## 🏗 Arquitectura del Sistema
+## 📂 Estructura del Proyecto
 
-El flujo de decisión sigue estos pasos rigurosos:
-
-1.  **Ingesta de Datos:** Recopilación de estadísticas de `TeamData.sqlite` y cuotas de mercado.
-2.  **Feature Engineering:** Cálculo de métricas avanzadas (Elo, Home Advantage, Rest Days).
-3.  **Inferencia ML:** El modelo XGBoost genera la probabilidad base.
-4.  **Contextualización IA:** Se envía un prompt estructurado a Groq (Llama 3.3) con los datos del partido + contexto de lesiones.
-5.  **Síntesis:** La API combina ambos resultados y los sirve al Frontend.
+```
+bet/
+├── main.py              # FastAPI server principal
+├── prediction_api.py    # Motor de predicción XGBoost
+├── history_db.py        # Persistencia de historial
+├── config.toml          # Configuración del sistema
+├── requirements.txt     # Dependencias Python
+├── Dockerfile           # Contenedor Docker
+│
+├── Data/                # Bases de datos SQLite
+│   ├── TeamData.sqlite  # Estadísticas de equipos
+│   ├── history.db       # Historial de predicciones
+│   └── Bankroll.sqlite  # Estado del bankroll
+│
+├── Models/              # Modelos XGBoost entrenados
+├── src/                 # Módulos internos
+│   ├── BankrollEngine/  # Gestión de capital
+│   ├── Services/        # Servicios de riesgo
+│   └── ...
+│
+├── static/              # Frontend (index.html)
+├── tests/               # Tests unitarios
+└── docs/                # Documentación técnica
+```
 
 ---
 
-## 🚀 Instalación y Configuración
+## 🚀 Instalación
 
-Sigue estos pasos para desplegar tu propio oráculo de la NBA.
-
-### Prerrequisitos
-- Python 3.10 o superior
+### Requisitos
+- Python 3.11+
 - Git
 
-### Paso 1: Clonar el Repositorio
+### Pasos
+
 ```bash
+# 1. Clonar repositorio
 git clone https://github.com/ApkVox/bet.git
 cd bet
-```
 
-### Paso 2: Crear Entorno Virtual
-Es crucial aislar las dependencias.
-```bash
-# Windows
+# 2. Crear entorno virtual
 python -m venv venv
-.\venv\Scripts\activate
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate # Linux/Mac
 
-# Mac/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Paso 3: Instalar Dependencias
-```bash
+# 3. Instalar dependencias
 pip install -r requirements.txt
-```
 
-### Paso 4: Configurar Variables de Entorno
-Necesitas una API Key de Groq (es gratuita actualmente).
-1. Crea un archivo `.env` en la raíz.
-2. Añade tu clave:
-```env
-GROQ_API_KEY=gsk_tu_clave_secreta_aqui
-PORT=8000
-```
+# 4. Configurar variables de entorno
+cp .env.example .env
+# Editar .env y añadir GROQ_API_KEY
 
-### Paso 5: Ejecutar el Servidor
-```bash
+# 5. Ejecutar
 python main.py
 ```
-Visita `http://localhost:8000` en tu navegador.
+
+Visita `http://localhost:8000`
 
 ---
 
-## 🎮 Uso de la Aplicación
+## 🎮 Uso
 
-1.  **Inicio:** Al abrir la app, verás los partidos de hoy automáticamente.
-2.  **Ver Análisis:** Haz clic en "Más Datos" en cualquier partido para abrir el modal con el desglose de la IA.
-3.  **Filtrar:** Usa el filtro "Solo mejores oportunidades (Valor+)" para ver solo las apuestas matemáticamente rentables.
-4.  **Historial:** Navega a la pestaña "Historial" para ver el rendimiento pasado del modelo (Ganados/Perdidos y Balance).
+1. **Predicciones del día:** Página principal muestra partidos con probabilidades
+2. **Más Datos:** Click en cualquier partido para análisis detallado
+3. **Filtrar:** "Solo mejores oportunidades" muestra solo EV positivo
+4. **Historial:** Pestaña para ver rendimiento pasado (WIN/LOSS)
 
 ---
 
-## 📡 API Reference
+## 📡 API
 
-La API está documentada automáticamente. Visita `/docs` para ver Swagger UI.
-
-### Endpoints Clave
+Documentación completa en `/docs` (Swagger UI).
 
 | Método | Endpoint | Descripción |
 |:---:|:---|:---|
-| `GET` | `/predict-today` | Obtiene predicciones para los juegos de hoy. |
-| `GET` | `/history/full` | Historial completo de predicciones y resultados. |
-| `GET` | `/match-details/{home}/{away}` | Detalles profundos y análisis específico de un cruce. |
-| `POST` | `/update-history` | Trigger manual para actualizar resultados de juegos terminados. |
+| `GET` | `/pronosticos-hoy` | Predicciones del día |
+| `GET` | `/history/full` | Historial completo |
+| `GET` | `/match-details/{home}/{away}` | Análisis de partido |
+| `POST` | `/update-history` | Actualizar resultados |
+| `GET` | `/bankroll/status` | Estado del bankroll |
 
 ---
 
-## 🛠 Stack Tecnológico
+## 🌐 Despliegue
 
-- **Backend:** Python, FastAPI, Uvicorn.
-- **Machine Learning:** XGBoost, Scikit-Learn, Pandas, NumPy.
-- **Inteligencia Artificial:** Groq Cloud API (Llama 3.3 70B Versatile).
-- **Base de Datos:** SQLite (ligera, rápida y sin configuración).
-- **Frontend:** HTML5, Tailwind CSS (vía CDN), Vanilla JavaScript.
-- **Despliegue:** Docker Ready.
+### Render (Producción)
+
+El proyecto está desplegado en: **https://bet-7b8l.onrender.com**
+
+### Docker
+
+```bash
+docker build -t nba-predictor .
+docker run -p 8000:8000 --env-file .env nba-predictor
+```
+
+### Keep-Alive
+
+El workflow `.github/workflows/keep-alive.yml` hace ping cada 10 minutos para evitar que Render duerma el servidor.
 
 ---
 
 ## 📝 Licencia
 
-Este proyecto se distribuye bajo la licencia MIT. Siéntete libre de usarlo, modificarlo y compartirlo.
+MIT License - Libre uso, modificación y distribución.
 
-> **⚠️ AVISO DE RESPONSABILIDAD:** Esta herramienta es para fines educativos y de entretenimiento. Las predicciones deportivas conllevan riesgos financieros. No apuestes dinero que no puedas permitirte perder.
+> **⚠️ AVISO:** Esta herramienta es para fines educativos. Las predicciones deportivas conllevan riesgos financieros. No apuestes dinero que no puedas permitirte perder.
 
 ---
 
 <div align="center">
   <h3>Hecho con ❤️, Código y Baloncesto 🏀</h3>
-  <p>Desarrollado por el equipo de NBA Predictor AI</p>
 </div>

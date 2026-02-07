@@ -4,6 +4,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+# [FROZEN] DO NOT MODIFY: Core ML Logic verified in Phase 2
+import timel
 import toml
 
 from src.Utils.Dictionaries import (
