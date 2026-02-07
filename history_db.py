@@ -3,6 +3,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+print(f"DEBUG: Initializing history_db module")
+
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "Data" / "history.db"
 

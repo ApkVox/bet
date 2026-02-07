@@ -12,6 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+print(f"DEBUG: Current WD: {os.getcwd()}")
+print(f"DEBUG: Files in .: {os.listdir('.')}")
+sys.stdout.flush()
+
 import joblib
 import numpy as np
 import xgboost as xgb
