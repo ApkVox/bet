@@ -220,7 +220,7 @@ async function loadPredictions() {
                     <br>¡Pronto volveremos con mejores aciertos!
                 </p>
             </div>`;
-        document.getElementById('games-today').textContent = '0';
+
         return;
     }
 
@@ -235,7 +235,7 @@ async function loadPredictions() {
         // API structure
         currentPredictions = data.predictions || [];
 
-        document.getElementById('games-today').textContent = currentPredictions.length;
+
         renderPredictions(currentPredictions);
     } catch (error) {
         console.error(error);
@@ -274,9 +274,7 @@ async function loadHistory() {
         const total = wins + losses;
         const accuracy = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-        document.getElementById('accuracy-stat').textContent = accuracy + '%';
-        document.getElementById('total-predictions').textContent = allHistory.length;
-        document.getElementById('wins-stat').textContent = wins;
+
 
         renderHistory('all');
     } catch (error) {

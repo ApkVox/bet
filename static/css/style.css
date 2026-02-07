@@ -258,14 +258,14 @@ body {
 /* PREDICTIONS GRID */
 .predictions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 24px;
 }
 
 .prediction-card {
     background: var(--bg-card);
     border-radius: var(--radius-xl);
-    padding: 20px;
+    padding: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all 0.3s;
@@ -366,40 +366,85 @@ body {
 
 .history-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
 }
 
 .history-card {
     background: var(--bg-card);
     border-radius: var(--radius-lg);
-    padding: 16px;
+    padding: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.history-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
 }
 
 .history-teams {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.history-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+}
+
+.history-team-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.history-vs {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    padding: 4px 10px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
 }
 
 .history-team-logo {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
     object-fit: contain;
 }
 
 .history-info {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
+    justify-content: center;
+    text-align: center;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    border-top: none;
+    gap: 16px;
+}
+
+.history-prediction {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.history-prediction strong {
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .result-badge {
@@ -528,4 +573,44 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* HISTORY DAY UTILS */
+.history-day {
+    margin-bottom: 32px;
+}
+
+.history-day-header {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+/* LOAD MORE BUTTON */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+    padding-bottom: 20px;
+}
+
+.load-more-btn {
+    padding: 12px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.load-more-btn:hover {
+    transform: scale(1.05);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-hover);
 }
