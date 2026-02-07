@@ -1,6 +1,6 @@
-waitress
-fastapi
+
 uvicorn
+fastapi
 requests
 pandas
 numpy

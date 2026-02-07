@@ -1,5 +1,5 @@
-from waitress import serve
-from main import app
+
+import uvicorn
 import os
 import sys
 
@@ -13,5 +13,5 @@ if __name__ == "__main__":
     print(f"👉 Access at: http://localhost:{port}")
     print(f"==========================================")
     
-    # Serve using waitress
-    serve(app, host="0.0.0.0", port=port, threads=6)
+    # Serve using uvicorn (ASGI)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")
