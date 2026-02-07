@@ -13,5 +13,5 @@ jobs:
       - name: Ping Render Server
         run: |
           echo "Pinging server to keep it alive..."
-          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://bet-a0j0.onrender.com/
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://bet-7b8l.onrender.com/
           echo "Ping completed at $(date)"
