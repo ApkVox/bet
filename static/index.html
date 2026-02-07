@@ -158,12 +158,67 @@
             background: var(--bg-card-hover);
         }
 
-        /* MAIN */
-        .main {
-            max-width: 1200px;
+        /* ==========================================
+           LAYOUT & ADS
+           ========================================== */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr minmax(320px, 1200px) 1fr;
+            gap: 20px;
+            max-width: 1920px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 20px;
+        }
+
+        .main {
+            padding: 20px 0;
             padding-bottom: 100px;
+            grid-column: 2;
+        }
+
+        .ad-banner {
+            position: sticky;
+            top: 100px;
+            height: calc(100vh - 140px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .ad-placeholder {
+            width: 100%;
+            height: 100%;
+            border: 2px dashed var(--border);
+            background: rgba(128, 128, 128, 0.03);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 1440px) {
+            .app-container {
+                display: block;
+                max-width: 1200px;
+                padding: 0 20px;
+            }
+
+            .ad-banner {
+                display: none;
+            }
+
+            .main {
+                padding: 20px 0;
+            }
         }
 
         .section {
@@ -650,11 +705,12 @@
 </head>
 
 <body>
+    <!-- HEADER -->
     <header class="header">
         <div class="header-content">
             <div class="logo">
                 <span class="logo-icon">🏀</span>
-                <span class="logo-text">NBA Predictor AI</span>
+                <span class="logo-text">Courtside AI</span>
             </div>
             <div class="header-right">
                 <nav class="nav-tabs">
@@ -666,57 +722,74 @@
         </div>
     </header>
 
-    <main class="main">
-        <!-- PREDICTIONS -->
-        <section id="predictions" class="section active">
-            <h2 class="section-title">Partidos de Hoy</h2>
-            <div class="predictions-grid" id="predictionsGrid">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <span>Cargando predicciones...</span>
-                </div>
+    <div class="app-container">
+        <!-- AD BANNER LEFT -->
+        <aside class="ad-banner left">
+            <div class="ad-placeholder">
+                <span>Publicidad aquí</span>
             </div>
+        </aside>
 
-            <!-- Stats at bottom -->
-            <div class="stats-footer">
-                <div class="stats-grid">
-                    <div class="stat-card accent">
-                        <div class="stat-value" id="accuracy-stat">--</div>
-                        <div class="stat-label">Precisión</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-predictions">--</div>
-                        <div class="stat-label">Predicciones</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="wins-stat">--</div>
-                        <div class="stat-label">Aciertos</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="games-today">--</div>
-                        <div class="stat-label">Hoy</div>
+        <!-- MAIN CONTENT -->
+        <main class="main">
+            <!-- PREDICTIONS -->
+            <section id="predictions" class="section active">
+                <h2 class="section-title">Partidos de Hoy</h2>
+                <div class="predictions-grid" id="predictionsGrid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Cargando predicciones...</span>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- HISTORY -->
-        <section id="history" class="section">
-            <h2 class="section-title">Historial</h2>
-            <div class="history-filters">
-                <button class="filter-btn active" data-filter="all">Todas</button>
-                <button class="filter-btn" data-filter="win">Ganadas</button>
-                <button class="filter-btn" data-filter="loss">Perdidas</button>
-                <button class="filter-btn" data-filter="pending">Pendientes</button>
-            </div>
-            <div id="historyContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <span>Cargando historial...</span>
+                <!-- Stats at bottom -->
+                <div class="stats-footer">
+                    <div class="stats-grid">
+                        <div class="stat-card accent">
+                            <div class="stat-value" id="accuracy-stat">--</div>
+                            <div class="stat-label">Precisión</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-predictions">--</div>
+                            <div class="stat-label">Predicciones</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="wins-stat">--</div>
+                            <div class="stat-label">Aciertos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="games-today">--</div>
+                            <div class="stat-label">Hoy</div>
+                        </div>
+                    </div>
                 </div>
+            </section>
+
+            <!-- HISTORY -->
+            <section id="history" class="section">
+                <h2 class="section-title">Historial</h2>
+                <div class="history-filters">
+                    <button class="filter-btn active" data-filter="all">Todas</button>
+                    <button class="filter-btn" data-filter="win">Ganadas</button>
+                    <button class="filter-btn" data-filter="loss">Perdidas</button>
+                    <button class="filter-btn" data-filter="pending">Pendientes</button>
+                </div>
+                <div id="historyContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Cargando historial...</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- AD BANNER RIGHT -->
+        <aside class="ad-banner right">
+            <div class="ad-placeholder">
+                <span>Publicidad aquí</span>
             </div>
-        </section>
-    </main>
+        </aside>
+    </div> <!-- End app-container -->
 
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-nav">

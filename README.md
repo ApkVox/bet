@@ -1,4 +1,4 @@
-# 🏀 NBA Predictor AI
+# 🏀 Courtside AI
 
 > **Tu Analista Deportivo Inteligente** — Predicciones NBA con Machine Learning e Inteligencia Artificial
 
