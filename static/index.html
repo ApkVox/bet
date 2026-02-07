@@ -127,6 +127,38 @@
             transform: scale(1.05);
         }
 
+        /* SPORT SELECTOR */
+        .sport-selector {
+            display: flex;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 99px;
+            /* Pill shape */
+            border: 1px solid var(--border);
+            margin-right: 8px;
+        }
+
+        .sport-btn {
+            padding: 4px 12px;
+            border-radius: 99px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sport-btn.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 113, 227, 0.25);
+        }
+
         /* NAV TABS */
         .nav-tabs {
             display: flex;
@@ -713,6 +745,12 @@
                 <span class="logo-text">Courtside AI</span>
             </div>
             <div class="header-right">
+                <!-- Sport Selector -->
+                <div class="sport-selector">
+                    <button class="sport-btn active" data-sport="nba">🏀 NBA</button>
+                    <button class="sport-btn" data-sport="football">⚽ Fútbol</button>
+                </div>
+
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-section="predictions">Predicciones</button>
                     <button class="nav-tab" data-section="history">Historial</button>
@@ -964,26 +1002,58 @@
         });
 
         // Data
+        let currentSport = 'nba'; // 'nba' or 'football'
         let currentPredictions = [];
         let allHistory = [];
 
+        // Sport Selection
+        document.querySelectorAll('.sport-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('active')) return;
+
+                // Update UI
+                document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update State
+                currentSport = btn.dataset.sport;
+
+                // Reload Data
+                loadPredictions();
+                loadHistory(); // Reload history too if needed
+            });
+        });
+
         async function loadPredictions() {
+            const grid = document.getElementById('predictionsGrid');
+            grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
             try {
-                const response = await fetch('/predict-today');
+                const endpoint = currentSport === 'football' ? '/predict-football' : '/predict-today';
+                const response = await fetch(endpoint);
                 const data = await response.json();
-                currentPredictions = data.predictions || [];
+
+                // API structure difference: /predict-today returns {predictions: []}, /predict-football returns []
+                currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
+
                 document.getElementById('games-today').textContent = currentPredictions.length;
                 renderPredictions(currentPredictions);
             } catch (error) {
-                document.getElementById('predictionsGrid').innerHTML = `
-                    <div class="empty-state"><div class="empty-icon">⚠️</div><p>Error</p></div>`;
+                console.error(error);
+                grid.innerHTML = `
+                    <div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando datos</p></div>`;
             }
         }
 
         async function loadHistory() {
+            // TODO: Implement history filter by sport
+            // For now, loading default history
             try {
-                const response = await fetch('/history/full?days=30');
+                const endpoint = currentSport === 'football' ? '/history/football?limit=30' : '/history/full?days=30';
+                const response = await fetch(endpoint);
                 const data = await response.json();
+
+                // API diff: /history/full returns {history: []}, /history/football returns {history: []}
                 allHistory = data.history || [];
 
                 const wins = allHistory.filter(h => h.result === 'WIN').length;
@@ -1004,34 +1074,73 @@
         function renderPredictions(predictions) {
             const grid = document.getElementById('predictionsGrid');
             if (!predictions.length) {
-                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏀</div><p>No hay partidos hoy</p></div>`;
+                const icon = currentSport === 'football' ? '⚽' : '🏀';
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon}</div><p>No hay partidos de ${currentSport === 'football' ? 'fútbol' : 'NBA'} hoy</p></div>`;
                 return;
             }
 
-            grid.innerHTML = predictions.map((pred, idx) => `
-                <div class="prediction-card" onclick="showDetails(${idx})">
-                    <div class="match-header">
-                        <div class="team">
-                            <img class="team-logo" src="${NBA_LOGOS[pred.home_team] || ''}" alt="" onerror="this.style.display='none'">
-                            <span class="team-name">${pred.home_team}</span>
+            grid.innerHTML = predictions.map((pred, idx) => {
+                if (currentSport === 'football') {
+                    // FOOTBALL CARD (3-way)
+                    return `
+                    <div class="prediction-card" onclick="showDetails(${idx})">
+                        <div class="league-badge" style="font-size: 10px; opacity: 0.7; margin-bottom: 8px;">${pred.league}</div>
+                        <div class="match-header">
+                            <div class="team">
+                                <span class="team-name" style="font-size: 1.1em">${pred.home_team}</span>
+                            </div>
+                            <span class="vs-badge">VS</span>
+                            <div class="team">
+                                <span class="team-name" style="font-size: 1.1em">${pred.away_team}</span>
+                            </div>
                         </div>
-                        <span class="vs-badge">VS</span>
-                        <div class="team">
-                            <img class="team-logo" src="${NBA_LOGOS[pred.away_team] || ''}" alt="" onerror="this.style.display='none'">
-                            <span class="team-name">${pred.away_team}</span>
+                        <div class="prediction-result" style="margin-top: 12px; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Local</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_home * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Empate</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'inherit'}">${(pred.prob_draw * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Visitante</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_away * 100).toFixed(0)}%</div>
+                            </div>
+                        </div>
+                        <div class="prediction-meta">
+                            <span class="meta-tag">Predicción: <strong>${pred.prediction}</strong></span>
                         </div>
                     </div>
-                    <div class="prediction-result">
-                        <div class="predicted-winner">${pred.winner}</div>
-                        <div class="probability">${pred.win_probability}%</div>
-                        <div class="probability-label">Probabilidad</div>
+                    `;
+                } else {
+                    // NBA CARD (Existing)
+                    return `
+                    <div class="prediction-card" onclick="showDetails(${idx})">
+                        <div class="match-header">
+                            <div class="team">
+                                <img class="team-logo" src="${NBA_LOGOS[pred.home_team] || ''}" alt="" onerror="this.style.display='none'">
+                                <span class="team-name">${pred.home_team}</span>
+                            </div>
+                            <span class="vs-badge">VS</span>
+                            <div class="team">
+                                <img class="team-logo" src="${NBA_LOGOS[pred.away_team] || ''}" alt="" onerror="this.style.display='none'">
+                                <span class="team-name">${pred.away_team}</span>
+                            </div>
+                        </div>
+                        <div class="prediction-result">
+                            <div class="predicted-winner">${pred.winner}</div>
+                            <div class="probability">${pred.win_probability}%</div>
+                            <div class="probability-label">Probabilidad</div>
+                        </div>
+                        <div class="prediction-meta">
+                            ${pred.ev_value > 0 ? `<span class="meta-tag positive">EV +${pred.ev_value?.toFixed(1)}%</span>` : ''}
+                            ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">⚠️ Riesgo</span>` : ''}
+                        </div>
                     </div>
-                    <div class="prediction-meta">
-                        ${pred.ev_value > 0 ? `<span class="meta-tag positive">EV +${pred.ev_value?.toFixed(1)}%</span>` : ''}
-                        ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">⚠️ Riesgo</span>` : ''}
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                }
+            }).join('');
         }
 
         function renderHistory(filter) {

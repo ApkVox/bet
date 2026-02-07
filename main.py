@@ -1592,3 +1592,75 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+# ===========================================
+# FOOTBALL INTEGRATION (Branch: football-mode)
+# ===========================================
+import football_api
+
+class FootballMatchPrediction(BaseModel):
+    date: str
+    league: str
+    match_id: str
+    home_team: str
+    away_team: str
+    prediction: str # '1', 'X', '2' or Team Name
+    prob_home: float
+    prob_draw: float
+    prob_away: float
+    odd_home: Optional[float] = None
+    odd_draw: Optional[float] = None
+    odd_away: Optional[float] = None
+    status: str = "PENDING"
+    
+@app.get("/predict-football", response_model=list[FootballMatchPrediction])
+async def predict_football(league: Optional[str] = None):
+    """
+    Obtiene predicciones de fútbol para el día actual.
+    """
+    # 1. Obtener fixtures
+    fixtures = football_api.football_api.get_fixtures()
+    
+    # Mock data for MVP if no fixtures found (or scraper failed)
+    if not fixtures:
+        # Mocking a few games for UI testing
+        mock_games = [
+            {"home": "Manchester City", "away": "Liverpool", "league": "ENG-Premier League"},
+            {"home": "Real Madrid", "away": "Barcelona", "league": "ESP-La Liga"},
+            {"home": "Juventus", "away": "AC Milan", "league": "ITA-Serie A"}
+        ]
+        
+        predictions = []
+        for game in mock_games:
+            if league and league not in game['league']:
+                continue
+                
+            pred = football_api.football_api.predict_match(game['home'], game['away'], game['league'])
+            
+            # Create Pydantic model
+            f_pred = FootballMatchPrediction(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                league=game['league'],
+                match_id=f"{game['home']} vs {game['away']}",
+                home_team=game['home'],
+                away_team=game['away'],
+                prediction=pred['prediction'],
+                prob_home=pred['probs']['home'],
+                prob_draw=pred['probs']['draw'],
+                prob_away=pred['probs']['away'],
+                odd_home=2.1,
+                odd_draw=3.4,
+                odd_away=3.2,
+                status="PENDING"
+            )
+            
+            # Save to DB
+            history_db.save_football_prediction(f_pred.dict())
+            predictions.append(f_pred)
+            
+        return predictions
+
+    return []
+
+@app.get("/history/football")
+async def get_football_history_endpoint(limit: int = 50):
+    return {"history": history_db.get_football_history(limit)}

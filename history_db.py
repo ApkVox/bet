@@ -30,8 +30,30 @@ def init_history_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # New table for Football
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS football_predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                league TEXT NOT NULL,
+                match_id TEXT UNIQUE NOT NULL,
+                home_team TEXT,
+                away_team TEXT,
+                prediction TEXT, -- '1', 'X', '2'
+                prob_home REAL,
+                prob_draw REAL,
+                prob_away REAL,
+                odd_home REAL,
+                odd_draw REAL,
+                odd_away REAL,
+                status TEXT DEFAULT 'PENDING',
+                result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
-    print("[OK] history.db inicializada")
+    print("[OK] history.db inicializada (NBA + Football)")
 
 
 def save_prediction(prediction_data: dict):
@@ -237,11 +259,44 @@ def get_team_recent_results(team_name: str, limit: int = 5) -> list:
         """, (f"%{team_name}%", f"%{team_name}%", limit))
         
         return [
-            {
-                "date": row[0],
-                "match": row[1],
-                "predicted_winner": row[2],
                 "result": row[3]
             }
             for row in cursor.fetchall()
         ]
+
+
+def save_football_prediction(pred_data: dict):
+    """Guarda una predicción de fútbol"""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO football_predictions 
+            (date, league, match_id, home_team, away_team, prediction,
+             prob_home, prob_draw, prob_away, 
+             odd_home, odd_draw, odd_away, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+        """, (
+            pred_data['date'],
+            pred_data['league'],
+            pred_data['match_id'],
+            pred_data['home_team'],
+            pred_data['away_team'],
+            pred_data['prediction'],
+            pred_data['probs']['home'],
+            pred_data['probs']['draw'],
+            pred_data['probs']['away'],
+            pred_data.get('odds', {}).get('home', 0),
+            pred_data.get('odds', {}).get('draw', 0),
+            pred_data.get('odds', {}).get('away', 0)
+        ))
+        conn.commit()
+
+
+def get_football_history(limit: int = 50):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("""
+            SELECT * FROM football_predictions 
+            ORDER BY date DESC, created_at DESC 
+            LIMIT ?
+        """, (limit,))
+        return [dict(row) for row in cursor.fetchall()]
