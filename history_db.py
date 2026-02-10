@@ -226,6 +226,16 @@ def get_predictions_by_date(date: str) -> list[dict]:
 
 
 
+def delete_predictions_for_date(date: str) -> int:
+    """Elimina todas las predicciones de una fecha específica (para invalidar cache stale)"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("DELETE FROM predictions WHERE date = ? AND result = 'PENDING'", (date,))
+        deleted = cursor.rowcount
+        conn.commit()
+    print(f"[DB] Deleted {deleted} stale predictions for {date}")
+    return deleted
+
+
 def get_team_recent_results(team_name: str, limit: int = 5) -> list:
     """Obtiene los últimos N resultados de un equipo"""
     with sqlite3.connect(DB_PATH) as conn:

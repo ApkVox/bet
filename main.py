@@ -30,6 +30,7 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+import httpx
 
 # Cargar variables de entorno
 load_dotenv()
@@ -40,6 +41,9 @@ load_dotenv()
 scheduler = AsyncIOScheduler()
 LAST_UPDATE_TIME = None
 UPDATE_RESULTS = []
+
+# URL externa de Render para self-ping keep-alive
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "https://bet-7b8l.onrender.com")
 
 # ===========================================
 # BOOSTERWRAPPER - Necesaria para deserializar modelos calibrados
@@ -1029,11 +1033,11 @@ def refresh_games_cache():
 
 
 # ===========================================
-# BACKGROUND JOB: Auto-update pending predictions
+# BACKGROUND JOBS
 # ===========================================
 def run_pending_updates():
     """
-    Background job that runs every 30 minutes.
+    Background job that runs every 15 minutes.
     Updates pending predictions with real scores from SBR.
     """
     global LAST_UPDATE_TIME, UPDATE_RESULTS
@@ -1062,9 +1066,87 @@ def run_pending_updates():
         })
 
 
+async def keep_render_alive():
+    """
+    Self-ping cada 2 minutos para evitar que Render duerma el servidor.
+    Render Free tier duerme servicios después de 15 min de inactividad.
+    """
+    if not RENDER_EXTERNAL_URL:
+        return
+    
+    url = f"{RENDER_EXTERNAL_URL}/api/health"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(url)
+            print(f"[KEEP-ALIVE] Ping {url} -> {resp.status_code}")
+    except Exception as e:
+        print(f"[KEEP-ALIVE] Ping failed: {e}")
+
+
+def auto_daily_refresh():
+    """
+    Cada 30 minutos verifica si las predicciones del día son válidas.
+    Si los partidos de SBR no coinciden con los del cache, regenera.
+    También refresca el cache de partidos.
+    """
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    print(f"[AUTO-REFRESH] Checking predictions for {today}...")
+    
+    try:
+        # 1. Refrescar partidos de SBR
+        refresh_games_cache()
+        
+        # 2. Verificar si predicciones del día son válidas
+        from history_db import get_predictions_by_date, delete_predictions_for_date
+        cached_preds = get_predictions_by_date(today)
+        
+        if not cached_preds:
+            print("[AUTO-REFRESH] No cached predictions for today, will generate on next request")
+            return
+        
+        # 3. Comparar con partidos reales de SBR
+        real_games = get_todays_games_from_sbr()
+        if not real_games:
+            print("[AUTO-REFRESH] No SBR games found, keeping cached predictions")
+            return
+        
+        # Construir sets de partidos para comparar
+        cached_matches = set()
+        for p in cached_preds:
+            cached_matches.add(f"{p.get('home_team', '')} vs {p.get('away_team', '')}")
+        
+        real_matches = set()
+        for g in real_games:
+            real_matches.add(f"{g['home_team']} vs {g['away_team']}")
+        
+        # Si hay mismatch importante, invalidar
+        if cached_matches != real_matches:
+            print(f"[AUTO-REFRESH] ⚠️ STALE CACHE DETECTED!")
+            print(f"  Cached: {cached_matches}")
+            print(f"  Real:   {real_matches}")
+            deleted = delete_predictions_for_date(today)
+            print(f"[AUTO-REFRESH] Invalidated {deleted} stale predictions")
+        else:
+            print(f"[AUTO-REFRESH] ✅ Predictions match SBR games ({len(cached_matches)} games)")
+            
+    except Exception as e:
+        print(f"[AUTO-REFRESH] Error: {e}")
+
+
+def refresh_games_cache_job():
+    """Job periódico para refrescar el cache de partidos de SBR."""
+    print("[SCHEDULER] Refreshing games cache...")
+    try:
+        refresh_games_cache()
+    except Exception as e:
+        print(f"[SCHEDULER] Error refreshing games cache: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Cargar modelos al iniciar la API"""
+    """Cargar modelos y configurar todos los jobs automáticos al iniciar."""
     from prediction_api import load_models
     load_models()
     
@@ -1075,8 +1157,20 @@ async def startup_event():
     from history_db import init_history_db
     init_history_db()
     
-    # Iniciar scheduler para actualización automática de scores
-    # Ejecuta cada 15 minutos para actualizar partidos finalizados
+    # ===========================================
+    # SCHEDULER JOBS
+    # ===========================================
+    
+    # 1. Keep-Alive: self-ping cada 2 minutos
+    scheduler.add_job(
+        keep_render_alive,
+        IntervalTrigger(minutes=2),
+        id='keep_render_alive',
+        name='Keep Render Alive (self-ping)',
+        replace_existing=True
+    )
+    
+    # 2. Update pending predictions: cada 15 minutos
     scheduler.add_job(
         run_pending_updates,
         IntervalTrigger(minutes=15),
@@ -1084,13 +1178,38 @@ async def startup_event():
         name='Auto-update pending predictions',
         replace_existing=True
     )
-    scheduler.start()
-    print("[SCHEDULER] Background scheduler started - Updates every 15 minutes")
     
-    # Ejecutar una vez al inicio (después de 5 segundos para dar tiempo a cargar todo)
+    # 3. Auto daily refresh: cada 30 minutos valida cache
+    scheduler.add_job(
+        auto_daily_refresh,
+        IntervalTrigger(minutes=30),
+        id='auto_daily_refresh',
+        name='Auto validate/refresh daily predictions',
+        replace_existing=True
+    )
+    
+    # 4. Refresh games cache: cada 15 minutos
+    scheduler.add_job(
+        refresh_games_cache_job,
+        IntervalTrigger(minutes=15),
+        id='refresh_games_cache',
+        name='Refresh SBR games cache',
+        replace_existing=True
+    )
+    
+    scheduler.start()
+    print("[SCHEDULER] Background scheduler started with 4 jobs:")
+    print("  - Keep-Alive: every 2 min")
+    print("  - Update pending: every 15 min")
+    print("  - Auto daily refresh: every 30 min")
+    print("  - Games cache refresh: every 15 min")
+    
+    # Ejecutar recovery al inicio (después de 5 seg para dar tiempo a cargar)
     import asyncio
     await asyncio.sleep(5)
+    print("[STARTUP] Running initial recovery...")
     run_pending_updates()
+    auto_daily_refresh()
 
 
 @app.on_event("shutdown")
@@ -1132,26 +1251,39 @@ async def predict_today(include_ai: bool = True):
     """
     Obtiene predicciones para los partidos de hoy.
     OPTIMIZADO: Lee del historial si ya existen (Load Once).
+    MEJORADO: Valida que el cache coincida con los partidos reales de SBR.
     """
     today = datetime.now().strftime("%Y-%m-%d")
     
     # 1. Intentar leer del historial (CACHE HIT)
-    from history_db import get_predictions_by_date, save_prediction
+    from history_db import get_predictions_by_date, save_prediction, delete_predictions_for_date
     
     cached_preds = get_predictions_by_date(today)
     print(f"DEBUG: Read-Through Cache Check for DATE='{today}'. Found: {len(cached_preds) if cached_preds else 0}")
     
     if cached_preds and len(cached_preds) > 0:
+        # VALIDACIÓN: Verificar que los partidos en cache coincidan con SBR
+        real_games = get_todays_games_from_sbr()
+        if real_games:
+            cached_teams = set()
+            for p in cached_preds:
+                cached_teams.add(f"{p.get('home_team', '')}:{p.get('away_team', '')}")
+            
+            real_teams = set()
+            for g in real_games:
+                real_teams.add(f"{g['home_team']}:{g['away_team']}")
+            
+            if cached_teams != real_teams:
+                print(f"⚠️ STALE CACHE: Cached teams don't match SBR games! Invalidating...")
+                print(f"  Cached: {cached_teams}")
+                print(f"  Real:   {real_teams}")
+                delete_predictions_for_date(today)
+                cached_preds = []  # Force regeneration below
+    
+    if cached_preds and len(cached_preds) > 0:
         # Convertir diccionarios a MatchPrediction objects
         pred_objects = []
         for p in cached_preds:
-            # Reconstruct basic MatchPrediction (AI analysis might be generic if not saved textually, 
-            # but usually we want to preserve AI insights. For now MVP stores basic data and re-runs AI? 
-            # No, user wants FAST load. We should assume data in DB is sufficient.
-            # Warning: DB schema doesn't store 'ai_analysis' text string currently in save_prediction.
-            # We will return basic data which is fast.
-            
-            # Simple conversion
             try:
                 mp = MatchPrediction(
                     home_team=p['home_team'],
@@ -1164,12 +1296,9 @@ async def predict_today(include_ai: bool = True):
                     kelly_stake_pct=p['kelly_stake_pct'],
                     warning_level=p['warning_level'],
                     
-                    # Campos default/calculados
-                    under_over="N/A",  # Fixed: str, not float
+                    under_over="N/A",
                     ou_line=0.0,
                     ou_probability=50.0,
-                    # predicted_score_home removed (not in schema)
-                    # predicted_score_away removed (not in schema)
                     implied_prob_market=0.0,
                     discrepancy=0.0,
                     ai_analysis="✅ Cargado del historial (Guardado previamente)", 
