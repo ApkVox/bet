@@ -12,9 +12,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-print(f"DEBUG: Current WD: {os.getcwd()}")
-print(f"DEBUG: Files in .: {os.listdir('.')}")
-sys.stdout.flush()
 
 import joblib
 import numpy as np
@@ -1714,19 +1711,8 @@ async def get_match_details(home_team: str, away_team: str):
     }
 
 
-if __name__ == "__main__":
-    import uvicorn
-    # Inicializar base de datos de historial
-    import history_db
-    history_db.init_history_db()
-    
-    # HACK: Registrar BoosterWrapper para joblib
-    sys.modules['__main__'].BoosterWrapper = BoosterWrapper
-    
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
 # ===========================================
-# FOOTBALL INTEGRATION (Branch: football-mode)
+# FOOTBALL INTEGRATION
 # ===========================================
 import football_api
 
@@ -1736,7 +1722,7 @@ class FootballMatchPrediction(BaseModel):
     match_id: str
     home_team: str
     away_team: str
-    prediction: str # '1', 'X', '2' or Team Name
+    prediction: str
     prob_home: float
     prob_draw: float
     prob_away: float
@@ -1744,13 +1730,12 @@ class FootballMatchPrediction(BaseModel):
     odd_draw: Optional[float] = None
     odd_away: Optional[float] = None
     status: str = "PENDING"
-    
+
 @app.get("/predict-football", response_model=list[FootballMatchPrediction])
 async def predict_football(league: Optional[str] = None):
     """
     Obtiene predicciones de fútbol usando Poisson distribution.
     """
-    # Get all predictions from football API (uses Poisson predictor)
     predictions = football_api.football_api.get_all_predictions(league)
     
     result = []
@@ -1771,11 +1756,10 @@ async def predict_football(league: Optional[str] = None):
             status="PENDING"
         )
         
-        # Save to DB
         try:
             history_db.save_football_prediction(f_pred.dict())
         except Exception as e:
-            print(f"Error saving football prediction: {e}")
+            print(f"[WARN] Error saving football prediction: {e}")
             
         result.append(f_pred)
         
@@ -1785,3 +1769,14 @@ async def predict_football(league: Optional[str] = None):
 @app.get("/history/football")
 async def get_football_history_endpoint(limit: int = 50):
     return {"history": history_db.get_football_history(limit)}
+
+
+# ===========================================
+# MAIN ENTRY POINT
+# ===========================================
+if __name__ == "__main__":
+    import uvicorn
+    history_db.init_history_db()
+    sys.modules['__main__'].BoosterWrapper = BoosterWrapper
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

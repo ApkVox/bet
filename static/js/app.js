@@ -208,39 +208,23 @@ document.querySelectorAll('.sport-btn').forEach(btn => {
 
 async function loadPredictions() {
     const grid = document.getElementById('predictionsGrid');
-
-    // Football Under Construction
-    if (currentSport === 'football') {
-        grid.innerHTML = `
-            <div class="empty-state" style="padding: 40px 20px;">
-                <div class="empty-icon" style="font-size: 64px; margin-bottom: 20px;">🚧</div>
-                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 10px;">En Construcción</h3>
-                <p style="color: var(--text-secondary); max-width: 300px; margin: 0 auto;">
-                    Estamos mejorando nuestro modelo de predicción para fútbol. 
-                    <br>¡Pronto volveremos con mejores aciertos!
-                </p>
-            </div>`;
-
-        return;
-    }
-
     grid.innerHTML = renderSkeletonCards(6);
 
     try {
-        const endpoint = '/predict-today'; // Only NBA for now
+        const endpoint = currentSport === 'football' ? '/predict-football' : '/predict-today';
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Error de red');
         const data = await response.json();
 
-        // API structure
-        currentPredictions = data.predictions || [];
-
+        // Football returns array directly, NBA returns {predictions: [...]}
+        currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
 
         renderPredictions(currentPredictions);
     } catch (error) {
         console.error(error);
+        const icon = currentSport === 'football' ? '⚽' : '🏀';
         grid.innerHTML = `
-            <div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando datos</p></div>`;
+            <div class="empty-state"><div class="empty-icon">${icon}</div><p>Error cargando predicciones</p></div>`;
         showToast('Error cargando predicciones', 'error');
     }
 }
@@ -248,38 +232,20 @@ async function loadPredictions() {
 async function loadHistory() {
     currentHistoryLimit = 20;
     const container = document.getElementById('historyContainer');
-
-    if (currentSport === 'football') {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📂</div>
-                <p>Historial de fútbol no disponible durante el mantenimiento.</p>
-            </div>`;
-        return;
-    }
-
     container.innerHTML = `<div class="history-cards">${renderSkeletonHistory(6)}</div>`;
 
     try {
-        const endpoint = '/history/full?days=365'; // Only NBA for now
+        const endpoint = currentSport === 'football' ? '/history/football?limit=100' : '/history/full?days=365';
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Error al cargar historial');
         const data = await response.json();
 
-        // API diff
         allHistory = data.history || [];
-
-        const wins = allHistory.filter(h => h.result === 'WIN').length;
-        const losses = allHistory.filter(h => h.result === 'LOSS').length;
-        const total = wins + losses;
-        const accuracy = total > 0 ? Math.round((wins / total) * 100) : 0;
-
-
 
         renderHistory('all');
     } catch (error) {
         console.error('Error loading history:', error);
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error historial</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando historial</p></div>`;
         showToast('Error cargando historial', 'error');
     }
 }

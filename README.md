@@ -1,6 +1,6 @@
-# 🏀 Courtside AI
+# 🏀⚽ Courtside AI
 
-> **Tu Analista Deportivo Inteligente** — Predicciones NBA con Machine Learning e Inteligencia Artificial
+> **Tu Analista Deportivo Inteligente** — Predicciones NBA y Fútbol con Machine Learning e Inteligencia Artificial
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -12,31 +12,13 @@
 
 | Característica | Descripción |
 |:---|:---|
-| 🎯 **Predicciones ML** | Modelo XGBoost con 68.9% de precisión |
+| 🎯 **Predicciones NBA** | Modelo XGBoost con 68.9% de precisión |
+| ⚽ **Predicciones Fútbol** | Modelo Poisson para Premier League y ligas europeas |
+| 🤖 **Análisis IA** | Groq LLM (Llama 3.3 70B) para análisis narrativo |
+| 🔄 **Auto-Recovery** | Keep-alive, cache invalidation y auto-refresh |
 | 🌓 **Modo Oscuro/Claro** | Toggle de tema con auto-detect del sistema |
 | 📱 **Diseño Responsive** | Optimizado para móviles (Bento Grid estilo Apple) |
-| 📊 **Dashboard Interactivo** | Stats en tiempo real con diseño glassmorphism |
 | 📜 **Historial Completo** | Tracking de WIN/LOSS con filtros |
-
----
-
-## 🎨 Diseño
-
-El frontend utiliza un diseño inspirado en **Apple Bento Grid**:
-
-- **Tarjetas con esquinas redondeadas** (border-radius: 24px)
-- **Sombras suaves** para profundidad
-- **Paleta de colores minimalista** (grises + azul acento)
-- **Animaciones sutiles** en hover y transiciones
-- **Navegación bottom** en dispositivos móviles
-
-### Temas
-
-| Light Mode | Dark Mode |
-|:---:|:---:|
-| `#f5f5f7` background | `#000000` background |
-| `#ffffff` cards | `#1c1c1e` cards |
-| `#0071e3` accent | `#0a84ff` accent |
 
 ---
 
@@ -55,7 +37,8 @@ python -m venv venv
 pip install -r requirements.txt
 
 # Configurar .env
-echo "GROQ_API_KEY=tu_api_key" > .env
+cp .env.example .env
+# Editar .env con tu GROQ_API_KEY
 
 # Ejecutar
 python main.py
@@ -69,8 +52,11 @@ Visita `http://localhost:8000`
 
 | Método | Endpoint | Descripción |
 |:---:|:---|:---|
-| `GET` | `/predict-today` | Predicciones del día |
-| `GET` | `/history/full` | Historial completo |
+| `GET` | `/predict-today` | Predicciones NBA del día |
+| `GET` | `/predict-football` | Predicciones de fútbol (Poisson) |
+| `GET` | `/history/full` | Historial completo NBA |
+| `GET` | `/history/football` | Historial de fútbol |
+| `GET` | `/api/health` | Health check (usado por keep-alive) |
 | `GET` | `/api/update-pending` | Sincronizar resultados |
 
 Documentación Swagger: `/docs`
@@ -81,13 +67,43 @@ Documentación Swagger: `/docs`
 
 ```
 bet/
-├── main.py              # API FastAPI
-├── prediction_api.py    # Motor XGBoost
+├── main.py              # API FastAPI (endpoints + scheduler)
+├── prediction_api.py    # Motor XGBoost (NBA)
+├── football_api.py      # Motor Poisson (Fútbol)
+├── footy/               # Predictor Poisson
 ├── history_db.py        # Persistencia SQLite
-├── static/index.html    # Frontend (Bento Grid)
-├── Data/                # Bases de datos
-└── Models/              # Modelos entrenados
+├── production_server.py # Entry point producción
+├── static/
+│   ├── index.html       # Frontend SPA
+│   └── js/app.js        # Lógica frontend
+├── Data/                # Bases de datos y datasets
+├── Models/              # Modelos XGBoost entrenados
+└── Dockerfile           # Deploy (non-root user)
 ```
+
+---
+
+## 🔄 Sistema Automático
+
+El servidor incluye 4 jobs automáticos:
+
+| Job | Intervalo | Función |
+|:---|:---:|:---|
+| 🏓 Keep-Alive | 2 min | Self-ping para evitar sleep de Render |
+| 📊 Update Pending | 15 min | Actualiza scores de partidos finalizados |
+| 🔄 Auto Daily Refresh | 30 min | Valida predicciones vs datos reales de SBR |
+| 🏀 Games Cache Refresh | 15 min | Refresca partidos desde SBR |
+
+**Auto-Recovery**: Al arrancar, ejecuta validación completa y regenera predicciones stale.
+
+---
+
+## 🔒 Seguridad
+
+- Dockerfile con usuario no-root (`appuser`)
+- Endpoint de debug protegido con `DEBUG_MODE` env var
+- Variables sensibles en `.env` (no versionadas)
+- Error messages sanitizados
 
 ---
 
@@ -96,8 +112,8 @@ bet/
 **Producción:** https://bet-7b8l.onrender.com
 
 ```bash
-docker build -t nba-predictor .
-docker run -p 8000:8000 --env-file .env nba-predictor
+docker build -t courtside-ai .
+docker run -p 10000:10000 --env-file .env courtside-ai
 ```
 
 ---
@@ -105,5 +121,5 @@ docker run -p 8000:8000 --env-file .env nba-predictor
 > ⚠️ **AVISO:** Herramienta educativa. Las predicciones deportivas conllevan riesgos. No apuestes dinero que no puedas perder.
 
 <div align="center">
-  <sub>Hecho con ❤️ y 🏀</sub>
+  <sub>Hecho con ❤️ 🏀 ⚽</sub>
 </div>
