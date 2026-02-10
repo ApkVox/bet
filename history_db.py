@@ -271,6 +271,10 @@ def get_team_recent_results(team_name: str, limit: int = 5) -> list:
         """, (f"%{team_name}%", f"%{team_name}%", limit))
         
         return [
+            {
+                "date": row[0],
+                "match": row[1],
+                "predicted_winner": row[2],
                 "result": row[3]
             }
             for row in cursor.fetchall()
