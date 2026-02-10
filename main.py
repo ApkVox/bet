@@ -1725,3 +1725,63 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+# ===========================================
+# FOOTBALL INTEGRATION (Branch: football-mode)
+# ===========================================
+import football_api
+
+class FootballMatchPrediction(BaseModel):
+    date: str
+    league: str
+    match_id: str
+    home_team: str
+    away_team: str
+    prediction: str # '1', 'X', '2' or Team Name
+    prob_home: float
+    prob_draw: float
+    prob_away: float
+    odd_home: Optional[float] = None
+    odd_draw: Optional[float] = None
+    odd_away: Optional[float] = None
+    status: str = "PENDING"
+    
+@app.get("/predict-football", response_model=list[FootballMatchPrediction])
+async def predict_football(league: Optional[str] = None):
+    """
+    Obtiene predicciones de fútbol usando Poisson distribution.
+    """
+    # Get all predictions from football API (uses Poisson predictor)
+    predictions = football_api.football_api.get_all_predictions(league)
+    
+    result = []
+    for pred in predictions:
+        f_pred = FootballMatchPrediction(
+            date=datetime.now().strftime("%Y-%m-%d"),
+            league=pred['league'],
+            match_id=f"{pred['home_team']} vs {pred['away_team']}",
+            home_team=pred['home_team'],
+            away_team=pred['away_team'],
+            prediction=pred['prediction'],
+            prob_home=pred['probs']['home'],
+            prob_draw=pred['probs']['draw'],
+            prob_away=pred['probs']['away'],
+            odd_home=None,
+            odd_draw=None,
+            odd_away=None,
+            status="PENDING"
+        )
+        
+        # Save to DB
+        try:
+            history_db.save_football_prediction(f_pred.dict())
+        except Exception as e:
+            print(f"Error saving football prediction: {e}")
+            
+        result.append(f_pred)
+        
+    return result
+
+
+@app.get("/history/football")
+async def get_football_history_endpoint(limit: int = 50):
+    return {"history": history_db.get_football_history(limit)}

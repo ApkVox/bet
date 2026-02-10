@@ -8,7 +8,732 @@
     <meta name="description" content="Predicciones NBA con Machine Learning e Inteligencia Artificial">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* ==========================================
+           CSS VARIABLES - THEME SYSTEM
+           ========================================== */
+        :root {
+            --bg-primary: #f5f5f7;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #fafafa;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --text-tertiary: #6e6e73;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --warning: #ff9500;
+            --border: rgba(0, 0, 0, 0.08);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 28px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #000000;
+            --bg-secondary: #1c1c1e;
+            --bg-card: #1c1c1e;
+            --bg-card-hover: #2c2c2e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #98989d;
+            --text-tertiary: #8e8e93;
+            --accent: #0a84ff;
+            --accent-hover: #409cff;
+            --success: #30d158;
+            --danger: #ff453a;
+            --warning: #ff9f0a;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* HEADER */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 24px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+        }
+
+        /* SPORT SELECTOR */
+        .sport-selector {
+            display: flex;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 99px;
+            /* Pill shape */
+            border: 1px solid var(--border);
+            margin-right: 8px;
+        }
+
+        .sport-btn {
+            padding: 4px 12px;
+            border-radius: 99px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sport-btn.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 113, 227, 0.25);
+        }
+
+        /* NAV TABS */
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: var(--bg-card-hover);
+        }
+
+        /* ==========================================
+           LAYOUT & ADS
+           ========================================== */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr minmax(320px, 1200px) 1fr;
+            gap: 20px;
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .main {
+            padding: 20px 0;
+            padding-bottom: 100px;
+            grid-column: 2;
+        }
+
+        .ad-banner {
+            position: sticky;
+            top: 100px;
+            height: calc(100vh - 140px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .ad-placeholder {
+            width: 100%;
+            height: 100%;
+            border: 2px dashed var(--border);
+            background: rgba(128, 128, 128, 0.03);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 1440px) {
+            .app-container {
+                display: block;
+                max-width: 1200px;
+                padding: 0 20px;
+            }
+
+            .ad-banner {
+                display: none;
+            }
+
+            .main {
+                padding: 20px 0;
+            }
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        /* PREDICTIONS GRID */
+        .predictions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .prediction-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .prediction-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .match-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .team-logo {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 6px;
+            object-fit: contain;
+        }
+
+        .team-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .vs-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+
+        .prediction-result {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .predicted-winner {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .probability {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .probability-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .prediction-meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .meta-tag.positive {
+            background: rgba(52, 199, 89, 0.15);
+            color: var(--success);
+        }
+
+        .meta-tag.negative {
+            background: rgba(255, 59, 48, 0.15);
+            color: var(--danger);
+        }
+
+        /* HISTORY */
+        .history-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* History grouped by day */
+        .history-day {
+            margin-bottom: 24px;
+        }
+
+        .history-day-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .history-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 12px;
+        }
+
+        .history-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .history-teams {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .history-team-logo {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .history-vs {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            font-weight: 600;
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-match-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-prediction {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .result-badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .result-badge.win {
+            background: rgba(52, 199, 89, 0.15);
+            color: var(--success);
+        }
+
+        .result-badge.loss {
+            background: rgba(255, 59, 48, 0.15);
+            color: var(--danger);
+        }
+
+        .result-badge.pending {
+            background: rgba(255, 149, 0, 0.15);
+            color: var(--warning);
+        }
+
+        /* STATS FOOTER */
+        .stats-footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .stat-card.accent {
+            background: linear-gradient(135deg, var(--accent), #5856d6);
+            color: white;
+            border: none;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .stat-card.accent .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        /* MOBILE BOTTOM NAV */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 8px 16px;
+            z-index: 100;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .mobile-nav-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mobile-nav-btn.active {
+            color: var(--accent);
+        }
+
+        .mobile-nav-btn span {
+            font-size: 20px;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .analysis-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .logo-text {
+                display: none;
+            }
+
+            .header .nav-tabs {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            .predictions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .history-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-value {
+                font-size: 22px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main {
+                padding: 12px;
+                padding-bottom: 80px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+
+            .prediction-card {
+                padding: 16px;
+            }
+
+            .team-logo {
+                width: 40px;
+                height: 40px;
+            }
+
+            .probability {
+                font-size: 22px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -38,9 +763,29 @@
     <div class="app-container">
         <!-- AD BANNER LEFT -->
         <aside class="ad-banner left">
+            <!-- OPCION 1: Placeholder (Por defecto) -->
             <div class="ad-placeholder">
                 <span>Publicidad aquí</span>
             </div>
+
+            <!-- OPCION 2: Imagen de Afiliado (Descomentar para usar) -->
+            <!--
+            <a href="TU_ENLACE_AFILIADO" target="_blank" rel="nofollow" class="ad-link">
+                <img src="https://via.placeholder.com/160x600?text=Tu+Banner+Aqui" alt="Publicidad" class="ad-image">
+            </a>
+            -->
+
+            <!-- OPCION 3: Google AdSense (Descomentar para usar) -->
+            <!--
+            <script async src="https://pagead2.googlesyndication.com/..."></script>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-XXXXXX"
+                 data-ad-slot="YYYYYY"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+            -->
         </aside>
 
         <!-- MAIN CONTENT -->
@@ -56,7 +801,26 @@
                 </div>
 
                 <!-- Stats at bottom -->
-
+                <div class="stats-footer">
+                    <div class="stats-grid">
+                        <div class="stat-card accent">
+                            <div class="stat-value" id="accuracy-stat">--</div>
+                            <div class="stat-label">Precisión</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-predictions">--</div>
+                            <div class="stat-label">Predicciones</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="wins-stat">--</div>
+                            <div class="stat-label">Aciertos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="games-today">--</div>
+                            <div class="stat-label">Hoy</div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- HISTORY -->
@@ -79,11 +843,55 @@
 
         <!-- AD BANNER RIGHT -->
         <aside class="ad-banner right">
+            <!-- OPCION 1: Placeholder (Por defecto) -->
             <div class="ad-placeholder">
                 <span>Publicidad aquí</span>
             </div>
+
+            <!-- OPCION 2: Imagen de Afiliado (Descomentar para usar) -->
+            <!--
+            <a href="TU_ENLACE_AFILIADO" target="_blank" rel="nofollow" class="ad-link">
+                <img src="https://via.placeholder.com/160x600?text=Tu+Banner+Aqui" alt="Publicidad" class="ad-image">
+            </a>
+            -->
+
+            <!-- OPCION 3: Google AdSense (Descomentar para usar) -->
+            <!--
+            <script async src="https://pagead2.googlesyndication.com/..."></script>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-XXXXXX"
+                 data-ad-slot="YYYYYY"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+            -->
         </aside>
     </div> <!-- End app-container -->
+
+    <style>
+        /* Añadido para Banners de Afiliados */
+        .ad-link {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .ad-link:hover {
+            transform: scale(1.02);
+        }
+
+        .ad-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* O contain, dependiendo del banner */
+            display: block;
+        }
+    </style>
 
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-nav">
@@ -114,10 +922,322 @@
         </div>
     </div>
 
-    <!-- Toast Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <script>
+        const NBA_LOGOS = {
+            "Atlanta Hawks": "https://cdn.nba.com/logos/nba/1610612737/global/L/logo.svg",
+            "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg",
+            "Brooklyn Nets": "https://cdn.nba.com/logos/nba/1610612751/global/L/logo.svg",
+            "Charlotte Hornets": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg",
+            "Chicago Bulls": "https://cdn.nba.com/logos/nba/1610612741/global/L/logo.svg",
+            "Cleveland Cavaliers": "https://cdn.nba.com/logos/nba/1610612739/global/L/logo.svg",
+            "Dallas Mavericks": "https://cdn.nba.com/logos/nba/1610612742/global/L/logo.svg",
+            "Denver Nuggets": "https://cdn.nba.com/logos/nba/1610612743/global/L/logo.svg",
+            "Detroit Pistons": "https://cdn.nba.com/logos/nba/1610612765/global/L/logo.svg",
+            "Golden State Warriors": "https://cdn.nba.com/logos/nba/1610612744/global/L/logo.svg",
+            "Houston Rockets": "https://cdn.nba.com/logos/nba/1610612745/global/L/logo.svg",
+            "Indiana Pacers": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg",
+            "LA Clippers": "https://cdn.nba.com/logos/nba/1610612746/global/L/logo.svg",
+            "Los Angeles Lakers": "https://cdn.nba.com/logos/nba/1610612747/global/L/logo.svg",
+            "Memphis Grizzlies": "https://cdn.nba.com/logos/nba/1610612763/global/L/logo.svg",
+            "Miami Heat": "https://cdn.nba.com/logos/nba/1610612748/global/L/logo.svg",
+            "Milwaukee Bucks": "https://cdn.nba.com/logos/nba/1610612749/global/L/logo.svg",
+            "Minnesota Timberwolves": "https://cdn.nba.com/logos/nba/1610612750/global/L/logo.svg",
+            "New Orleans Pelicans": "https://cdn.nba.com/logos/nba/1610612740/global/L/logo.svg",
+            "New York Knicks": "https://cdn.nba.com/logos/nba/1610612752/global/L/logo.svg",
+            "Oklahoma City Thunder": "https://cdn.nba.com/logos/nba/1610612760/global/L/logo.svg",
+            "Orlando Magic": "https://cdn.nba.com/logos/nba/1610612753/global/L/logo.svg",
+            "Philadelphia 76ers": "https://cdn.nba.com/logos/nba/1610612755/global/L/logo.svg",
+            "Phoenix Suns": "https://cdn.nba.com/logos/nba/1610612756/global/L/logo.svg",
+            "Portland Trail Blazers": "https://cdn.nba.com/logos/nba/1610612757/global/L/logo.svg",
+            "Sacramento Kings": "https://cdn.nba.com/logos/nba/1610612758/global/L/logo.svg",
+            "San Antonio Spurs": "https://cdn.nba.com/logos/nba/1610612759/global/L/logo.svg",
+            "Toronto Raptors": "https://cdn.nba.com/logos/nba/1610612761/global/L/logo.svg",
+            "Utah Jazz": "https://cdn.nba.com/logos/nba/1610612762/global/L/logo.svg",
+            "Washington Wizards": "https://cdn.nba.com/logos/nba/1610612764/global/L/logo.svg"
+        };
 
-    <script src="/static/js/app.js"></script>
+        // Theme
+        const themeToggle = document.getElementById('themeToggle');
+        const mobileThemeToggle = document.getElementById('mobileThemeToggle');
+        const mobileThemeIcon = document.getElementById('mobileThemeIcon');
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = theme === 'dark' ? '☀️' : '🌙';
+            themeToggle.textContent = icon;
+            mobileThemeIcon.textContent = icon;
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved) setTheme(saved);
+            else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+        mobileThemeToggle.addEventListener('click', toggleTheme);
+        initTheme();
+
+        // Navigation
+        function switchSection(sectionId) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav-btn').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+            document.querySelector(`.nav-tab[data-section="${sectionId}"]`)?.classList.add('active');
+            document.querySelector(`.mobile-nav-btn[data-section="${sectionId}"]`)?.classList.add('active');
+            document.getElementById(sectionId)?.classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-tab, .mobile-nav-btn[data-section]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.section) switchSection(btn.dataset.section);
+            });
+        });
+
+        // Data
+        let currentSport = 'nba'; // 'nba' or 'football'
+        let currentPredictions = [];
+        let allHistory = [];
+
+        // Sport Selection
+        document.querySelectorAll('.sport-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('active')) return;
+
+                // Update UI
+                document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update State
+                currentSport = btn.dataset.sport;
+
+                // Reload Data
+                loadPredictions();
+                loadHistory(); // Reload history too if needed
+            });
+        });
+
+        async function loadPredictions() {
+            const grid = document.getElementById('predictionsGrid');
+            grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const endpoint = currentSport === 'football' ? '/predict-football' : '/predict-today';
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                // API structure difference: /predict-today returns {predictions: []}, /predict-football returns []
+                currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
+
+                document.getElementById('games-today').textContent = currentPredictions.length;
+                renderPredictions(currentPredictions);
+            } catch (error) {
+                console.error(error);
+                grid.innerHTML = `
+                    <div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando datos</p></div>`;
+            }
+        }
+
+        async function loadHistory() {
+            // TODO: Implement history filter by sport
+            // For now, loading default history
+            try {
+                const endpoint = currentSport === 'football' ? '/history/football?limit=30' : '/history/full?days=30';
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                // API diff: /history/full returns {history: []}, /history/football returns {history: []}
+                allHistory = data.history || [];
+
+                const wins = allHistory.filter(h => h.result === 'WIN').length;
+                const losses = allHistory.filter(h => h.result === 'LOSS').length;
+                const total = wins + losses;
+                const accuracy = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+                document.getElementById('accuracy-stat').textContent = accuracy + '%';
+                document.getElementById('total-predictions').textContent = allHistory.length;
+                document.getElementById('wins-stat').textContent = wins;
+
+                renderHistory('all');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        function renderPredictions(predictions) {
+            const grid = document.getElementById('predictionsGrid');
+            if (!predictions.length) {
+                const icon = currentSport === 'football' ? '⚽' : '🏀';
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon}</div><p>No hay partidos de ${currentSport === 'football' ? 'fútbol' : 'NBA'} hoy</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = predictions.map((pred, idx) => {
+                if (currentSport === 'football') {
+                    // FOOTBALL CARD (3-way)
+                    return `
+                    <div class="prediction-card" onclick="showDetails(${idx})">
+                        <div class="league-badge" style="font-size: 10px; opacity: 0.7; margin-bottom: 8px;">${pred.league}</div>
+                        <div class="match-header">
+                            <div class="team">
+                                <span class="team-name" style="font-size: 1.1em">${pred.home_team}</span>
+                            </div>
+                            <span class="vs-badge">VS</span>
+                            <div class="team">
+                                <span class="team-name" style="font-size: 1.1em">${pred.away_team}</span>
+                            </div>
+                        </div>
+                        <div class="prediction-result" style="margin-top: 12px; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Local</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_home * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Empate</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'inherit'}">${(pred.prob_draw * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.8">Visitante</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_away * 100).toFixed(0)}%</div>
+                            </div>
+                        </div>
+                        <div class="prediction-meta">
+                            <span class="meta-tag">Predicción: <strong>${pred.prediction}</strong></span>
+                        </div>
+                    </div>
+                    `;
+                } else {
+                    // NBA CARD (Existing)
+                    return `
+                    <div class="prediction-card" onclick="showDetails(${idx})">
+                        <div class="match-header">
+                            <div class="team">
+                                <img class="team-logo" src="${NBA_LOGOS[pred.home_team] || ''}" alt="" onerror="this.style.display='none'">
+                                <span class="team-name">${pred.home_team}</span>
+                            </div>
+                            <span class="vs-badge">VS</span>
+                            <div class="team">
+                                <img class="team-logo" src="${NBA_LOGOS[pred.away_team] || ''}" alt="" onerror="this.style.display='none'">
+                                <span class="team-name">${pred.away_team}</span>
+                            </div>
+                        </div>
+                        <div class="prediction-result">
+                            <div class="predicted-winner">${pred.winner}</div>
+                            <div class="probability">${pred.win_probability}%</div>
+                            <div class="probability-label">Probabilidad</div>
+                        </div>
+                        <div class="prediction-meta">
+                            ${pred.ev_value > 0 ? `<span class="meta-tag positive">EV +${pred.ev_value?.toFixed(1)}%</span>` : ''}
+                            ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">⚠️ Riesgo</span>` : ''}
+                        </div>
+                    </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        function renderHistory(filter) {
+            const container = document.getElementById('historyContainer');
+            let filtered = allHistory;
+            if (filter !== 'all') {
+                filtered = allHistory.filter(h => h.result?.toLowerCase() === filter);
+            }
+
+            if (!filtered.length) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No hay registros</p></div>`;
+                return;
+            }
+
+            // Group by date
+            const grouped = {};
+            filtered.forEach(h => {
+                if (!grouped[h.date]) grouped[h.date] = [];
+                grouped[h.date].push(h);
+            });
+
+            // Sort dates descending
+            const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+            container.innerHTML = sortedDates.map(date => {
+                const games = grouped[date];
+                const dateObj = new Date(date + 'T12:00:00');
+                const formatted = dateObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+                return `
+                    <div class="history-day">
+                        <div class="history-day-header">${formatted}</div>
+                        <div class="history-cards">
+                            ${games.map(h => {
+                    const teams = h.match?.split(' vs ') || ['', ''];
+                    const home = teams[0]?.trim() || '';
+                    const away = teams[1]?.trim() || '';
+                    return `
+                                    <div class="history-card">
+                                        <div class="history-teams">
+                                            <img class="history-team-logo" src="${NBA_LOGOS[home] || ''}" alt="" onerror="this.style.display='none'">
+                                            <span class="history-vs">vs</span>
+                                            <img class="history-team-logo" src="${NBA_LOGOS[away] || ''}" alt="" onerror="this.style.display='none'">
+                                        </div>
+                                        <div class="history-info">
+                                            <div class="history-match-name">${h.match}</div>
+                                            <div class="history-prediction">${h.predicted_winner} (${h.probability}%)</div>
+                                        </div>
+                                        <span class="result-badge ${h.result?.toLowerCase() || 'pending'}">
+                                            ${h.result === 'WIN' ? '✓' : h.result === 'LOSS' ? '✗' : '⏳'}
+                                        </span>
+                                    </div>
+                                `;
+                }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Filters
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderHistory(btn.dataset.filter);
+            });
+        });
+
+        // Modal
+        function showDetails(index) {
+            const pred = currentPredictions[index];
+            if (!pred) return;
+            document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: var(--accent);">${pred.winner}</strong> gana con <strong>${pred.win_probability}%</strong>
+                </div>
+                <p class="analysis-text">${pred.ai_analysis || 'Análisis no disponible'}</p>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        document.getElementById('modal').addEventListener('click', e => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPredictions();
+            loadHistory();
+        });
+    </script>
 </body>
 
 </html>
