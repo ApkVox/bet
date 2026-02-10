@@ -495,47 +495,6 @@
             color: var(--warning);
         }
 
-        /* STATS FOOTER */
-        .stats-footer {
-            margin-top: 40px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            padding: 16px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-        }
-
-        .stat-card.accent {
-            background: linear-gradient(135deg, var(--accent), #5856d6);
-            color: white;
-            border: none;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .stat-card.accent .stat-label {
-            color: rgba(255, 255, 255, 0.8);
-        }
 
         /* Loading */
         .loading {
@@ -800,27 +759,6 @@
                     </div>
                 </div>
 
-                <!-- Stats at bottom -->
-                <div class="stats-footer">
-                    <div class="stats-grid">
-                        <div class="stat-card accent">
-                            <div class="stat-value" id="accuracy-stat">--</div>
-                            <div class="stat-label">Precisión</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="total-predictions">--</div>
-                            <div class="stat-label">Predicciones</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="wins-stat">--</div>
-                            <div class="stat-label">Aciertos</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="games-today">--</div>
-                            <div class="stat-label">Hoy</div>
-                        </div>
-                    </div>
-                </div>
             </section>
 
             <!-- HISTORY -->
