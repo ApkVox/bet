@@ -974,7 +974,8 @@
                 // API structure difference: /predict-today returns {predictions: []}, /predict-football returns []
                 currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
 
-                document.getElementById('games-today').textContent = currentPredictions.length;
+                const gamesTodayEl = document.getElementById('games-today');
+                if (gamesTodayEl) gamesTodayEl.textContent = currentPredictions.length;
                 renderPredictions(currentPredictions);
             } catch (error) {
                 console.error(error);
@@ -999,9 +1000,12 @@
                 const total = wins + losses;
                 const accuracy = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-                document.getElementById('accuracy-stat').textContent = accuracy + '%';
-                document.getElementById('total-predictions').textContent = allHistory.length;
-                document.getElementById('wins-stat').textContent = wins;
+                const accuracyEl = document.getElementById('accuracy-stat');
+                const totalEl = document.getElementById('total-predictions');
+                const winsEl = document.getElementById('wins-stat');
+                if (accuracyEl) accuracyEl.textContent = accuracy + '%';
+                if (totalEl) totalEl.textContent = allHistory.length;
+                if (winsEl) winsEl.textContent = wins;
 
                 renderHistory('all');
             } catch (error) {
