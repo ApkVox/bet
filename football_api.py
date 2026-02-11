@@ -25,19 +25,42 @@ except ImportError as e:
     POISSON_AVAILABLE = False
     logger.warning(f"Poisson predictor not available: {e}")
 
+# Import FootballProvider
+from src.DataProviders.FootballProvider import FootballProvider
+
 # Constants
 DATA_PATH = "Data/football/complete_features.csv"
 LEAGUES = ['ENG-Premier League', 'ESP-La Liga', 'ITA-Serie A', 'GER-Bundesliga', 'FRA-Ligue 1']
 
-# Sample upcoming fixtures (for MVP - replace with API later)
-UPCOMING_FIXTURES = [
-    {"home": "Arsenal", "away": "Man City", "league": "ENG-Premier League"},
-    {"home": "Liverpool", "away": "Chelsea", "league": "ENG-Premier League"},
-    {"home": "Real Madrid", "away": "Barcelona", "league": "ESP-La Liga"},
-    {"home": "Juventus", "away": "AC Milan", "league": "ITA-Serie A"},
-    {"home": "Bayern Munich", "away": "Dortmund", "league": "GER-Bundesliga"},
-    {"home": "PSG", "away": "Lyon", "league": "FRA-Ligue 1"},
-]
+# Cache for fixtures to avoid spamming OneFootball
+_FIXTURES_CACHE = {
+    "data": [],
+    "last_updated": None
+}
+
+def get_upcoming_fixtures() -> list:
+    """
+    Fetches real upcoming fixtures from FootballProvider.
+    Uses simple in-memory caching (1 hour TTL).
+    """
+    global _FIXTURES_CACHE
+    
+    now = datetime.now()
+    if _FIXTURES_CACHE["data"] and _FIXTURES_CACHE["last_updated"]:
+        time_diff = (now - _FIXTURES_CACHE["last_updated"]).total_seconds()
+        if time_diff < 3600: # 1 hour cache
+            logger.info(f"Using cached football fixtures ({len(_FIXTURES_CACHE['data'])} games)")
+            return _FIXTURES_CACHE["data"]
+            
+    logger.info("Fetching fresh football fixtures...")
+    provider = FootballProvider()
+    fixtures = provider.get_fixtures()
+    
+    if fixtures:
+        _FIXTURES_CACHE["data"] = fixtures
+        _FIXTURES_CACHE["last_updated"] = now
+        
+    return fixtures
 
 
 class FootballAPI:
@@ -66,16 +89,15 @@ class FootballAPI:
 
     def get_fixtures(self, date_str: str = None) -> List[Dict]:
         """
-        Get football fixtures for a specific date.
-        MVP: Returns static fixtures. Replace with API call later.
+        Get football fixtures.
+        Uses the FootballProvider via get_upcoming_fixtures.
         """
         if not date_str:
             date_str = datetime.now().strftime("%Y-%m-%d")
             
-        logger.info(f"Getting football fixtures for {date_str}")
-        
-        # Return sample fixtures for MVP
-        return UPCOMING_FIXTURES
+        # For now, we disregard date_str and just get whatever is upcoming/live
+        # In a full valid implementation, we would filter by date.
+        return get_upcoming_fixtures()
 
     def predict_match(self, home_team: str, away_team: str, league: str) -> Dict:
         """
@@ -88,7 +110,7 @@ class FootballAPI:
             "league": league,
             "prediction": "Draw",
             "probs": {"home": 33.3, "draw": 33.4, "away": 33.3},
-            "expected_goals": {"home": 1.5, "away": 1.5},
+            "expected_goals": {"home": 0.0, "away": 0.0},
             "top_scorelines": [],
             "status": "PENDING"
         }
@@ -102,9 +124,9 @@ class FootballAPI:
                 if insights:
                     # Extract outcome probabilities
                     outcome_probs = insights.get('outcome_probs', {})
-                    home_prob = outcome_probs.get('home_win', 33.3)
-                    draw_prob = outcome_probs.get('draw', 33.4)
-                    away_prob = outcome_probs.get('away_win', 33.3)
+                    home_prob = outcome_probs.get('home_win', 0) * 100
+                    draw_prob = outcome_probs.get('draw', 0) * 100
+                    away_prob = outcome_probs.get('away_win', 0) * 100
                     
                     # Determine prediction
                     max_prob = max(home_prob, draw_prob, away_prob)
@@ -145,7 +167,27 @@ class FootballAPI:
         
         predictions = []
         for fixture in fixtures:
-            pred = self.predict_match(fixture['home'], fixture['away'], fixture['league'])
+            # We predict using the NORMALIZED names (home_team, away_team)
+            # But we might want to preserve raw names for display if needed
+            pred = self.predict_match(fixture['home_team'], fixture['away_team'], fixture['league'])
+            
+            # Enrich with time and raw names
+            pred['time'] = fixture.get('time', 'Coming Soon')
+            pred['raw_home'] = fixture.get('home_raw', fixture['home_team'])
+            pred['raw_away'] = fixture.get('away_raw', fixture['away_team'])
+             
+            # Save to history DB (Best effort)
+            try:
+                import history_db
+                # We need a unique match_id. hash date+teams
+                match_id = f"{fixture.get('date', datetime.now().date())}_{fixture['home_team']}_{fixture['away_team']}"
+                
+                # We need to adapt the save function or create a new one for football
+                # For now, let's assume we will implement save_football_prediction in history_db
+                history_db.save_football_prediction(pred, match_id, fixture.get('date', str(datetime.now().date())))
+            except Exception as e:
+                logger.debug(f"Could not save prediction history: {e}")
+
             predictions.append(pred)
             
         return predictions

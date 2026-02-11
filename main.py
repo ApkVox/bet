@@ -1775,45 +1775,58 @@ class FootballMatchPrediction(BaseModel):
     odd_draw: Optional[float] = None
     odd_away: Optional[float] = None
     status: str = "PENDING"
+    time: Optional[str] = "00:00"
+    raw_home: Optional[str] = None
+    raw_away: Optional[str] = None
 
 @app.get("/predict-football", response_model=list[FootballMatchPrediction])
 async def predict_football(league: Optional[str] = None):
     """
     Obtiene predicciones de fútbol usando Poisson distribution.
     """
-    predictions = football_api.football_api.get_all_predictions(league)
+    # Fetch raw predictions from API
+    raw_preds = football_api.football_api.get_all_predictions(league)
     
-    result = []
-    for pred in predictions:
-        f_pred = FootballMatchPrediction(
-            date=datetime.now().strftime("%Y-%m-%d"),
-            league=pred['league'],
-            match_id=f"{pred['home_team']} vs {pred['away_team']}",
-            home_team=pred['home_team'],
-            away_team=pred['away_team'],
-            prediction=pred['prediction'],
-            prob_home=pred['probs']['home'],
-            prob_draw=pred['probs']['draw'],
-            prob_away=pred['probs']['away'],
-            odd_home=None,
-            odd_draw=None,
-            odd_away=None,
-            status="PENDING"
-        )
+    formatted_preds = []
+    
+    for p in raw_preds:
+        # Transform nested probs to flat structure
+        probs = p.get("probs", {})
+        
+        # Ensure match_id exists or generate one
+        match_id = p.get("match_id")
+        if not match_id:
+            match_id = f"{datetime.now().date()}_{p['home_team']}_{p['away_team']}"
         
         try:
-            history_db.save_football_prediction(f_pred.dict())
+            formatted_preds.append({
+                "date": p.get("date", str(datetime.now().date())),
+                "league": p.get("league", "ENG-Premier League"),
+                "match_id": match_id,
+                "home_team": p["home_team"],
+                "away_team": p["away_team"],
+                "prediction": p["prediction"],
+                "prob_home": float(probs.get("home", 0)),
+                "prob_draw": float(probs.get("draw", 0)),
+                "prob_away": float(probs.get("away", 0)),
+                "status": p.get("status", "PENDING"),
+                "time": p.get("time", "00:00"),
+                "raw_home": p.get("raw_home"),
+                "raw_away": p.get("raw_away")
+            })
         except Exception as e:
-            print(f"[WARN] Error saving football prediction: {e}")
-            
-        result.append(f_pred)
+            print(f"[ERROR] Formatting football prediction: {e}")
+            continue
         
-    return result
-
+    return formatted_preds
 
 @app.get("/history/football")
-async def get_football_history_endpoint(limit: int = 50):
-    return {"history": history_db.get_football_history(limit)}
+async def get_football_history_endpoint(days: int = 30):
+    """
+    Obtiene el historial de predicciones de fútbol.
+    """
+    import history_db
+    return history_db.get_football_history(days)
 
 
 # ===========================================

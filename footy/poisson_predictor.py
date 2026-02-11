@@ -386,7 +386,8 @@ class PoissonScorelinePredictor:
                 },
                 'high_confidence_bets': [],
                 'goal_markets': predictions['goal_market_probs'],
-                'exact_scores': predictions['top_scorelines'][:5]
+                'exact_scores': predictions['top_scorelines'][:5],
+                'outcome_probs': predictions['outcome_probabilities'] # Added for API usage
             }
 
             # Identify high confidence betting opportunities SAFELY
