@@ -1141,6 +1141,19 @@ def refresh_games_cache_job():
         print(f"[SCHEDULER] Error refreshing games cache: {e}")
 
 
+def run_history_backfill_job():
+    """Background job to detect and fill gaps in prediction history."""
+    print("[SCHEDULER] Running history backfill...")
+    try:
+        from history_backfill import run_backfill
+        result = run_backfill()
+        print(f"[SCHEDULER] Backfill complete: {result.get('predictions_added', 0)} added")
+    except Exception as e:
+        print(f"[SCHEDULER] Error in history backfill: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 @app.on_event("startup")
 async def startup_event():
     """Cargar modelos y configurar todos los jobs automáticos al iniciar."""
@@ -1194,12 +1207,23 @@ async def startup_event():
         replace_existing=True
     )
     
+    # 5. History backfill: once at startup + daily at 4 AM
+    from apscheduler.triggers.cron import CronTrigger
+    scheduler.add_job(
+        run_history_backfill_job,
+        CronTrigger(hour=4, minute=0),
+        id='history_backfill_daily',
+        name='Daily history backfill (4 AM)',
+        replace_existing=True
+    )
+    
     scheduler.start()
-    print("[SCHEDULER] Background scheduler started with 4 jobs:")
+    print("[SCHEDULER] Background scheduler started with 5 jobs:")
     print("  - Keep-Alive: every 2 min")
     print("  - Update pending: every 15 min")
     print("  - Auto daily refresh: every 30 min")
     print("  - Games cache refresh: every 15 min")
+    print("  - History backfill: daily at 4 AM")
     
     # Ejecutar recovery al inicio (después de 5 seg para dar tiempo a cargar)
     import asyncio
@@ -1207,6 +1231,11 @@ async def startup_event():
     print("[STARTUP] Running initial recovery...")
     run_pending_updates()
     auto_daily_refresh()
+    
+    # Run backfill after 30 sec delay to not block startup
+    await asyncio.sleep(25)
+    print("[STARTUP] Running initial history backfill...")
+    run_history_backfill_job()
 
 
 @app.on_event("shutdown")
@@ -1500,6 +1529,22 @@ async def get_scheduler_status():
         "last_update_time": LAST_UPDATE_TIME,
         "recent_updates": UPDATE_RESULTS[-5:] if UPDATE_RESULTS else []
     }
+
+
+@app.get("/api/backfill-history")
+async def backfill_history_endpoint():
+    """
+    Manually trigger history backfill.
+    Detects missing dates/games and fills gaps with retroactive predictions.
+    """
+    try:
+        from history_backfill import run_backfill
+        result = run_backfill()
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
 
 
 # ===========================================

@@ -316,3 +316,22 @@ def get_football_history(limit: int = 50):
             LIMIT ?
         """, (limit,))
         return [dict(row) for row in cursor.fetchall()]
+
+
+def get_all_prediction_dates() -> dict:
+    """Returns {date_str: count} for all dates with predictions"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT date, COUNT(*) FROM predictions
+            GROUP BY date ORDER BY date
+        """)
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+
+def get_match_ids_for_date(date: str) -> set:
+    """Returns set of match_id strings for a given date"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute(
+            "SELECT match_id FROM predictions WHERE date = ?", (date,)
+        )
+        return {row[0] for row in cursor.fetchall()}
