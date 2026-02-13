@@ -17,13 +17,13 @@ from typing import List, Dict, Optional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Try to import Poisson predictor
-try:
-    from footy.poisson_predictor import PoissonScorelinePredictor
-    POISSON_AVAILABLE = True
-except ImportError as e:
-    POISSON_AVAILABLE = False
-    logger.warning(f"Poisson predictor not available: {e}")
+# Deferred import for Poisson predictor
+# try:
+#     from footy.poisson_predictor import PoissonScorelinePredictor
+#     POISSON_AVAILABLE = True
+# except ImportError as e:
+#     POISSON_AVAILABLE = False
+#     logger.warning(f"Poisson predictor not available: {e}")
 
 # Import FootballProvider
 from src.DataProviders.FootballProvider import FootballProvider
@@ -67,10 +67,17 @@ class FootballAPI:
     def __init__(self):
         self.predictor = None
         self.data = None
-        self._initialize()
+        self._is_initialized = False
+        # Do not initialize immediately to save startup memory
+        # self._initialize()
         
-    def _initialize(self):
-        """Load data and initialize Poisson predictor."""
+    def ensure_initialized(self):
+        """Lazy load data and predictor only when needed."""
+        if self._is_initialized:
+            return
+
+        logger.info("Lazy loading FootballAPI resources...")
+        
         # Load historical data
         if os.path.exists(DATA_PATH):
             try:
@@ -78,14 +85,19 @@ class FootballAPI:
                 logger.info(f"Loaded football data: {len(self.data)} records")
                 
                 # Initialize Poisson predictor if available
-                if POISSON_AVAILABLE:
+                try:
+                    from footy.poisson_predictor import PoissonScorelinePredictor
                     self.predictor = PoissonScorelinePredictor()
                     self.predictor.calculate_team_strengths(self.data)
                     logger.info("Poisson predictor initialized successfully")
+                except ImportError as e:
+                    logger.warning(f"Poisson predictor not available (lazy load failed): {e}")
             except Exception as e:
                 logger.error(f"Error loading football data: {e}")
         else:
             logger.warning(f"Football data not found at {DATA_PATH}")
+            
+        self._is_initialized = True
 
     def get_fixtures(self, date_str: str = None) -> List[Dict]:
         """
@@ -104,6 +116,8 @@ class FootballAPI:
         Predict the outcome of a football match using Poisson distribution.
         Returns probabilities for Home Win, Draw, Away Win.
         """
+        self.ensure_initialized()  # Ensure models are loaded
+        
         result = {
             "home_team": home_team,
             "away_team": away_team,
@@ -159,7 +173,11 @@ class FootballAPI:
 
     def get_all_predictions(self, league: Optional[str] = None) -> List[Dict]:
         """Get predictions for all upcoming fixtures."""
+        # get_fixtures does NOT need initialization (it hits OneFootball API)
         fixtures = self.get_fixtures()
+        
+        # Ensure initialized before predicting loop
+        self.ensure_initialized()
         
         # Filter by league if specified
         if league:
