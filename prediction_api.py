@@ -5,6 +5,7 @@ NBA Prediction API Module
 Clean prediction module that properly uses XGBoost models.
 This replaces the broken random-based predictions in main.py.
 """
+import gc
 import re
 import sqlite3
 from datetime import date, timedelta
@@ -14,7 +15,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-import joblib
 
 from src.Utils.Dictionaries import team_index_current
 from src.Services.shadow_bettor import get_shadow_bettor
@@ -41,9 +41,7 @@ DROP_COLUMNS = [
 # ===========================================
 _models_cache = {
     "ml_model": None,
-    "ml_calibrator": None,
     "uo_model": None,
-    "uo_calibrator": None,
     "ml_accuracy": "N/A",
     "uo_accuracy": "N/A"
 }
@@ -69,26 +67,14 @@ def _get_model_accuracy(model_path: Path) -> str:
     return f"{match.group(1)}%" if match else "N/A"
 
 
-def _load_calibrator(model_path: Path):
-    """Load the calibrator .pkl file if it exists."""
-    calibration_path = model_path.with_name(f"{model_path.stem}_calibration.pkl")
-    if not calibration_path.exists():
-        return None
-    try:
-        return joblib.load(calibration_path)
-    except Exception:
-        return None
-
-
 def load_models():
-    """Load XGBoost ML and O/U models with their calibrators."""
+    """Load XGBoost ML and O/U models (without calibrators to save memory)."""
     global _models_cache
     
     if _models_cache["ml_model"] is None:
         ml_path = _select_model_path("ML")
         _models_cache["ml_model"] = xgb.Booster()
         _models_cache["ml_model"].load_model(str(ml_path))
-        _models_cache["ml_calibrator"] = _load_calibrator(ml_path)
         _models_cache["ml_accuracy"] = _get_model_accuracy(ml_path)
         print(f"[OK] ML Model loaded: {ml_path.name} (Accuracy: {_models_cache['ml_accuracy']})")
     
@@ -96,7 +82,6 @@ def load_models():
         uo_path = _select_model_path("UO")
         _models_cache["uo_model"] = xgb.Booster()
         _models_cache["uo_model"].load_model(str(uo_path))
-        _models_cache["uo_calibrator"] = _load_calibrator(uo_path)
         _models_cache["uo_accuracy"] = _get_model_accuracy(uo_path)
         print(f"[OK] O/U Model loaded: {uo_path.name} (Accuracy: {_models_cache['uo_accuracy']})")
 
@@ -111,9 +96,9 @@ def get_model_accuracy() -> str:
 # ===========================================
 # FEATURE EXTRACTION (POINT-IN-TIME SAFE)
 # ===========================================
-# Cache for team data with date tracking
+# Cache only the selected table name (NOT the DataFrame) to save memory
 _team_data_cache = {
-    "df": None,
+    "table_name": None,
     "data_date": None,  # Date of the snapshot used
     "target_date": None  # Target date it was fetched for
 }
@@ -142,37 +127,28 @@ def _get_available_table_dates(team_db_path: Path = TEAM_DB_PATH) -> list:
         return []
 
 
-def _get_team_data_for_date(
+def _resolve_table_for_date(
     target_date: date,
     team_db_path: Path = TEAM_DB_PATH
-) -> tuple[Optional[pd.DataFrame], Optional[date]]:
+) -> tuple[Optional[str], Optional[date]]:
     """
-    POINT-IN-TIME SAFE: Get team statistics snapshot from BEFORE the target date.
-    
-    This prevents data leakage by ensuring we only use information that
-    would have been available before the game occurred.
-    
-    Args:
-        target_date: The date of the game being predicted (uses data < this date)
-        team_db_path: Path to TeamData.sqlite
+    POINT-IN-TIME SAFE: Find the correct table name from BEFORE the target date.
+    Caches only the table name (not the data) to save memory.
     
     Returns:
-        Tuple of (DataFrame with team stats, date of the snapshot used)
+        Tuple of (table_name, snapshot_date)
         Returns (None, None) if no valid snapshot exists
-    
-    Raises:
-        DataLeakageError: If attempting to use same-day or future data
     """
     global _team_data_cache
     
     # Check cache - reuse if same target_date
-    if (_team_data_cache["df"] is not None and 
+    if (_team_data_cache["table_name"] is not None and 
         _team_data_cache["target_date"] == target_date):
-        print(f"[CACHE HIT] Reusing data from {_team_data_cache['data_date']} for target {target_date}")
-        return _team_data_cache["df"], _team_data_cache["data_date"]
+        print(f"[CACHE HIT] Reusing table {_team_data_cache['table_name']} for target {target_date}")
+        return _team_data_cache["table_name"], _team_data_cache["data_date"]
     
     try:
-        print(f"[POINT-IN-TIME] Fetching data for game date: {target_date}")
+        print(f"[POINT-IN-TIME] Resolving table for game date: {target_date}")
         
         with sqlite3.connect(team_db_path) as con:
             cursor = con.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -194,7 +170,6 @@ def _get_team_data_for_date(
             if not valid_tables:
                 available_dates = sorted([d for _, d in tables])
                 print(f"[ERROR] No valid snapshots before {target_date}.")
-                print(f"[ERROR] Available dates: {available_dates[:5]}...{available_dates[-5:]}")
                 raise DataLeakageError(
                     f"No team data available before {target_date}. "
                     f"Earliest available: {min(available_dates) if available_dates else 'N/A'}"
@@ -204,30 +179,43 @@ def _get_team_data_for_date(
             valid_tables.sort(key=lambda x: x[1], reverse=True)
             selected_table, selected_date = valid_tables[0]
             
-            # Calculate data freshness
             data_age_days = (target_date - selected_date).days
+            print(f"[POINT-IN-TIME] ✓ Using snapshot: {selected_date} (age: {data_age_days}d)")
             
-            df = pd.read_sql_query(f'SELECT * FROM "{selected_table}"', con)
-            
-            # Log with clear visibility
-            print(f"[POINT-IN-TIME] ✓ Using snapshot: {selected_date}")
-            print(f"[POINT-IN-TIME]   Game date: {target_date}")
-            print(f"[POINT-IN-TIME]   Data age: {data_age_days} day(s)")
-            print(f"[POINT-IN-TIME]   Teams loaded: {len(df)}")
-            
-            # Warn if data is stale (more than 3 days old)
             if data_age_days > 3:
-                print(f"[WARNING] Data is {data_age_days} days old! Consider updating TeamData.sqlite")
+                print(f"[WARNING] Data is {data_age_days} days old!")
             
-            # Update cache
-            _team_data_cache["df"] = df
+            # Cache only the table name, NOT the data
+            _team_data_cache["table_name"] = selected_table
             _team_data_cache["data_date"] = selected_date
             _team_data_cache["target_date"] = target_date
             
-            return df, selected_date
+            return selected_table, selected_date
             
     except DataLeakageError:
-        raise  # Re-raise leakage errors
+        raise
+    except Exception as e:
+        print(f"[ERROR] Error resolving table: {e}")
+        return None, None
+
+
+def _get_team_data_for_date(
+    target_date: date,
+    team_db_path: Path = TEAM_DB_PATH
+) -> tuple[Optional[pd.DataFrame], Optional[date]]:
+    """
+    MEMORY-OPTIMIZED: Loads team data, uses it, then lets GC reclaim it.
+    The DataFrame is NOT cached — only the table name is cached.
+    """
+    table_name, snapshot_date = _resolve_table_for_date(target_date, team_db_path)
+    if table_name is None:
+        return None, None
+    
+    try:
+        with sqlite3.connect(team_db_path) as con:
+            df = pd.read_sql_query(f'SELECT * FROM "{table_name}"', con)
+            print(f"[POINT-IN-TIME] Loaded {len(df)} teams from {table_name}")
+            return df, snapshot_date
     except Exception as e:
         print(f"[ERROR] Error loading team data: {e}")
         return None, None
@@ -236,11 +224,7 @@ def _get_team_data_for_date(
 def _get_latest_team_data(team_db_path: Path = TEAM_DB_PATH) -> Optional[pd.DataFrame]:
     """
     DEPRECATED: Use _get_team_data_for_date() instead for point-in-time safety.
-    
-    This function is kept for backwards compatibility but now defaults to
-    using yesterday's date to prevent same-day leakage.
     """
-    # Default to yesterday to prevent same-day leakage
     yesterday = date.today() - timedelta(days=1)
     print(f"[DEPRECATED] _get_latest_team_data called without date. Using {yesterday} as cutoff.")
     df, _ = _get_team_data_for_date(yesterday, team_db_path)
@@ -248,9 +232,9 @@ def _get_latest_team_data(team_db_path: Path = TEAM_DB_PATH) -> Optional[pd.Data
 
 
 def clear_team_data_cache():
-    """Clear the team data cache. Useful for testing or forcing a refresh."""
+    """Clear the team data cache."""
     global _team_data_cache
-    _team_data_cache = {"df": None, "data_date": None, "target_date": None}
+    _team_data_cache = {"table_name": None, "data_date": None, "target_date": None}
     print("[CACHE] Team data cache cleared")
 
 
@@ -344,16 +328,9 @@ def predict_game(
     if features is None:
         return _mock_response(home_team, f"Cannot build features for {home_team} vs {away_team}")
     
-    # ML Prediction (Moneyline)
+    # ML Prediction (Moneyline) — raw XGBoost softmax (no calibrator to save memory)
     features_2d = features.reshape(1, -1)
-    
-    try:
-        if _models_cache["ml_calibrator"] is not None:
-            ml_probs = _models_cache["ml_calibrator"].predict_proba(features_2d)[0]
-        else:
-            ml_probs = _models_cache["ml_model"].predict(xgb.DMatrix(features_2d))[0]
-    except Exception:
-        ml_probs = _models_cache["ml_model"].predict(xgb.DMatrix(features_2d))[0]
+    ml_probs = _models_cache["ml_model"].predict(xgb.DMatrix(features_2d))[0]
     
     away_prob_raw = float(ml_probs[0])
     home_prob_raw = float(ml_probs[1])
@@ -390,16 +367,9 @@ def predict_game(
             game_date=datetime(game_date.year, game_date.month, game_date.day)
         )
     
-    # O/U Prediction
+    # O/U Prediction — raw XGBoost softmax (no calibrator to save memory)
     features_with_ou = np.append(features, ou_line).reshape(1, -1)
-    
-    try:
-        if _models_cache["uo_calibrator"] is not None:
-            ou_probs = _models_cache["uo_calibrator"].predict_proba(features_with_ou)[0]
-        else:
-            ou_probs = _models_cache["uo_model"].predict(xgb.DMatrix(features_with_ou))[0]
-    except Exception:
-        ou_probs = _models_cache["uo_model"].predict(xgb.DMatrix(features_with_ou))[0]
+    ou_probs = _models_cache["uo_model"].predict(xgb.DMatrix(features_with_ou))[0]
     
     under_prob = float(ou_probs[0]) * 100
     over_prob = float(ou_probs[1]) * 100

@@ -5,6 +5,7 @@ NBA PREDICTOR AI - MAIN API
 Motor híbrido: XGBoost (numérico) + Groq LLM (narrativo)
 """
 
+import gc
 import os
 import re
 import sys
@@ -13,7 +14,6 @@ from pathlib import Path
 from typing import Optional
 
 
-import joblib
 import numpy as np
 import xgboost as xgb
 from dotenv import load_dotenv
@@ -1061,6 +1061,8 @@ def run_pending_updates():
             "timestamp": LAST_UPDATE_TIME,
             "result": {"status": "error", "message": str(e)}
         })
+    finally:
+        gc.collect()
 
 
 async def keep_render_alive():
@@ -1129,6 +1131,8 @@ def auto_daily_refresh():
             
     except Exception as e:
         print(f"[AUTO-REFRESH] Error: {e}")
+    finally:
+        gc.collect()
 
 
 def refresh_games_cache_job():
@@ -1138,6 +1142,8 @@ def refresh_games_cache_job():
         refresh_games_cache()
     except Exception as e:
         print(f"[SCHEDULER] Error refreshing games cache: {e}")
+    finally:
+        gc.collect()
 
 
 def run_history_backfill_job():
@@ -1224,17 +1230,15 @@ async def startup_event():
     print("  - Games cache refresh: every 5 hours")
     print("  - History backfill: daily at 4 AM")
     
-    # Ejecutar recovery al inicio (después de 5 seg para dar tiempo a cargar)
+    # Ejecutar recovery al inicio (con delay y GC para no exceder memoria)
     import asyncio
-    await asyncio.sleep(5)
+    await asyncio.sleep(60)
     print("[STARTUP] Running initial recovery...")
     run_pending_updates()
+    gc.collect()
+    await asyncio.sleep(10)
     auto_daily_refresh()
-    
-    # Run backfill after 30 sec delay to not block startup
-    await asyncio.sleep(25)
-    print("[STARTUP] Running initial history backfill...")
-    run_history_backfill_job()
+    gc.collect()
 
 
 @app.on_event("shutdown")

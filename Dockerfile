@@ -9,6 +9,7 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV MALLOC_TRIM_THRESHOLD_=100000
 
 # Instalar dependencias de sistema para compilar numpy/xgboost
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -44,4 +45,4 @@ USER appuser
 EXPOSE 10000
 
 # Comando de inicio
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000", "--workers", "1"]
