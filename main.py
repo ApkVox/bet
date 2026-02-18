@@ -1065,8 +1065,7 @@ def run_pending_updates():
 
 async def keep_render_alive():
     """
-    Self-ping cada 14 minutos para evitar que Render duerma el servidor.
-    Render Free tier duerme servicios después de 15 min de inactividad.
+    Self-ping cada 5 horas.
     """
     if not RENDER_EXTERNAL_URL:
         return
@@ -1171,37 +1170,37 @@ async def startup_event():
     # SCHEDULER JOBS
     # ===========================================
     
-    # 1. Keep-Alive: self-ping cada 14 minutos
+    # 1. Keep-Alive: self-ping cada 5 horas
     scheduler.add_job(
         keep_render_alive,
-        IntervalTrigger(minutes=14),
+        IntervalTrigger(hours=5),
         id='keep_render_alive',
         name='Keep Render Alive (self-ping)',
         replace_existing=True
     )
     
-    # 2. Update pending predictions: cada 15 minutos
+    # 2. Update pending predictions: cada 5 horas
     scheduler.add_job(
         run_pending_updates,
-        IntervalTrigger(minutes=15),
+        IntervalTrigger(hours=5),
         id='update_pending_predictions',
         name='Auto-update pending predictions',
         replace_existing=True
     )
     
-    # 3. Auto daily refresh: cada 30 minutos valida cache
+    # 3. Auto daily refresh: cada 5 horas valida cache
     scheduler.add_job(
         auto_daily_refresh,
-        IntervalTrigger(minutes=30),
+        IntervalTrigger(hours=5),
         id='auto_daily_refresh',
         name='Auto validate/refresh daily predictions',
         replace_existing=True
     )
     
-    # 4. Refresh games cache: cada 15 minutos
+    # 4. Refresh games cache: cada 5 horas
     scheduler.add_job(
         refresh_games_cache_job,
-        IntervalTrigger(minutes=15),
+        IntervalTrigger(hours=5),
         id='refresh_games_cache',
         name='Refresh SBR games cache',
         replace_existing=True
@@ -1219,10 +1218,10 @@ async def startup_event():
     
     scheduler.start()
     print("[SCHEDULER] Background scheduler started with 5 jobs:")
-    print("  - Keep-Alive: every 14 min")
-    print("  - Update pending: every 15 min")
-    print("  - Auto daily refresh: every 30 min")
-    print("  - Games cache refresh: every 15 min")
+    print("  - Keep-Alive: every 5 hours")
+    print("  - Update pending: every 5 hours")
+    print("  - Auto daily refresh: every 5 hours")
+    print("  - Games cache refresh: every 5 hours")
     print("  - History backfill: daily at 4 AM")
     
     # Ejecutar recovery al inicio (después de 5 seg para dar tiempo a cargar)
