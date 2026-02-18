@@ -1157,6 +1157,8 @@ def run_history_backfill_job():
         print(f"[SCHEDULER] Error in history backfill: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        gc.collect()
 
 
 @app.on_event("startup")
@@ -1238,6 +1240,13 @@ async def startup_event():
     gc.collect()
     await asyncio.sleep(10)
     auto_daily_refresh()
+    gc.collect()
+    
+    # Backfill: rellenar fechas faltantes en historial (delay 5 min para no saturar memoria)
+    await asyncio.sleep(240)
+    print("[STARTUP] Running history backfill to fill missing dates...")
+    gc.collect()
+    run_history_backfill_job()
     gc.collect()
 
 
