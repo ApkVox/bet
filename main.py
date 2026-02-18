@@ -1065,7 +1065,7 @@ def run_pending_updates():
 
 async def keep_render_alive():
     """
-    Self-ping cada 2 minutos para evitar que Render duerma el servidor.
+    Self-ping cada 14 minutos para evitar que Render duerma el servidor.
     Render Free tier duerme servicios después de 15 min de inactividad.
     """
     if not RENDER_EXTERNAL_URL:
@@ -1171,10 +1171,10 @@ async def startup_event():
     # SCHEDULER JOBS
     # ===========================================
     
-    # 1. Keep-Alive: self-ping cada 2 minutos
+    # 1. Keep-Alive: self-ping cada 14 minutos
     scheduler.add_job(
         keep_render_alive,
-        IntervalTrigger(minutes=2),
+        IntervalTrigger(minutes=14),
         id='keep_render_alive',
         name='Keep Render Alive (self-ping)',
         replace_existing=True
@@ -1219,7 +1219,7 @@ async def startup_event():
     
     scheduler.start()
     print("[SCHEDULER] Background scheduler started with 5 jobs:")
-    print("  - Keep-Alive: every 2 min")
+    print("  - Keep-Alive: every 14 min")
     print("  - Update pending: every 15 min")
     print("  - Auto daily refresh: every 30 min")
     print("  - Games cache refresh: every 15 min")
