@@ -20,9 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # ===========================================
-# SECURITY: Crear usuario no-root
+# SECURITY: Crear usuario no-root (UID 1000 requerido por HF)
 # ===========================================
-RUN useradd --create-home --shell /bin/bash appuser
+RUN useradd -m -u 1000 appuser
 
 # Directorio de trabajo
 WORKDIR /app
@@ -41,8 +41,8 @@ RUN chown -R appuser:appuser /app
 # Cambiar a usuario no-root
 USER appuser
 
-# Puerto de Render
-EXPOSE 10000
+# Puerto estándar de Hugging Face Spaces
+EXPOSE 7860
 
 # Comando de inicio
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000", "--workers", "1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
