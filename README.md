@@ -1,3 +1,13 @@
+---
+title: NBA Predictor
+emoji: 🏀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # 🏀⚽ Courtside AI
 
 > **Tu Analista Deportivo Inteligente** — Predicciones NBA y Fútbol con Machine Learning e Inteligencia Artificial
