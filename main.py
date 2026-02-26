@@ -108,33 +108,33 @@ async def health_check():
     return {"status": "online", "db_connected": True}
 
 
-@app.get("/predict-today", response_model=PredictionResponse)
+@app.get("/predict-today")
 async def predict_today():
     """
     Obtiene las predicciones NBA generadas hoy desde la BD.
     Si no están listas o si es muy temprano, notifica al cliente que GitHub Actions está por correr.
     """
     date_str = datetime.now().strftime('%Y-%m-%d')
-    existing_preds = history_db.get_predictions_by_date(date_str)
+    existing_preds = history_db.get_predictions_by_date_light(date_str)
     
     if existing_preds:
         print(f"✅ Sirviendo {len(existing_preds)} juegos NBA desde caché DB (Light API)")
-        return PredictionResponse(
-            date=date_str,
-            total_games=len(existing_preds),
-            predictions=existing_preds,
-            model_accuracy="70% (Offline)",
-            status="success"
-        )
+        return {
+            "date": date_str,
+            "total_games": len(existing_preds),
+            "predictions": existing_preds,
+            "model_accuracy": "70% (Offline)",
+            "status": "success"
+        }
     else:
         print("⚠️ No hay datos calculados para hoy en SQLite. Notificando al Frontend.")
-        return PredictionResponse(
-            date=date_str,
-            total_games=0,
-            predictions=[],
-            model_accuracy="N/A",
-            status="pending_github_actions"
-        )
+        return {
+            "date": date_str,
+            "total_games": 0,
+            "predictions": [],
+            "model_accuracy": "N/A",
+            "status": "pending_github_actions"
+        }
 
 
 @app.get("/predict-football")
@@ -142,7 +142,7 @@ async def predict_football():
     """
     Obtiene las predicciones de Fútbol preparadas por GitHub Actions.
     """
-    preds = history_db.get_football_history(days=2) # Trae del futuro/presente
+    preds = history_db.get_football_history(days=3)
     
     if preds:
          return {"status": "success", "count": len(preds), "predictions": preds}
@@ -151,15 +151,22 @@ async def predict_football():
 
 
 @app.get("/history/full")
-async def get_full_history(days: int = 7):
+async def get_full_history(days: int = 365):
     """Obtiene el historial NBA de los últimos días"""
-    return history_db.get_history(days)
+    data = history_db.get_history(days)
+    # El frontend espera { history: [...] }
+    if isinstance(data, list):
+        return {"history": data}
+    return data
 
 
 @app.get("/history/football")
 async def get_football_history_endpoint(days: int = 30):
     """Obtiene el historial de fútbol de los últimos días."""
-    return history_db.get_football_history(days)
+    data = history_db.get_football_history(days)
+    if isinstance(data, list):
+        return {"history": data}
+    return data
 
 
 # ===========================================

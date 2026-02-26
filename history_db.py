@@ -264,6 +264,44 @@ def get_team_prediction_accuracy(team_name: str) -> dict:
             "accuracy": round((wins / total * 100) if total > 0 else 0, 1)
         }
 
+def get_predictions_by_date_light(date: str) -> list[dict]:
+    """Versión ligera que NO importa prediction_api (para uso en Render)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT date, match_id, home_team, away_team, predicted_winner, 
+                   prob_final, odds, ev_value, kelly_stake, warning_level, result
+            FROM predictions
+            WHERE date = ?
+        """, (date,))
+        
+        rows = cursor.fetchall()
+        predictions = []
+        
+        for row in rows:
+            p = {
+                "home_team": row[2],
+                "away_team": row[3],
+                "winner": row[4],
+                "win_probability": row[5] or 0,
+                "under_over": "N/A",
+                "ou_line": 0,
+                "ou_probability": 0,
+                "ai_analysis": None,
+                "is_mock": False,
+                "odds_home": row[6] if row[4] == row[2] else None,
+                "odds_away": row[6] if row[4] == row[3] else None,
+                "ev_score": row[7],
+                "kelly_stake": row[8],
+                "warning_level": row[9],
+                "game_status": row[10],
+                "home_score": None,
+                "away_score": None
+            }
+            predictions.append(p)
+            
+        return predictions
+
+
 def get_predictions_by_date(date: str) -> list[dict]:
     """Obtiene predicciones guardadas para una fecha específica"""
     with sqlite3.connect(DB_PATH) as conn:
