@@ -1,0 +1,51 @@
+name: Daily NBA & Football Predictions
+
+on:
+    schedule:
+        # Corre a las 08:00 UTC (3:00 AM Colombia/EST)
+        - cron: "0 8 * * *"
+    workflow_dispatch:
+        # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+    generate-predictions:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v3
+              with:
+                  # Para que el push pueda hacerse saltando ciertas reglas o trigger workflows cíclicos
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set up Python 3.11
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.11"
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+
+            - name: Delete invalid XGBoost Cache files (if any)
+              run: |
+                  # Limpia archivos temporales que impiden que Dmatrix corra limpio
+                  rm -rf *.model || true
+
+            - name: Run Predictions Engine (generate_daily_job.py)
+              env:
+                  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+                  ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+              run: |
+                  python generate_daily_job.py
+
+            - name: Commit and Push Updated History DB
+              run: |
+                  git config --global user.name "CourtsideAI-Bot"
+                  git config --global user.email "bot@courtside.ai"
+                  git add Data/history.db
+                  # Solo hace commit si hubo cambios reales en history.db
+                  git diff-index --quiet HEAD || git commit -m "🤖 [Bot] Auto-update predictions history (CRON)"
+                  git push

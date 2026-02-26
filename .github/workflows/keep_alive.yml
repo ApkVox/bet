@@ -1,0 +1,16 @@
+name: Keep Render Alive (Anti-Sleep)
+
+on:
+    schedule:
+        # Corre cada 14 minutos para evitar el límite de 15 minutos inactivos de Render
+        - cron: "*/14 * * * *"
+    workflow_dispatch:
+
+jobs:
+    ping-render:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Ping Courtside AI Render endpoint
+              run: |
+                  curl -sS https://bet-7b8l.onrender.com/api/health > /dev/null
+                  echo "✅ Pinged Render successfuly to prevent sleep."

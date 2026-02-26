@@ -217,14 +217,25 @@ async function loadPredictions() {
         const data = await response.json();
 
         // Football returns array directly, NBA returns {predictions: [...]}
-        currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
+        if (data.status === "pending_github_actions") {
+            const icon = currentSport === 'football' ? '⚽' : '🏀';
+            grid.innerHTML = `
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                    <h3 style="margin-bottom: 8px;">Calculando Predicciones</h3>
+                    <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto; line-height: 1.5;">El motor de Inteligencia Artificial en GitHub Actions está procesando los partidos de hoy. Por favor regresa en unos minutos.</p>
+                </div>`;
+            return;
+        }
+
+        currentPredictions = currentSport === 'football' ? (data.predictions || data) : (data.predictions || []);
 
         renderPredictions(currentPredictions);
     } catch (error) {
         console.error(error);
         const icon = currentSport === 'football' ? '⚽' : '🏀';
         grid.innerHTML = `
-            <div class="empty-state"><div class="empty-icon">${icon}</div><p>Error cargando predicciones</p></div>`;
+            <div class="empty-state"><div class="empty-icon">${icon}</div><p>Error de conexión con el servidor de lectura</p></div>`;
         showToast('Error cargando predicciones', 'error');
     }
 }

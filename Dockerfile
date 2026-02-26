@@ -28,9 +28,9 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copiar e instalar dependencias primero (mejor cache de Docker)
-COPY requirements.txt .
+COPY requirements_prod.txt .
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements_prod.txt
 
 # Copiar TODO el proyecto (incluye src/, Data/, Models/)
 COPY . .
