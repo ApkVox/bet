@@ -971,8 +971,8 @@
                 const response = await fetch(endpoint);
                 const data = await response.json();
 
-                // API structure difference: /predict-today returns {predictions: []}, /predict-football returns []
-                currentPredictions = currentSport === 'football' ? data : (data.predictions || []);
+                // API structure difference removed: both endpoints return {predictions: []}
+                currentPredictions = data.predictions || [];
 
                 const gamesTodayEl = document.getElementById('games-today');
                 if (gamesTodayEl) gamesTodayEl.textContent = currentPredictions.length;

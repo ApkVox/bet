@@ -128,13 +128,16 @@ export default function HistoryScreen({ sport, colors }) {
             ? 'https://media.api-sports.io/football/leagues/39.png'
             : 'https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg';
 
+        const colorScheme = useColorScheme();
+        const isLightMode = colorScheme === 'light';
+
         return (
             <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
                 {/* League Badge Header */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <Image
                         source={{ uri: leagueLogoUrl }}
-                        style={{ width: sport === 'football' ? 16 : 30, height: 16, marginRight: 6, tintColor: sport === 'nba' ? (theme === 'light' ? '#000' : '#fff') : undefined }}
+                        style={{ width: sport === 'football' ? 16 : 30, height: 16, marginRight: 6, tintColor: sport === 'nba' ? (isLightMode ? '#000' : '#fff') : undefined }}
                         resizeMode="contain"
                     />
                     <Text style={{ fontSize: 10, color: colors.textTertiary, textTransform: 'uppercase', fontWeight: 'bold' }}>

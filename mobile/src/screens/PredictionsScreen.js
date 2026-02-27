@@ -75,13 +75,15 @@ export default function PredictionsScreen({ sport, colors }) {
             ? 'https://media.api-sports.io/football/leagues/39.png'
             : 'https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg';
 
+        const isLightMode = colorScheme === 'light';
+
         return (
             <Animated.View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
                 {/* League Badge Header */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <Image
                         source={{ uri: leagueLogoUrl }}
-                        style={{ width: sport === 'football' ? 20 : 36, height: 20, marginRight: 8, tintColor: sport === 'nba' ? (theme === 'light' ? '#000' : '#fff') : undefined }}
+                        style={{ width: sport === 'football' ? 20 : 36, height: 20, marginRight: 8, tintColor: sport === 'nba' ? (isLightMode ? '#000' : '#fff') : undefined }}
                         resizeMode="contain"
                     />
                     <Text style={{ fontSize: 11, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: 'bold' }}>
