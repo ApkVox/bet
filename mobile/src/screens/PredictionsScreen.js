@@ -92,10 +92,16 @@ export default function PredictionsScreen({ sport, colors }) {
                 </View>
 
                 {/* Match Header */}
-                <View style={styles.matchHeader}>
+                <View style={[styles.matchHeader, { marginTop: 16 }]}>
                     <View style={styles.teamBox}>
-                        <Image source={item.home_logo ? { uri: item.home_logo } : getTeamLogo(item.home_team)} style={styles.teamLogo} resizeMode="contain" />
-                        <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
+                        {item.home_logo ? (
+                            <Image source={{ uri: item.home_logo }} style={styles.teamLogo} resizeMode="contain" />
+                        ) : (
+                            <View style={[styles.teamLogo, { backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' }]}>
+                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{item.home_team?.substring(0, 2)}</Text>
+                            </View>
+                        )}
+                        <Text style={[styles.teamName, { color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text, fontWeight: (item.prediction === '1' || item.prediction === item.home_team) ? 'bold' : 'normal' }]} numberOfLines={2}>
                             {item.home_team}
                         </Text>
                     </View>
@@ -103,8 +109,14 @@ export default function PredictionsScreen({ sport, colors }) {
                         <Text style={[styles.vsText, { color: colors.textTertiary }]}>VS</Text>
                     </View>
                     <View style={styles.teamBox}>
-                        <Image source={item.away_logo ? { uri: item.away_logo } : getTeamLogo(item.away_team)} style={styles.teamLogo} resizeMode="contain" />
-                        <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
+                        {item.away_logo ? (
+                            <Image source={{ uri: item.away_logo }} style={styles.teamLogo} resizeMode="contain" />
+                        ) : (
+                            <View style={[styles.teamLogo, { backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' }]}>
+                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{item.away_team?.substring(0, 2)}</Text>
+                            </View>
+                        )}
+                        <Text style={[styles.teamName, { color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text, fontWeight: (item.prediction === '2' || item.prediction === item.away_team) ? 'bold' : 'normal' }]} numberOfLines={2}>
                             {item.away_team}
                         </Text>
                     </View>
@@ -112,26 +124,27 @@ export default function PredictionsScreen({ sport, colors }) {
 
                 {/* Prediction Result */}
                 {sport === 'football' ? (
-                    <View style={{ marginTop: 16, flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '1' || item.prediction === item.home_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
-                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>1 (Local)</Text>
-                            <Text style={{ fontWeight: 'bold', color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text }}>
+                    <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.border, backgroundColor: (item.prediction === '1' || item.prediction === item.home_team) ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
+                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Local</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text }}>
                                 {(item.probs?.home || 0).toFixed(0)}%
                             </Text>
                         </View>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === 'X' || item.prediction === 'Draw') ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
-                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>X (Empate)</Text>
-                            <Text style={{ fontWeight: 'bold', color: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.text }}>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.border, backgroundColor: (item.prediction === 'X' || item.prediction === 'Draw') ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
+                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Empate</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.text }}>
                                 {(item.probs?.draw || 0).toFixed(0)}%
                             </Text>
                         </View>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '2' || item.prediction === item.away_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
-                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>2 (Visita)</Text>
-                            <Text style={{ fontWeight: 'bold', color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text }}>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.border, backgroundColor: (item.prediction === '2' || item.prediction === item.away_team) ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
+                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Visita</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text }}>
                                 {(item.probs?.away || 0).toFixed(0)}%
                             </Text>
                         </View>
                     </View>
+
                 ) : (
                     <View style={[styles.resultBox, { backgroundColor: colors.bgMuted }]}>
                         <Text style={[styles.winnerName, { color: colors.accent }]}>{item.winner}</Text>

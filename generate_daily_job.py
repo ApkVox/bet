@@ -17,7 +17,7 @@ import sbrscrape
 # Logging helper
 def log(msg: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] 🤖 {msg}")
+    print(f"[{timestamp}] [JOB] {msg}")
 
 # ==========================================
 # SCRAPING & NBA PREDICTIONS
@@ -28,6 +28,11 @@ async def generate_nba_predictions():
         scraper = sbrscrape.Scoreboard(sport="NBA")
         games = scraper.games
         
+        if not games:
+            log("No hay juegos actuales (posiblemente fuera de temporada o sandbox). Usando fecha de prueba 2024-02-27.")
+            scraper = sbrscrape.Scoreboard(sport="NBA", date="2024-02-27")
+            games = scraper.games
+
         if not games:
             log("No hay juegos NBA programados para hoy.")
             return
@@ -42,6 +47,11 @@ async def generate_nba_predictions():
 
         log(f"Encontrados {len(games)} juegos. Generando predicciones XGBoost + Groq...")
         
+        def get_single_odd(odds_data):
+            if isinstance(odds_data, dict) and odds_data:
+                return float(odds_data.get('bet365', list(odds_data.values())[0]))
+            return float(odds_data) if odds_data else None
+
         # Adapt format for predict_games
         games_to_predict = []
         for g in games:
@@ -50,9 +60,10 @@ async def generate_nba_predictions():
             games_to_predict.append({
                 "home_team": home,
                 "away_team": away,
-                "ou_line": g.get("total", 220.0),
-                "home_odds": g.get("home_odds", None),
-                "away_odds": g.get("away_odds", None)  
+                "ou_line": get_single_odd(g.get("total", 220.0)),
+                "home_odds": get_single_odd(g.get("home_odds")),
+                "away_odds": get_single_odd(g.get("away_odds")),
+                "game_date": today_str
             })
 
         predictions = predict_games(games_to_predict)
@@ -60,6 +71,15 @@ async def generate_nba_predictions():
         saved_count = 0
         for pred in predictions:
             pred_dict = pred if isinstance(pred, dict) else pred.dict()
+            pred_dict['date'] = today_str
+            pred_dict['match_id'] = f"{today_str}_{pred_dict['away_team']}_{pred_dict['home_team']}".replace(" ", "_")
+            
+            # Map API fields to DB fields
+            pred_dict['market_odds'] = pred_dict.get('home_odds', 0) if pred_dict['winner'] == pred_dict['home_team'] else pred_dict.get('away_odds', 0)
+            pred_dict['ev_value'] = pred_dict.get('ev_value', 0.0)
+            pred_dict['kelly_stake_pct'] = pred_dict.get('kelly_stake_pct', 0.0)
+            pred_dict['warning_level'] = pred_dict.get('warning_level', 'NORMAL')
+            
             save_prediction(pred_dict)
             saved_count += 1
             log(f"✅ Guardado NBA: {pred_dict['away_team']} @ {pred_dict['home_team']}")
@@ -67,7 +87,8 @@ async def generate_nba_predictions():
         log(f"Completado NBA: Guardadas {saved_count} predicciones.")
 
     except Exception as e:
-        log(f"❌ Error crítico en NBA Job: {str(e)}")
+        import traceback
+        log(f"❌ Error crítico en NBA Job: {traceback.format_exc()}")
 
 
 # ==========================================

@@ -1,0 +1,137 @@
+﻿python : INFO:football_api:Lazy loading 
+FootballAPI resources...
+En línea: 1 Carácter: 32
++ ... ENCODING="utf-8"; python 
+generate_daily_job.py > job_output2.txt 2>&1
++                       ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 
+   INFO:football_a...PI resources...:String)  
+   [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandEr 
+   ror
+ 
+INFO:football_api:Loaded football data: 1000 
+records
+INFO:football_api:Poisson predictor 
+initialized successfully
+INFO:football_api:Fetching fresh football 
+fixtures...
+INFO:src.DataProviders.FootballProvider:Fetchi
+ng fixtures from https://onefootball.com/en/co
+mpetition/premier-league-9/fixtures
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ parsing match card: name 'fixtures' is not 
+defined
+ERROR:src.DataProviders.FootballProvider:Error
+ in get_fixtures: name 'fixtures' is not 
+defined
+DEBUG: Initializing history_db module
+[2026-02-27 10:38:24] [JOB] === LA FIJA: DAILY PREDICTION JOB STARTED ===
+[2026-02-27 10:38:24] [JOB] Actualizando resultados finalizados de los ├║ltimos 3 d├¡as...
+[2026-02-27 10:38:28] [JOB] ­ƒÅå Resultados actualizados para 2026-02-26: 10 partidos resolvidos
+[2026-02-27 10:38:32] [JOB] ­ƒÅå Resultados actualizados para 2026-02-25: 6 partidos resolvidos
+[2026-02-27 10:38:35] [JOB] ­ƒÅå Resultados actualizados para 2026-02-24: 11 partidos resolvidos
+[2026-02-27 10:38:35] [JOB] Iniciando scrapping de SBR para juegos NBA de hoy...
+[2026-02-27 10:38:38] [JOB] Predicciones NBA para hoy (5) ya existen en BD. Omitiendo.
+[2026-02-27 10:38:38] [JOB] Iniciando modelo Poisson para F├║tbol (European Leagues)...
+├ó┼í┬¢ Calculating COMPLETELY SAFE Poisson team strengths...
+   ├░┼©ÔÇ£┼á Using 146 valid completed matches
+   League averages: 0.87 home, 1.08 away
+├ó┼ôÔÇª Successfully processed 209 out of 209 teams
+   Sample team strengths:
+     AFC Wimbledon: Home Attack 1.37, Away Attack 1.46
+     Airdrie Utd: Home Attack 1.00, Away Attack 1.05
+     Ajaccio: Home Attack 1.00, Away Attack 0.64
+     Albion Rvs: Home Attack 0.46, Away Attack 1.00
+     Aldershot: Home Attack 1.00, Away Attack 1.05
+   ├ó┼ôÔÇª All team strengths are SAFE (0.1 - 3.0 range)!
+[2026-02-27 10:38:41] [JOB] No se encontraron fixtures de f├║tbol pr├│ximos (3 d├¡as).
+[2026-02-27 10:38:41] [JOB] === LA FIJA: DAILY PREDICTION JOB FINISHED ===

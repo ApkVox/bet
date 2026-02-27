@@ -420,25 +420,51 @@
 
         .history-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
         }
 
         .history-card {
             background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            padding: 16px;
+            border-radius: var(--radius-xl);
+            padding: 20px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .history-card.win {
+            background: rgba(52, 199, 89, 0.03);
+            /* green tint */
+            border-color: rgba(52, 199, 89, 0.3);
+        }
+
+        [data-theme="dark"] .history-card.win {
+            background: rgba(48, 209, 88, 0.05);
+        }
+
+        .history-card.loss {
+            background: rgba(255, 59, 48, 0.03);
+            /* red tint */
+            border-color: rgba(255, 59, 48, 0.3);
+        }
+
+        [data-theme="dark"] .history-card.loss {
+            background: rgba(255, 69, 58, 0.05);
         }
 
         .history-teams {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 1;
+        }
+
+        .history-team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
             flex: 1;
         }
 
@@ -449,9 +475,12 @@
         }
 
         .history-vs {
-            font-size: 10px;
-            color: var(--text-tertiary);
+            font-size: 11px;
             font-weight: 600;
+            color: var(--text-tertiary);
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
         }
 
         .history-info {
@@ -1023,35 +1052,52 @@
 
             grid.innerHTML = predictions.map((pred, idx) => {
                 if (currentSport === 'football') {
-                    // FOOTBALL CARD (3-way)
+                    // FOOTBALL CARD (Matching NBA aesthetic exactly)
+                    // Ensure logos are gracefully handled
+                    const homeLogo = pred.home_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(pred.home_team.substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100`;
+                    const awayLogo = pred.away_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(pred.away_team.substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100`;
+
+                    const isHomeFavored = pred.prediction === pred.home_team || pred.prediction === '1';
+                    const isAwayFavored = pred.prediction === pred.away_team || pred.prediction === '2';
+                    const isDraw = pred.prediction === 'Draw' || pred.prediction === 'X';
+
                     return `
                     <div class="prediction-card" onclick="showDetails(${idx})">
-                        <div class="league-badge" style="font-size: 10px; opacity: 0.7; margin-bottom: 8px;">${pred.league}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; align-items: center;">
+                            <img src="https://media.api-sports.io/football/leagues/39.png" style="height:16px; opacity:0.8" alt="PL" onerror="this.style.display='none'"> 
+                            <span style="margin-left: 6px;">PREMIER LEAGUE</span>
+                        </div>
+                        
                         <div class="match-header">
                             <div class="team">
-                                <span class="team-name" style="font-size: 1.1em">${pred.home_team}</span>
+                                <img class="team-logo" src="${homeLogo}" alt="${pred.home_team}" onerror="this.style.display='none'">
+                                <span class="team-name" style="${isHomeFavored ? 'color: var(--accent); font-weight: 700;' : ''}">${pred.home_team}</span>
                             </div>
                             <span class="vs-badge">VS</span>
                             <div class="team">
-                                <span class="team-name" style="font-size: 1.1em">${pred.away_team}</span>
+                                <img class="team-logo" src="${awayLogo}" alt="${pred.away_team}" onerror="this.style.display='none'">
+                                <span class="team-name" style="${isAwayFavored ? 'color: var(--accent); font-weight: 700;' : ''}">${pred.away_team}</span>
                             </div>
                         </div>
-                        <div class="prediction-result" style="margin-top: 12px; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
-                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
-                                <div style="font-size: 12px; opacity: 0.8">Local</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'inherit'}">${pred.probs?.home ? (pred.probs.home).toFixed(0) : '0'}%</div>
+
+                        <div class="prediction-result" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px;">
+                            <div class="prob-box" style="text-align: center; padding: 8px; background: ${isHomeFavored ? 'rgba(0,113,227,0.1)' : 'var(--bg-card)'}; border: 1px solid ${isHomeFavored ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px; transition: all 0.2s ease;">
+                                <div style="font-size: 11px; opacity: 0.7; font-weight: 600; text-transform: uppercase;">Local</div>
+                                <div style="font-size: 18px; font-weight: 700; margin-top: 4px; color: ${isHomeFavored ? 'var(--accent)' : 'var(--text-primary)'}">${pred.probs?.home ? (pred.probs.home).toFixed(0) : '0'}%</div>
                             </div>
-                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
-                                <div style="font-size: 12px; opacity: 0.8">Empate</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'inherit'}">${pred.probs?.draw ? (pred.probs.draw).toFixed(0) : '0'}%</div>
+                            <div class="prob-box" style="text-align: center; padding: 8px; background: ${isDraw ? 'rgba(0,113,227,0.1)' : 'var(--bg-card)'}; border: 1px solid ${isDraw ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px; transition: all 0.2s ease;">
+                                <div style="font-size: 11px; opacity: 0.7; font-weight: 600; text-transform: uppercase;">Empate</div>
+                                <div style="font-size: 18px; font-weight: 700; margin-top: 4px; color: ${isDraw ? 'var(--accent)' : 'var(--text-primary)'}">${pred.probs?.draw ? (pred.probs.draw).toFixed(0) : '0'}%</div>
                             </div>
-                            <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
-                                <div style="font-size: 12px; opacity: 0.8">Visitante</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'inherit'}">${pred.probs?.away ? (pred.probs.away).toFixed(0) : '0'}%</div>
+                            <div class="prob-box" style="text-align: center; padding: 8px; background: ${isAwayFavored ? 'rgba(0,113,227,0.1)' : 'var(--bg-card)'}; border: 1px solid ${isAwayFavored ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px; transition: all 0.2s ease;">
+                                <div style="font-size: 11px; opacity: 0.7; font-weight: 600; text-transform: uppercase;">Visita</div>
+                                <div style="font-size: 18px; font-weight: 700; margin-top: 4px; color: ${isAwayFavored ? 'var(--accent)' : 'var(--text-primary)'}">${pred.probs?.away ? (pred.probs.away).toFixed(0) : '0'}%</div>
                             </div>
                         </div>
-                        <div class="prediction-meta">
-                            <span class="meta-tag">Predicción: <strong>${pred.prediction}</strong></span>
+                        
+                        <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">PREDICCIÓN DEL MODELO</span>
+                            <span style="font-weight: 700; color: var(--accent); font-size: 14px;">${pred.prediction}</span>
                         </div>
                     </div>
                     `;
@@ -1118,9 +1164,37 @@
                         <div class="history-cards">
                             ${games.map(h => {
                     const matchName = h.match || h.match_id || `${h.home_team} vs ${h.away_team}`;
-                    const teams = matchName.split(' vs ');
-                    const home = h.home_team || teams[0] || 'Local';
-                    const away = h.away_team || teams[1] || 'Visita';
+                    let home = h.home_team;
+                    let away = h.away_team;
+
+                    if (!home || !away) {
+                        if (matchName.includes(' vs ')) {
+                            const teams = matchName.split(' vs ');
+                            home = teams[0].trim();
+                            away = teams[1].trim();
+                        } else if (matchName.includes('_')) {
+                            const parts = matchName.split('_');
+                            if (parts.length >= 3) {
+                                // e.g. "2026-02-27_Memphis_Grizzlies_Dallas_Mavericks"
+                                // Strip date
+                                const teamStr = matchName.substring(11);
+                                // Approximation for split (first 2 words away, last 2 words home) 
+                                // Just replace underscores with spaces for a readable format
+                                const t = teamStr.replace(/_/g, ' ');
+                                // We don't know exactly where the split is without a dictionary, 
+                                // but we can do a naive split at the middle or just provide a fallback.
+                                // For NBA, "vs" is preferred but if not, let's at least make it readable.
+                                home = "Local";
+                                away = t;
+                            } else {
+                                home = parts[0];
+                                away = parts[1] || 'Visita';
+                            }
+                        }
+                    }
+
+                    home = home || 'Local';
+                    away = away || 'Visita';
                     // Determine which field contains the prediction/winner
                     const winner = h.result === 'WIN' ? (h.winner || h.predicted_winner || h.prediction)
                         : (h.result === 'LOSS' ? (h.prediction || h.predicted_winner || h.winner)
@@ -1133,36 +1207,56 @@
                                 (h.probs?.draw && h.prediction === 'Draw' ? (h.probs.draw).toFixed(0) :
                                     (h.win_probability || h.probability || 0))));
 
-                    // Use avatar based fallback for football, NBA svgs for nba
-                    const getLogoUrl = (sport, team) => {
+                    // Use backend logo if provided, otherwise NBA SVGs or fallback
+                    const getLogoUrl = (sport, team, backendLogo) => {
+                        if (backendLogo) return backendLogo;
                         if (sport === 'nba') return NBA_LOGOS[team] || '';
                         return `https://ui-avatars.com/api/?name=${encodeURIComponent(team.substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100`;
                     };
 
-                    const homeLogo = getLogoUrl(currentSport, home);
-                    const awayLogo = getLogoUrl(currentSport, away);
+                    const homeLogo = getLogoUrl(currentSport, home, h.home_logo);
+                    const awayLogo = getLogoUrl(currentSport, away, h.away_logo);
                     const leagueLogo = currentSport === 'football' ?
                         `<img src="https://media.api-sports.io/football/leagues/39.png" style="height:16px; opacity:0.8" alt="PL" onerror="this.style.display='none'">` :
                         `<img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" style="height:16px; opacity:0.8; filter:invert(1)" alt="NBA" onerror="this.style.display='none'">`;
 
                     return `
-                        <div class="history-item ${h.result?.toLowerCase()}">
-                            <div class="result-badge ${h.result?.toLowerCase()}">${h.result === 'WIN' ? '✅ ACERTADA' : h.result === 'LOSS' ? '❌ FALLADA' : '⏳ PENDIENTE'}</div>
-                            <div style="font-size: 10px; margin-bottom: 8px; text-transform: uppercase;">${leagueLogo}</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <img src="${homeLogo}" style="width:24px; height:24px; border-radius:12px;" onerror="this.style.display='none'">
-                                    <span style="font-weight: 500">${home}</span>
+                        <div class="history-card ${h.result?.toLowerCase()}">
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; align-items: center;">
+                                ${leagueLogo} <span style="margin-left: 6px;">${currentSport === 'football' ? 'PREMIER LEAGUE' : 'NBA'}</span>
+                            </div>
+                            
+                            <div class="match-header">
+                                <div class="team">
+                                    ${homeLogo ? `<img class="team-logo" src="${homeLogo}" alt="${home}">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-bottom:8px;">${home.substring(0, 2)}</div>`}
+                                    <span class="team-name">${home}</span>
+                                    ${h.home_score != null ? `<span style="font-size: 18px; font-weight: 800; margin-top: 4px;">${h.home_score}</span>` : ''}
                                 </div>
-                                <span style="color: var(--text-tertiary); font-size: 12px; font-weight:bold;">VS</span>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-weight: 500">${away}</span>
-                                    <img src="${awayLogo}" style="width:24px; height:24px; border-radius:12px;" onerror="this.style.display='none'">
+                                <span class="vs-badge">VS</span>
+                                <div class="team">
+                                    ${awayLogo ? `<img class="team-logo" src="${awayLogo}" alt="${away}">` : `<div style="width:40px;height:40px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-bottom:8px;">${away.substring(0, 2)}</div>`}
+                                    <span class="team-name">${away}</span>
+                                    ${h.away_score != null ? `<span style="font-size: 18px; font-weight: 800; margin-top: 4px;">${h.away_score}</span>` : ''}
                                 </div>
                             </div>
-                            <div style="background: var(--bg-card); padding: 8px; border-radius: var(--radius-sm); font-size: 13px; display: flex; justify-content: space-between;">
-                                <span>Predicción: <strong>${winner}</strong></span>
-                                <span style="color: var(--text-tertiary)">Prob: ${prob}%</span>
+
+                            ${currentSport === 'football' ? `
+                                <div class="prediction-result" style="margin-top: 12px; grid-template-columns: 1fr 1fr 1fr; gap: 4px; background: ${h.result === 'WIN' ? 'rgba(52, 199, 89, 0.1)' : h.result === 'LOSS' ? 'rgba(255, 59, 48, 0.1)' : 'var(--bg-secondary)'}">
+                                    <div style="text-align: center; font-size: 14px; font-weight: 700; color: ${h.result === 'WIN' ? 'var(--success)' : h.result === 'LOSS' ? 'var(--danger)' : 'var(--accent)'}; width:100%;">
+                                        Prediccion: ${winner} (${prob}%)
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="prediction-result" style="background: ${h.result === 'WIN' ? 'rgba(52, 199, 89, 0.1)' : h.result === 'LOSS' ? 'rgba(255, 59, 48, 0.1)' : 'var(--bg-secondary)'}">
+                                    <div class="predicted-winner" style="color: ${h.result === 'WIN' ? 'var(--success)' : h.result === 'LOSS' ? 'var(--danger)' : 'var(--accent)'}">${winner}</div>
+                                    <div class="probability">${prob}%</div>
+                                    <div class="probability-label">Probabilidad</div>
+                                </div>
+                            `}
+
+                            <div class="prediction-meta" style="margin-top: 12px;">
+                                <span class="result-badge ${h.result?.toLowerCase()}" style="padding: 6px 12px;">${h.result === 'WIN' ? '✓ Ganada' : h.result === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}</span>
+                                ${h.ev > 0 ? `<span class="meta-tag positive">+EV ${h.ev?.toFixed(1)}%</span>` : ''}
                             </div>
                         </div>
                     `;

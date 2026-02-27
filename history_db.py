@@ -217,7 +217,7 @@ def get_history(days: int = 7) -> list[dict]:
     """Obtiene historial de predicciones"""
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute("""
-            SELECT date, match_id, predicted_winner, prob_final, odds, 
+            SELECT date, match_id, home_team, away_team, predicted_winner, prob_final, odds, 
                    ev_value, kelly_stake, result, profit
             FROM predictions
             WHERE date >= date('now', '-' || ? || ' days')
@@ -230,13 +230,15 @@ def get_history(days: int = 7) -> list[dict]:
             {
                 "date": row[0],
                 "match": row[1],
-                "predicted_winner": row[2],
-                "probability": row[3],
-                "odds": row[4],
-                "ev": row[5],
-                "kelly_stake": row[6],
-                "result": row[7],
-                "profit": row[8]
+                "home_team": row[2],
+                "away_team": row[3],
+                "predicted_winner": row[4],
+                "probability": row[5],
+                "odds": row[6],
+                "ev": row[7],
+                "kelly_stake": row[8],
+                "result": row[9],
+                "profit": row[10]
             }
             for row in rows
         ]
@@ -295,7 +297,13 @@ def get_predictions_by_date_light(date: str) -> list[dict]:
                 "warning_level": row[9],
                 "game_status": row[10],
                 "home_score": None,
-                "away_score": None
+                "away_score": None,
+                "implied_prob": None,
+                "discrepancy": None,
+                "value_type": None,
+                "sentiment_score": None,
+                "key_injuries": None,
+                "risk_analysis": None
             }
             predictions.append(p)
             
@@ -417,6 +425,40 @@ def get_football_history(days: int = 30) -> list[dict]:
             WHERE date >= date('now', '-' || ? || ' days')
             ORDER BY date DESC, created_at DESC
         """, (days,))
+        
+        rows = cursor.fetchall()
+        
+        return [
+            {
+                "date": row[0],
+                "league": row[1],
+                "match_id": row[2],
+                "home_team": row[3],
+                "away_team": row[4],
+                "prediction": row[5],
+                "probs": {
+                    "home": row[6],
+                    "draw": row[7],
+                    "away": row[8]
+                },
+                "result": row[9],
+                "created_at": row[10]
+            }
+            for row in rows
+        ]
+
+
+def get_upcoming_football_predictions() -> list[dict]:
+    """Obtiene predicciones de fútbol pendientes para la próxima jornada (fecha >= actual)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        # Retrieve matches that are from today onwards and pending
+        cursor = conn.execute("""
+            SELECT date, league, match_id, home_team, away_team, prediction,
+                   prob_home, prob_draw, prob_away, result, created_at
+            FROM football_predictions
+            WHERE date >= date('now', 'localtime') AND result = 'PENDING'
+            ORDER BY date ASC, created_at DESC
+        """)
         
         rows = cursor.fetchall()
         

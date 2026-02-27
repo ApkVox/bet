@@ -161,9 +161,18 @@ async def predict_football():
     """
     Obtiene las predicciones de Fútbol preparadas por GitHub Actions.
     """
-    preds = history_db.get_football_history(days=3)
+    from football_logos import get_team_info
+    preds = history_db.get_upcoming_football_predictions()
     
     if preds:
+         for p in preds:
+             home_info = get_team_info(p['home_team'])
+             away_info = get_team_info(p['away_team'])
+             p['home_team'] = home_info['name'] # Swap to official name
+             p['away_team'] = away_info['name']
+             p['home_logo'] = home_info['logo']
+             p['away_logo'] = away_info['logo']
+         
          return {"status": "success", "count": len(preds), "predictions": preds}
     else:
          return {"status": "pending_github_actions", "count": 0, "predictions": []}
@@ -182,8 +191,18 @@ async def get_full_history(days: int = 365):
 @app.get("/history/football")
 async def get_football_history_endpoint(days: int = 30):
     """Obtiene el historial de fútbol de los últimos días."""
+    from football_logos import get_team_info
     data = history_db.get_football_history(days)
+    
     if isinstance(data, list):
+        for p in data:
+            home_info = get_team_info(p['home_team'])
+            away_info = get_team_info(p['away_team'])
+            p['home_team'] = home_info['name']
+            p['away_team'] = away_info['name']
+            p['home_logo'] = home_info['logo']
+            p['away_logo'] = away_info['logo']
+            
         return {"history": data}
     return data
 

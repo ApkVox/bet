@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
     StyleSheet, View, Text, SectionList, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Image, useColorScheme
+    RefreshControl, TouchableOpacity, Image
 } from 'react-native';
 import { getHistoryFull, getFootballHistory } from '../api/api';
 import { NBA_TEAM_LOGOS } from '../theme/theme';
@@ -96,7 +96,7 @@ export default function HistoryScreen({ sport, colors }) {
     if (error) {
         return (
             <View style={[styles.center, { backgroundColor: colors.bg }]}>
-                <Text style={{ fontSize: 40, marginBottom: 12 }}>📡</Text>
+                <Text style={{ fontSize: 40, marginBottom: 12 }}>­ƒôí</Text>
                 <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
                 <TouchableOpacity
                     style={[styles.retryBtn, { backgroundColor: colors.accent }]}
@@ -130,110 +130,57 @@ export default function HistoryScreen({ sport, colors }) {
 
         const colorScheme = useColorScheme();
         const isLightMode = colorScheme === 'light';
-        const cardBgColor = isWin ? 'rgba(46, 204, 113, 0.08)' : isLoss ? 'rgba(231, 76, 60, 0.08)' : colors.bgCard;
-        const cardBorderColor = isWin ? 'rgba(46, 204, 113, 0.3)' : isLoss ? 'rgba(231, 76, 60, 0.3)' : colors.border;
 
         return (
-            <View style={[styles.card, { backgroundColor: cardBgColor, borderColor: cardBorderColor }]}>
+            <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
                 {/* League Badge Header */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <Image
                         source={{ uri: leagueLogoUrl }}
-                        style={{ width: sport === 'football' ? 20 : 36, height: 20, marginRight: 8, tintColor: sport === 'nba' ? (isLightMode ? '#000' : '#fff') : undefined }}
+                        style={{ width: sport === 'football' ? 16 : 30, height: 16, marginRight: 6, tintColor: sport === 'nba' ? (isLightMode ? '#000' : '#fff') : undefined }}
                         resizeMode="contain"
                     />
-                    <Text style={{ fontSize: 11, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                    <Text style={{ fontSize: 10, color: colors.textTertiary, textTransform: 'uppercase', fontWeight: 'bold' }}>
                         {sport === 'football' ? 'Premier League' : 'NBA'}
                     </Text>
                 </View>
 
-                {/* Match Header */}
-                <View style={[styles.matchHeader, { marginTop: 16 }]}>
-                    <View style={styles.teamBox}>
-                        {item.home_logo ? (
-                            <Image source={{ uri: item.home_logo }} style={styles.teamLogo} resizeMode="contain" />
-                        ) : (
-                            <View style={[styles.teamLogo, { backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' }]}>
-                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{item.home_team?.substring(0, 2)}</Text>
-                            </View>
-                        )}
-                        <Text style={[styles.teamName, { color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text, fontWeight: (item.prediction === '1' || item.prediction === item.home_team) ? 'bold' : 'normal' }]} numberOfLines={2}>
-                            {item.home_team || 'N/A'}
-                        </Text>
-                        {(item.home_score != null) && (
-                            <Text style={[styles.scoreText, { color: colors.text }]}>{item.home_score}</Text>
-                        )}
-                    </View>
-                    <View style={[styles.vsBadge, { backgroundColor: colors.bgMuted }]}>
-                        <Text style={[styles.vsText, { color: colors.textTertiary }]}>VS</Text>
-                    </View>
-                    <View style={styles.teamBox}>
-                        {item.away_logo ? (
-                            <Image source={{ uri: item.away_logo }} style={styles.teamLogo} resizeMode="contain" />
-                        ) : (
-                            <View style={[styles.teamLogo, { backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' }]}>
-                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{item.away_team?.substring(0, 2)}</Text>
-                            </View>
-                        )}
-                        <Text style={[styles.teamName, { color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text, fontWeight: (item.prediction === '2' || item.prediction === item.away_team) ? 'bold' : 'normal' }]} numberOfLines={2}>
-                            {item.away_team || 'N/A'}
-                        </Text>
-                        {(item.away_score != null) && (
-                            <Text style={[styles.scoreText, { color: colors.text }]}>{item.away_score}</Text>
-                        )}
-                    </View>
-                </View>
+                <View style={styles.cardContent}>
+                    <View style={styles.matchInfo}>
+                        <View style={styles.teamRow}>
+                            <Image source={item.home_logo ? { uri: item.home_logo } : getTeamLogo(item.home_team)} style={styles.teamLogoSmall} resizeMode="contain" />
+                            <Text style={[styles.matchTeams, { color: colors.text }]} numberOfLines={1}>
+                                {item.home_team || 'N/A'}
+                            </Text>
+                            {(item.home_score != null) && (
+                                <Text style={[styles.scoreText, { color: colors.text }]}>{item.home_score}</Text>
+                            )}
+                        </View>
+                        <View style={styles.teamRow}>
+                            <Image source={item.away_logo ? { uri: item.away_logo } : getTeamLogo(item.away_team)} style={styles.teamLogoSmall} resizeMode="contain" />
+                            <Text style={[styles.matchTeams, { color: colors.text }]} numberOfLines={1}>
+                                {item.away_team || 'N/A'}
+                            </Text>
+                            {(item.away_score != null) && (
+                                <Text style={[styles.scoreText, { color: colors.text }]}>{item.away_score}</Text>
+                            )}
+                        </View>
 
-                {/* Prediction Result like PredictionsScreen */}
-                {sport === 'football' ? (
-                    <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.border, backgroundColor: (item.prediction === '1' || item.prediction === item.home_team) ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
-                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Local</Text>
-                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text }}>
-                                {(item.probs?.home || 0).toFixed(0)}%
-                            </Text>
-                        </View>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.border, backgroundColor: (item.prediction === 'X' || item.prediction === 'Draw') ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
-                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Empate</Text>
-                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.text }}>
-                                {(item.probs?.draw || 0).toFixed(0)}%
-                            </Text>
-                        </View>
-                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.border, backgroundColor: (item.prediction === '2' || item.prediction === item.away_team) ? (isLightMode ? 'rgba(0,113,227,0.05)' : 'rgba(0,113,227,0.15)') : colors.bgMuted }}>
-                            <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' }}>Visita</Text>
-                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text }}>
-                                {(item.probs?.away || 0).toFixed(0)}%
-                            </Text>
-                        </View>
-                    </View>
-                ) : (
-                    <View style={[styles.resultBox, { backgroundColor: isWin ? colors.successLight : isLoss ? colors.dangerLight : colors.bgMuted }]}>
-                        <Text style={[styles.winnerName, { color: isWin ? colors.success : isLoss ? colors.danger : colors.accent }]}>{item.winner}</Text>
-                        <Text style={[styles.probability, { color: colors.text }]}>
-                            {(item.win_probability || 0).toFixed(1)}%
+                        <Text style={[styles.predLabel, { color: colors.textSecondary }]}>
+                            Pred: {item.winner || 'N/A'} ({(item.win_probability || 0).toFixed(1)}%)
                         </Text>
-                        <Text style={[styles.probLabel, { color: colors.textSecondary }]}>Probabilidad</Text>
                     </View>
-                )}
-
-                {/* Meta Row Result Badge */}
-                <View style={styles.metaRow}>
                     <View style={[
-                        styles.metaTag,
-                        { backgroundColor: isWin ? colors.success : isLoss ? colors.danger : colors.warning }
+                        styles.resultBadge,
+                        { backgroundColor: isWin ? colors.successLight : isLoss ? colors.dangerLight : colors.warningLight }
                     ]}>
-                        <Text style={[styles.metaText, { color: '#fff' }]}>
-                            {isWin ? '✓ Ganada' : isLoss ? '✗ Perdida' : '⏳ Pendiente'}
+                        <Text style={[
+                            styles.resultText,
+                            { color: isWin ? colors.success : isLoss ? colors.danger : colors.warning }
+                        ]}>
+                            {isWin ? 'Ô£ô' : isLoss ? 'Ô£ù' : 'ÔÅ│'} {isWin ? 'Ganada' : isLoss ? 'Perdida' : 'Pendiente'}
                         </Text>
                     </View>
-
-                    {item.ev != null && item.ev > 0 && (
-                        <View style={[styles.metaTag, { backgroundColor: colors.successLight }]}>
-                            <Text style={[styles.metaText, { color: colors.success }]}>
-                                +EV {item.ev.toFixed(1)}
-                            </Text>
-                        </View>
-                    )}
                 </View>
             </View>
         );
@@ -325,7 +272,7 @@ export default function HistoryScreen({ sport, colors }) {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <Text style={{ fontSize: 48, marginBottom: 8 }}>📋</Text>
+                        <Text style={{ fontSize: 48, marginBottom: 8 }}>­ƒôï</Text>
                         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                             No hay resultados para este filtro
                         </Text>
@@ -364,35 +311,25 @@ const styles = StyleSheet.create({
     sectionHeader: { paddingVertical: 8 },
     sectionTitle: { fontSize: 14, fontWeight: '600' },
     card: {
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 14,
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 8,
         borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 2,
     },
-    matchHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-    },
-    teamBox: { flex: 1, alignItems: 'center' },
-    teamLogo: { width: 44, height: 44, marginBottom: 6 },
-    teamName: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
-    vsBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginHorizontal: 8 },
-    vsText: { fontSize: 11, fontWeight: '700' },
-    resultBox: { borderRadius: 16, padding: 16, alignItems: 'center', marginBottom: 10 },
-    winnerName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
-    probability: { fontSize: 28, fontWeight: '800' },
-    probLabel: { fontSize: 11, marginTop: 2 },
-    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-    metaTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-    metaText: { fontSize: 11, fontWeight: '600' },
-    scoreText: { fontSize: 16, fontWeight: '800', marginTop: 4 },
+    cardContent: { flexDirection: 'row', alignItems: 'center' },
+    matchInfo: { flex: 1, paddingRight: 10 },
+    teamRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+    teamLogoSmall: { width: 20, height: 20, marginRight: 8 },
+    matchTeams: { flex: 1, fontSize: 13, fontWeight: '600' },
+    scoreText: { fontSize: 13, fontWeight: '700', marginLeft: 8 },
+    predLabel: { fontSize: 12, marginTop: 4 },
+    resultBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+    resultText: { fontSize: 11, fontWeight: '700' },
     emptyState: { alignItems: 'center', paddingTop: 60 },
     emptyText: { fontSize: 15 },
 });
