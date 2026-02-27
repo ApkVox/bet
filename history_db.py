@@ -8,6 +8,38 @@ print(f"DEBUG: Initializing history_db module")
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "Data" / "history.db"
 
+def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    """Return existing column names for a table."""
+    cursor = conn.execute(f"PRAGMA table_info({table_name})")
+    return {row[1] for row in cursor.fetchall()}
+
+def _ensure_football_schema(conn: sqlite3.Connection) -> None:
+    """
+    Ensure football_predictions has all expected columns.
+    This keeps old production DBs compatible without destructive migrations.
+    """
+    required_columns = {
+        "date": "TEXT",
+        "league": "TEXT DEFAULT 'ENG-Premier League'",
+        "match_id": "TEXT",
+        "home_team": "TEXT",
+        "away_team": "TEXT",
+        "prediction": "TEXT",
+        "prob_home": "REAL",
+        "prob_draw": "REAL",
+        "prob_away": "REAL",
+        "odd_home": "REAL",
+        "odd_draw": "REAL",
+        "odd_away": "REAL",
+        "status": "TEXT DEFAULT 'PENDING'",
+        "result": "TEXT",
+        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    }
+    existing_columns = _get_table_columns(conn, "football_predictions")
+    for col, col_type in required_columns.items():
+        if col not in existing_columns:
+            conn.execute(f"ALTER TABLE football_predictions ADD COLUMN {col} {col_type}")
+
 def init_history_db():
     """Crea la tabla de historial si no existe"""
     DB_PATH.parent.mkdir(exist_ok=True)
@@ -54,6 +86,7 @@ def init_history_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        _ensure_football_schema(conn)
         conn.commit()
     print("[OK] history.db inicializada (NBA + Football)")
 
