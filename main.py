@@ -9,8 +9,11 @@ El trabajo pesado se movió a GitHub Actions (generate_daily_job.py).
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+# Zona horaria de Colombia (UTC-5)
+TZ_COLOMBIA = timezone(timedelta(hours=-5))
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -114,7 +117,7 @@ async def predict_today():
     Obtiene las predicciones NBA generadas hoy desde la BD.
     Si no están listas o si es muy temprano, notifica al cliente que GitHub Actions está por correr.
     """
-    date_str = datetime.now().strftime('%Y-%m-%d')
+    date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
     existing_preds = history_db.get_predictions_by_date_light(date_str)
     
     if existing_preds:
