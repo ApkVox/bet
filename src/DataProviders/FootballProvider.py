@@ -19,6 +19,7 @@ class FootballProvider:
     TEAM_MAPPING = {
         "Manchester City": "Man City",
         "Manchester United": "Man United",
+        "Man Utd": "Man United",
         "Leicester City": "Leicester",
         "Leeds United": "Leeds",
         "Norwich City": "Norwich",
@@ -27,6 +28,7 @@ class FootballProvider:
         "Brighton & Hove Albion": "Brighton",
         "West Ham United": "West Ham",
         "Tottenham Hotspur": "Tottenham",
+        "Spurs": "Tottenham",
         "Liverpool FC": "Liverpool",
         "Chelsea FC": "Chelsea",
         "Arsenal FC": "Arsenal",
