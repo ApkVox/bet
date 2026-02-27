@@ -46,12 +46,9 @@ const PL_LOGOS = {
     "Fulham": "https://resources.premierleague.com/premierleague/badges/50/t54.png",
     "Ipswich Town": "https://resources.premierleague.com/premierleague/badges/50/t40.png",
     "Ipswich": "https://resources.premierleague.com/premierleague/badges/50/t40.png",
-    "Leeds United": "https://resources.premierleague.com/premierleague/badges/50/t2.png",
-    "Leeds": "https://resources.premierleague.com/premierleague/badges/50/t2.png",
     "Leicester City": "https://resources.premierleague.com/premierleague/badges/50/t13.png",
     "Leicester": "https://resources.premierleague.com/premierleague/badges/50/t13.png",
     "Liverpool": "https://resources.premierleague.com/premierleague/badges/50/t14.png",
-    "Liverpool FC": "https://resources.premierleague.com/premierleague/badges/50/t14.png",
     "Manchester City": "https://resources.premierleague.com/premierleague/badges/50/t43.png",
     "Man City": "https://resources.premierleague.com/premierleague/badges/50/t43.png",
     "Manchester United": "https://resources.premierleague.com/premierleague/badges/50/t1.png",
@@ -61,7 +58,6 @@ const PL_LOGOS = {
     "Nottingham Forest": "https://resources.premierleague.com/premierleague/badges/50/t17.png",
     "Nott'm Forest": "https://resources.premierleague.com/premierleague/badges/50/t17.png",
     "Southampton": "https://resources.premierleague.com/premierleague/badges/50/t20.png",
-    "Sunderland": "https://resources.premierleague.com/premierleague/badges/50/t56.png",
     "Tottenham Hotspur": "https://resources.premierleague.com/premierleague/badges/50/t6.png",
     "Tottenham": "https://resources.premierleague.com/premierleague/badges/50/t6.png",
     "West Ham United": "https://resources.premierleague.com/premierleague/badges/50/t21.png",
@@ -78,7 +74,7 @@ const mobileThemeIcon = document.getElementById('mobileThemeIcon');
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    const icon = theme === 'dark' ? '☀️' : '🌙';
+    const icon = theme === 'dark' ? '\u2600\uFE0F' : '\u263E';
     if (themeToggle) themeToggle.textContent = icon;
     if (mobileThemeIcon) mobileThemeIcon.textContent = icon;
 }
@@ -86,7 +82,7 @@ function setTheme(theme) {
 function initTheme() {
     const saved = localStorage.getItem('theme');
     if (saved) setTheme(saved);
-    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+    else setTheme('dark');
 }
 
 function toggleTheme() {
@@ -115,75 +111,49 @@ document.querySelectorAll('.nav-tab, .mobile-nav-btn[data-section]').forEach(btn
     });
 });
 
-// UI: Toast & Skeletons
+// Toast
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
-
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <span>${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span>
-        <span>${message}</span>
-    `;
-
+    toast.innerHTML = `<span>${type === 'success' ? '\u2705' : type === 'error' ? '\u26A0\uFE0F' : '\u2139\uFE0F'}</span><span>${message}</span>`;
     container.appendChild(toast);
-
-    // Remove after 3s
     setTimeout(() => {
-        toast.style.animation = 'toast-out 0.3s forwards';
-        toast.addEventListener('animationend', () => {
-            if (toast.parentElement) toast.remove();
-        });
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
+// Skeleton loaders
 function renderSkeletonCards(count) {
     return Array(count).fill(0).map(() => `
-        <div class="prediction-card">
+        <div class="prediction-card" style="pointer-events:none;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                <div class="skeleton" style="width:16px;height:16px;border-radius:50%;"></div>
+                <div class="skeleton" style="width:100px;height:12px;"></div>
+            </div>
             <div class="match-header">
                 <div class="team">
-                    <div class="skeleton" style="width: 48px; height: 48px; border-radius: 50%; margin-bottom: 6px;"></div>
-                    <div class="skeleton skeleton-text" style="width: 60px;"></div>
+                    <div class="skeleton" style="width:56px;height:56px;border-radius:50%;"></div>
+                    <div class="skeleton" style="width:70px;height:14px;margin-top:8px;"></div>
                 </div>
-                <span class="vs-badge">VS</span>
+                <div class="skeleton" style="width:32px;height:24px;border-radius:99px;"></div>
                 <div class="team">
-                    <div class="skeleton" style="width: 48px; height: 48px; border-radius: 50%; margin-bottom: 6px;"></div>
-                    <div class="skeleton skeleton-text" style="width: 60px;"></div>
+                    <div class="skeleton" style="width:56px;height:56px;border-radius:50%;"></div>
+                    <div class="skeleton" style="width:70px;height:14px;margin-top:8px;"></div>
                 </div>
             </div>
-            <div class="prediction-result" style="padding:12px;">
-                <div class="skeleton skeleton-text" style="width: 100px; height: 16px; margin: 0 auto 8px;"></div>
-                <div class="skeleton skeleton-text" style="width: 80px; height: 24px; margin: 0 auto;"></div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderSkeletonHistory(count) {
-    return Array(count).fill(0).map(() => `
-         <div class="history-card">
-            <div class="history-teams">
-                <div class="history-team">
-                    <div class="skeleton" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 6px;"></div>
-                    <div class="skeleton skeleton-text" style="width: 50px;"></div>
-                </div>
-                <span class="history-vs">VS</span>
-                <div class="history-team">
-                    <div class="skeleton" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 6px;"></div>
-                    <div class="skeleton skeleton-text" style="width: 50px;"></div>
-                </div>
-            </div>
-            <div class="history-info">
-                <div class="skeleton skeleton-text" style="width: 120px;"></div>
-                <div class="skeleton skeleton-text" style="width: 80px;"></div>
-            </div>
+            <div class="skeleton" style="width:100%;height:70px;margin-top:16px;"></div>
+            <div class="skeleton" style="width:100%;height:44px;margin-top:12px;"></div>
         </div>
     `).join('');
 }
 
 // Data
-let currentSport = 'nba'; // 'nba' or 'football'
+let currentSport = 'nba';
 let currentPredictions = [];
 let allHistory = [];
 let currentHistoryLimit = 20;
@@ -192,15 +162,9 @@ let currentHistoryLimit = 20;
 document.querySelectorAll('.sport-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         if (btn.classList.contains('active')) return;
-
-        // Update UI
         document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        // Update State
         currentSport = btn.dataset.sport;
-
-        // Reload Data
         loadPredictions();
         loadHistory();
     });
@@ -216,26 +180,25 @@ async function loadPredictions() {
         if (!response.ok) throw new Error('Error de red');
         const data = await response.json();
 
-        // Football returns array directly, NBA returns {predictions: [...]}
         if (data.status === "pending_github_actions") {
-            const icon = currentSport === 'football' ? '⚽' : '🏀';
             grid.innerHTML = `
-                <div class="empty-state" style="padding: 40px 20px;">
-                    <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">⏳</div>
-                    <h3 style="margin-bottom: 8px;">Calculando Predicciones</h3>
-                    <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto; line-height: 1.5;">El motor de Inteligencia Artificial en GitHub Actions está procesando los partidos de hoy. Por favor regresa en unos minutos.</p>
+                <div class="empty-state" style="grid-column: 1/-1;">
+                    <div class="empty-icon">\u23F3</div>
+                    <h3 style="font-weight:800;font-size:18px;margin-bottom:8px;">Calculando Predicciones</h3>
+                    <p style="max-width:400px;margin:0 auto;line-height:1.6;">El motor de IA esta procesando los partidos de hoy. Regresa en unos minutos.</p>
                 </div>`;
             return;
         }
 
-        currentPredictions = currentSport === 'football' ? (data.predictions || data) : (data.predictions || []);
-
+        currentPredictions = data.predictions || [];
         renderPredictions(currentPredictions);
     } catch (error) {
         console.error(error);
-        const icon = currentSport === 'football' ? '⚽' : '🏀';
         grid.innerHTML = `
-            <div class="empty-state"><div class="empty-icon">${icon}</div><p>Error de conexión con el servidor de lectura</p></div>`;
+            <div class="empty-state" style="grid-column: 1/-1;">
+                <div class="empty-icon">\u26A0\uFE0F</div>
+                <p>Error cargando datos</p>
+            </div>`;
         showToast('Error cargando predicciones', 'error');
     }
 }
@@ -243,73 +206,99 @@ async function loadPredictions() {
 async function loadHistory() {
     currentHistoryLimit = 20;
     const container = document.getElementById('historyContainer');
-    container.innerHTML = `<div class="history-cards">${renderSkeletonHistory(6)}</div>`;
+    container.innerHTML = `<div class="loading"><div class="spinner"></div><span>Cargando historial...</span></div>`;
 
     try {
-        const endpoint = currentSport === 'football' ? '/history/football?limit=100' : '/history/full?days=365';
+        const endpoint = currentSport === 'football' ? '/history/football?days=60' : '/history/full?days=60';
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Error al cargar historial');
         const data = await response.json();
-
         allHistory = data.history || [];
-
         renderHistory('all');
     } catch (error) {
         console.error('Error loading history:', error);
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando historial</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">\u26A0\uFE0F</div><p>Error cargando historial</p></div>`;
         showToast('Error cargando historial', 'error');
     }
+}
+
+function getLogoUrl(sport, team, backendLogo) {
+    if (backendLogo) return backendLogo;
+    if (sport === 'nba') return NBA_LOGOS[team] || '';
+    return PL_LOGOS[team] || '';
 }
 
 function renderPredictions(predictions) {
     const grid = document.getElementById('predictionsGrid');
     if (!predictions.length) {
-        const icon = currentSport === 'football' ? '⚽' : '🏀';
-        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">${icon}</div><p>No hay partidos de ${currentSport === 'football' ? 'fútbol' : 'NBA'} hoy</p></div>`;
+        const icon = currentSport === 'football' ? '\u26BD' : '\uD83C\uDFC0';
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">${icon}</div><p>No hay partidos de ${currentSport === 'football' ? 'futbol' : 'NBA'} hoy</p></div>`;
         return;
     }
 
     grid.innerHTML = predictions.map((pred, idx) => {
+        const delay = (idx * 0.06).toFixed(2);
+
         if (currentSport === 'football') {
-            // FOOTBALL CARD (3-way)
+            const homeLogo = getLogoUrl('football', pred.home_team, pred.home_logo);
+            const awayLogo = getLogoUrl('football', pred.away_team, pred.away_logo);
+            const isHomeFavored = pred.prediction === pred.home_team || pred.prediction === '1';
+            const isAwayFavored = pred.prediction === pred.away_team || pred.prediction === '2';
+            const isDraw = pred.prediction === 'Draw' || pred.prediction === 'X';
+
+            const homeProb = pred.probs?.home ? pred.probs.home : 0;
+            const drawProb = pred.probs?.draw ? pred.probs.draw : 0;
+            const awayProb = pred.probs?.away ? pred.probs.away : 0;
+            const maxProb = Math.max(homeProb, drawProb, awayProb);
+
+            const predLabel = isHomeFavored ? pred.home_team : isAwayFavored ? pred.away_team : 'Empate';
+
             return `
-            <div class="prediction-card" onclick="showDetails(${idx})" style="position: relative; overflow: hidden;">
-                <div class="league-badge" style="position: absolute; top: 12px; right: 12px; font-size: 10px; opacity: 0.6; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${pred.league || 'Premier League'}</div>
-                <div class="match-header" style="margin-top: 10px;">
+            <div class="prediction-card animate-in" style="animation-delay:${delay}s" onclick="showDetails(${idx})">
+                <div class="card-league-badge">
+                    <img src="https://media.api-sports.io/football/leagues/39.png" alt="PL" onerror="this.style.display='none'">
+                    <span>Premier League</span>
+                </div>
+                <div class="match-header">
                     <div class="team">
-                        <img class="team-logo" src="${pred.home_logo || ''}" alt="" onerror="this.style.display='none'">
-                        <span class="team-name">${pred.home_team}</span>
+                        ${homeLogo ? `<img class="team-logo" src="${homeLogo}" alt="${pred.home_team}" onerror="this.style.display='none'">` : ''}
+                        <span class="team-name ${isHomeFavored ? 'favored' : ''}">${pred.home_team}</span>
                     </div>
                     <span class="vs-badge">VS</span>
                     <div class="team">
-                        <img class="team-logo" src="${pred.away_logo || ''}" alt="" onerror="this.style.display='none'">
-                        <span class="team-name">${pred.away_team}</span>
+                        ${awayLogo ? `<img class="team-logo" src="${awayLogo}" alt="${pred.away_team}" onerror="this.style.display='none'">` : ''}
+                        <span class="team-name ${isAwayFavored ? 'favored' : ''}">${pred.away_team}</span>
                     </div>
                 </div>
-                <div class="prediction-result" style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px;">
-                    <div class="prob-box" style="text-align: center; padding: 8px 4px; background: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--bg-card-hover)' : 'transparent'}; border-radius: var(--radius-sm); border: 1px solid ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'transparent'};">
-                        <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pred.home_team}</div>
-                        <div style="font-size: 18px; font-weight: 700; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'var(--text-primary)'}">${(pred.prob_home * 100).toFixed(0)}%</div>
+                <div class="prob-bar-container">
+                    <div class="prob-item ${isHomeFavored ? 'highlighted' : ''}">
+                        <div class="prob-label">Local</div>
+                        <div class="prob-value">${homeProb.toFixed(0)}%</div>
+                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${homeProb}%;animation-delay:${(idx * 0.06 + 0.3).toFixed(2)}s"></div></div>
                     </div>
-                    <div class="prob-box" style="text-align: center; padding: 8px 4px; background: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--bg-card-hover)' : 'transparent'}; border-radius: var(--radius-sm); border: 1px solid ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'transparent'};">
-                        <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Empate</div>
-                        <div style="font-size: 18px; font-weight: 700; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'var(--text-primary)'}">${(pred.prob_draw * 100).toFixed(0)}%</div>
+                    <div class="prob-item ${isDraw ? 'highlighted' : ''}">
+                        <div class="prob-label">Empate</div>
+                        <div class="prob-value">${drawProb.toFixed(0)}%</div>
+                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${drawProb}%;animation-delay:${(idx * 0.06 + 0.4).toFixed(2)}s"></div></div>
                     </div>
-                    <div class="prob-box" style="text-align: center; padding: 8px 4px; background: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--bg-card-hover)' : 'transparent'}; border-radius: var(--radius-sm); border: 1px solid ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'transparent'};">
-                        <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pred.away_team}</div>
-                        <div style="font-size: 18px; font-weight: 700; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'var(--text-primary)'}">${(pred.prob_away * 100).toFixed(0)}%</div>
+                    <div class="prob-item ${isAwayFavored ? 'highlighted' : ''}">
+                        <div class="prob-label">Visita</div>
+                        <div class="prob-value">${awayProb.toFixed(0)}%</div>
+                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${awayProb}%;animation-delay:${(idx * 0.06 + 0.5).toFixed(2)}s"></div></div>
                     </div>
                 </div>
-                <div class="probability-label" style="text-align: center; margin-top: -8px; margin-bottom: 12px;">Probabilidades</div>
-                <div class="prediction-meta" style="justify-content: center;">
-                    <span class="meta-tag" style="background: rgba(0, 113, 227, 0.1); color: var(--accent); font-weight: 700;">Pred: ${pred.prediction === '1' ? pred.home_team : pred.prediction === '2' ? pred.away_team : 'Empate'}</span>
+                <div class="card-prediction-footer">
+                    <span class="footer-label">Prediccion del modelo</span>
+                    <span class="footer-value">${predLabel}</span>
                 </div>
-            </div>
-            `;
+            </div>`;
         } else {
-            // NBA CARD (Existing)
             return `
-            <div class="prediction-card" onclick="showDetails(${idx})">
+            <div class="prediction-card animate-in" style="animation-delay:${delay}s" onclick="showDetails(${idx})">
+                <div class="card-league-badge">
+                    <img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" style="height:14px;opacity:0.7;filter:invert(1)" alt="NBA" onerror="this.style.display='none'">
+                    <span>NBA</span>
+                </div>
                 <div class="match-header">
                     <div class="team">
                         <img class="team-logo" src="${NBA_LOGOS[pred.home_team] || ''}" alt="" onerror="this.style.display='none'">
@@ -327,11 +316,10 @@ function renderPredictions(predictions) {
                     <div class="probability-label">Probabilidad</div>
                 </div>
                 <div class="prediction-meta">
-                    ${pred.ev_value > 0 ? `<span class="meta-tag positive">EV +${pred.ev_value?.toFixed(1)}%</span>` : ''}
-                    ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">⚠️ Riesgo</span>` : ''}
+                    ${pred.ev_score > 0 ? `<span class="meta-tag positive">EV +${pred.ev_score?.toFixed(1)}%</span>` : ''}
+                    ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">\u26A0\uFE0F Riesgo</span>` : ''}
                 </div>
-            </div>
-            `;
+            </div>`;
         }
     }).join('');
 }
@@ -353,21 +341,19 @@ function renderHistory(filter) {
     }
 
     if (!filtered.length) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No hay registros</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">\uD83D\uDCED</div><p>No hay registros</p></div>`;
         return;
     }
 
     const visible = filtered.slice(0, currentHistoryLimit);
-
-    // Group by date
     const grouped = {};
     visible.forEach(h => {
         if (!grouped[h.date]) grouped[h.date] = [];
         grouped[h.date].push(h);
     });
 
-    // Sort dates descending
     const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+    let cardIndex = 0;
 
     let html = sortedDates.map(date => {
         const games = grouped[date];
@@ -379,42 +365,75 @@ function renderHistory(filter) {
                 <div class="history-day-header">${formatted}</div>
                 <div class="history-cards">
                     ${games.map(h => {
-            const teams = h.match?.split(' vs ') || ['', ''];
-            const home = teams[0]?.trim() || '';
-            const away = teams[1]?.trim() || '';
+            const delay = (cardIndex++ * 0.05).toFixed(2);
+            let home = h.home_team;
+            let away = h.away_team;
+
+            if (!home || !away) {
+                const matchName = h.match || h.match_id || '';
+                if (matchName.includes(' vs ')) {
+                    const teams = matchName.split(' vs ');
+                    home = teams[0]?.trim() || 'Local';
+                    away = teams[1]?.trim() || 'Visita';
+                } else {
+                    home = home || 'Local';
+                    away = away || 'Visita';
+                }
+            }
+
+            const winner = h.predicted_winner || h.prediction || h.winner || '-';
+            const prob = h.prob_model ? (h.prob_model * 100).toFixed(0) :
+                (h.probs?.home && (h.prediction === home) ? h.probs.home.toFixed(0) :
+                    (h.probs?.away && (h.prediction === away) ? h.probs.away.toFixed(0) :
+                        (h.probs?.draw && h.prediction === 'Draw' ? h.probs.draw.toFixed(0) :
+                            (h.win_probability || h.probability || 0))));
+
+            const homeLogo = getLogoUrl(currentSport, home, h.home_logo);
+            const awayLogo = getLogoUrl(currentSport, away, h.away_logo);
+            const leagueLabel = currentSport === 'football' ? 'Premier League' : 'NBA';
+            const leagueLogo = currentSport === 'football'
+                ? `<img src="https://media.api-sports.io/football/leagues/39.png" style="height:14px;opacity:0.7" alt="PL" onerror="this.style.display='none'">`
+                : `<img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" style="height:14px;opacity:0.7;filter:invert(1)" alt="NBA" onerror="this.style.display='none'">`;
+
+            const resultClass = h.result?.toLowerCase() || 'pending';
+            const resultColor = resultClass === 'win' ? 'var(--success)' : resultClass === 'loss' ? 'var(--danger)' : 'var(--accent)';
+
             return `
-                            <div class="history-card">
-                                <div class="history-teams">
-                                    <div class="history-team">
-                                        <img class="history-team-logo" src="${h.home_logo || (currentSport === 'nba' ? (NBA_LOGOS[home] || '') : (PL_LOGOS[home] || ''))}" alt="" onerror="this.style.display='none'">
-                                        <span class="history-team-name">${home}</span>
-                                    </div>
-                                    <span class="history-vs">VS</span>
-                                    <div class="history-team">
-                                        <img class="history-team-logo" src="${h.away_logo || (currentSport === 'nba' ? (NBA_LOGOS[away] || '') : (PL_LOGOS[away] || ''))}" alt="" onerror="this.style.display='none'">
-                                        <span class="history-team-name">${away}</span>
-                                    </div>
-                                </div>
-                                <div class="history-info">
-                                    <div class="history-prediction">Predicción: <strong>${h.predicted_winner}</strong> (${h.probability}%)</div>
-                                    <span class="result-badge ${h.result?.toLowerCase() || 'pending'}">
-                                        ${h.result === 'WIN' ? '✓ Ganada' : h.result === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}
-                                    </span>
-                                </div>
-                            </div>
-                        `;
+                <div class="history-card ${resultClass} animate-in" style="animation-delay:${delay}s">
+                    <div class="card-league-badge">
+                        ${leagueLogo}
+                        <span>${leagueLabel}</span>
+                    </div>
+                    <div class="match-header">
+                        <div class="team">
+                            ${homeLogo ? `<img class="team-logo" src="${homeLogo}" alt="${home}" style="width:44px;height:44px" onerror="this.style.display='none'">` : `<div style="width:44px;height:44px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${home.substring(0, 2)}</div>`}
+                            <span class="team-name" style="font-size:12px">${home}</span>
+                            ${h.home_score != null ? `<span style="font-size:20px;font-weight:900;margin-top:2px;">${h.home_score}</span>` : ''}
+                        </div>
+                        <span class="vs-badge">VS</span>
+                        <div class="team">
+                            ${awayLogo ? `<img class="team-logo" src="${awayLogo}" alt="${away}" style="width:44px;height:44px" onerror="this.style.display='none'">` : `<div style="width:44px;height:44px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${away.substring(0, 2)}</div>`}
+                            <span class="team-name" style="font-size:12px">${away}</span>
+                            ${h.away_score != null ? `<span style="font-size:20px;font-weight:900;margin-top:2px;">${h.away_score}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="prediction-result" style="background:${resultClass === 'win' ? 'var(--success-bg)' : resultClass === 'loss' ? 'var(--danger-bg)' : 'var(--bg-secondary)'}">
+                        <div class="predicted-winner" style="color:${resultColor}">${winner}</div>
+                        <div class="probability" style="font-size:24px">${prob}%</div>
+                        <div class="probability-label">Probabilidad</div>
+                    </div>
+                    <div class="prediction-meta">
+                        <span class="result-badge ${resultClass}">${resultClass === 'win' ? '\u2713 Ganada' : resultClass === 'loss' ? '\u2717 Perdida' : '\u23F3 Pendiente'}</span>
+                        ${h.ev > 0 ? `<span class="meta-tag positive">+EV ${h.ev?.toFixed(1)}%</span>` : ''}
+                    </div>
+                </div>`;
         }).join('')}
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
 
     if (filtered.length > currentHistoryLimit) {
-        html += `
-            <div class="load-more-container">
-                <button class="load-more-btn" onclick="loadMoreHistory()">Ver más partidos...</button>
-            </div>
-        `;
+        html += `<div class="load-more-container"><button class="load-more-btn" onclick="loadMoreHistory()">Ver mas partidos...</button></div>`;
     }
 
     container.innerHTML = html;
@@ -425,6 +444,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        currentHistoryLimit = 20;
         renderHistory(btn.dataset.filter);
     });
 });
@@ -436,19 +456,21 @@ function showDetails(index) {
 
     let summary = '';
     if (currentSport === 'football') {
-        const winnerLabel = pred.prediction === '1' ? pred.home_team : pred.prediction === '2' ? pred.away_team : 'Empate';
-        const prob = (pred.prediction === '1' ? pred.prob_home : pred.prediction === '2' ? pred.prob_away : pred.prob_draw) * 100;
-        summary = `<strong style="color: var(--accent);">${winnerLabel}</strong> con <strong>${prob.toFixed(0)}%</strong> de probabilidad`;
+        const isHome = pred.prediction === pred.home_team || pred.prediction === '1';
+        const isAway = pred.prediction === pred.away_team || pred.prediction === '2';
+        const winnerLabel = isHome ? pred.home_team : isAway ? pred.away_team : 'Empate';
+        const prob = isHome ? pred.probs?.home : isAway ? pred.probs?.away : pred.probs?.draw;
+        summary = `<strong style="color:var(--accent);font-size:20px;">${winnerLabel}</strong><br><span style="font-size:14px;color:var(--text-secondary)">con <strong>${(prob || 0).toFixed(0)}%</strong> de probabilidad</span>`;
     } else {
-        summary = `<strong style="color: var(--accent);">${pred.winner}</strong> gana con <strong>${pred.win_probability}%</strong>`;
+        summary = `<strong style="color:var(--accent);font-size:20px;">${pred.winner}</strong><br><span style="font-size:14px;color:var(--text-secondary)">gana con <strong>${pred.win_probability}%</strong></span>`;
     }
 
     document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
     document.getElementById('modalBody').innerHTML = `
-        <div style="margin-bottom: 12px;">
+        <div style="text-align:center;margin-bottom:20px;padding:20px;background:var(--bg-secondary);border-radius:var(--radius-md);">
             ${summary}
         </div>
-        <p class="analysis-text">${pred.ai_analysis || 'Análisis de IA no disponible para este partido.'}</p>
+        <p class="analysis-text">${pred.ai_analysis || 'Analisis de IA no disponible para este partido.'}</p>
     `;
     document.getElementById('modal').classList.add('active');
 }

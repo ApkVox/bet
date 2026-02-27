@@ -1,50 +1,48 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { spacing, radius } from '../theme/theme';
 
 export default function Header({ sport, setSport, section, setSection, isDark, toggleTheme, colors }) {
     return (
         <View style={[styles.header, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
-            {/* Top: Logo + Theme */}
             <View style={styles.topRow}>
                 <View style={styles.logo}>
-                    <Text style={styles.logoIcon}>🏀</Text>
+                    <Text style={styles.logoIcon}>{'\uD83C\uDFC0'}</Text>
                     <Text style={[styles.logoText, { color: colors.text }]}>La Fija</Text>
                 </View>
                 <TouchableOpacity
-                    style={[styles.themeBtn, { backgroundColor: colors.bgMuted }]}
+                    style={[styles.themeBtn, { backgroundColor: colors.bgMuted, borderColor: colors.border }]}
                     onPress={toggleTheme}
                     activeOpacity={0.7}
                 >
-                    <Text style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</Text>
+                    <Text style={{ fontSize: 20 }}>{isDark ? '\u2600\uFE0F' : '\u263E'}</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Sport Selector */}
             <View style={[styles.selectorRow, { backgroundColor: colors.bgMuted }]}>
                 <TouchableOpacity
-                    style={[styles.selectorBtn, sport === 'nba' && styles.selectorActive]}
+                    style={[styles.selectorBtn, sport === 'nba' && { backgroundColor: colors.accent }]}
                     onPress={() => setSport('nba')}
                     activeOpacity={0.7}
                 >
-                    <Text style={[styles.selectorText, sport === 'nba' && styles.selectorTextActive]}>
-                        🏀 NBA
+                    <Text style={[styles.selectorText, { color: colors.textSecondary }, sport === 'nba' && styles.selectorTextActive]}>
+                        {'\uD83C\uDFC0'} NBA
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.selectorBtn, sport === 'football' && styles.selectorActive]}
+                    style={[styles.selectorBtn, sport === 'football' && { backgroundColor: colors.accent }]}
                     onPress={() => setSport('football')}
                     activeOpacity={0.7}
                 >
-                    <Text style={[styles.selectorText, sport === 'football' && styles.selectorTextActive]}>
-                        ⚽ Futbol
+                    <Text style={[styles.selectorText, { color: colors.textSecondary }, sport === 'football' && styles.selectorTextActive]}>
+                        {'\u26BD'} Futbol
                     </Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Section Tabs */}
             <View style={[styles.tabRow, { backgroundColor: colors.bgMuted }]}>
                 <TouchableOpacity
-                    style={[styles.tabBtn, section === 'predictions' && styles.tabActive]}
+                    style={[styles.tabBtn, section === 'predictions' && { backgroundColor: colors.accent }]}
                     onPress={() => setSection('predictions')}
                     activeOpacity={0.7}
                 >
@@ -53,7 +51,7 @@ export default function Header({ sport, setSport, section, setSection, isDark, t
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.tabBtn, section === 'history' && styles.tabActive]}
+                    style={[styles.tabBtn, section === 'history' && { backgroundColor: colors.accent }]}
                     onPress={() => setSection('history')}
                     activeOpacity={0.7}
                 >
@@ -69,8 +67,8 @@ export default function Header({ sport, setSport, section, setSection, isDark, t
 const styles = StyleSheet.create({
     header: {
         paddingTop: 54,
-        paddingBottom: 12,
-        paddingHorizontal: 16,
+        paddingBottom: spacing.md,
+        paddingHorizontal: spacing.md,
         borderBottomWidth: 1,
         gap: 10,
     },
@@ -82,45 +80,37 @@ const styles = StyleSheet.create({
     logo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: spacing.sm,
     },
-    logoIcon: { fontSize: 26 },
-    logoText: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
+    logoIcon: { fontSize: 28 },
+    logoText: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
     themeBtn: {
         width: 44,
         height: 44,
         borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
     },
     selectorRow: {
         flexDirection: 'row',
-        borderRadius: 99,
+        borderRadius: radius.pill,
         padding: 3,
     },
     selectorBtn: {
         flex: 1,
-        paddingVertical: 8,
-        borderRadius: 99,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.pill,
         alignItems: 'center',
-    },
-    selectorActive: {
-        backgroundColor: '#0071e3',
-        shadowColor: '#0071e3',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 3,
     },
     selectorText: {
         fontSize: 13,
-        fontWeight: '600',
-        color: '#86868b',
+        fontWeight: '700',
     },
     selectorTextActive: { color: '#fff' },
     tabRow: {
         flexDirection: 'row',
-        borderRadius: 12,
+        borderRadius: radius.md,
         padding: 3,
     },
     tabBtn: {
@@ -129,15 +119,12 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: 'center',
     },
-    tabActive: {
-        backgroundColor: '#0071e3',
-    },
     tabText: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '600',
     },
     tabTextActive: {
         color: '#fff',
-        fontWeight: '600',
+        fontWeight: '700',
     },
 });
