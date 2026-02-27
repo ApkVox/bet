@@ -62,15 +62,11 @@ export default function PredictionsScreen({ sport, colors }) {
 
     const getTeamLogo = (teamName) => {
         if (sport === 'nba') {
-            return { uri: NBA_TEAM_LOGOS[teamName] || 'https://cdn.nba.com/logos/nba/1610616834/primary/L/logo.svg' };
+            const url = NBA_TEAM_LOGOS[teamName];
+            if (url) return { uri: url };
+            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent((teamName || '?').substring(0, 2))}&background=1d428a&color=fff&rounded=true&bold=true&size=100` };
         } else {
-            // URL genérica de fútbol basada en el ID del equipo no la tenemos, pero podemos usar el nombre en un placeholder
-            // Lo ideal sería que la API enviara el logo o el ID, pero como usamos sbrscrape (Scraped Data) para fútbol en la web,
-            // la web de La Fija obtiene el ID del equipo y carga desde media.api-sports.io
-            // Pero en la respuesta actual de la API no tenemos el logo_url directamente a menos que la web haga el mapeo.
-            // Voy a crear una función que imite la lógica de la web (o provea un fallback visual).
-            // (En la versión web, para la predicción del día usa una clase CSS o un logo dummy si no tiene el ID).
-            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName)}&background=random&color=fff&rounded=true&bold=true` };
+            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent((teamName || '?').substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100` };
         }
     };
 

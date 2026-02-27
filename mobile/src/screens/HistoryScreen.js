@@ -22,7 +22,25 @@ export default function HistoryScreen({ sport, colors }) {
                 ? await getHistoryFull(30)
                 : await getFootballHistory(30);
 
-            const history = result.history || [];
+            const rawHistory = result.history || [];
+
+            // Normalize fields: API returns `match`, `predicted_winner`, `probability`
+            const history = rawHistory.map(item => {
+                let home_team = item.home_team || '';
+                let away_team = item.away_team || '';
+                if (!home_team && item.match) {
+                    const parts = item.match.split(' vs ');
+                    home_team = parts[0] || '';
+                    away_team = parts[1] || '';
+                }
+                return {
+                    ...item,
+                    home_team,
+                    away_team,
+                    winner: item.winner || item.predicted_winner || '',
+                    win_probability: item.win_probability != null ? item.win_probability : (item.probability != null ? item.probability : 0),
+                };
+            });
 
             // Compute stats
             const wins = history.filter(h => h.result === 'WIN').length;
@@ -91,11 +109,13 @@ export default function HistoryScreen({ sport, colors }) {
     }
 
     const getTeamLogo = (teamName) => {
-        if (!teamName) return { uri: 'https://ui-avatars.com/api/?name=?&background=random' };
+        if (!teamName) return { uri: `https://ui-avatars.com/api/?name=%3F&background=555&color=fff&rounded=true&bold=true&size=100` };
         if (sport === 'nba') {
-            return { uri: NBA_TEAM_LOGOS[teamName] || 'https://cdn.nba.com/logos/nba/1610616834/primary/L/logo.svg' };
+            const url = NBA_TEAM_LOGOS[teamName];
+            if (url) return { uri: url };
+            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.substring(0, 2))}&background=1d428a&color=fff&rounded=true&bold=true&size=100` };
         } else {
-            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName)}&background=random&color=fff&rounded=true&bold=true` };
+            return { uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100` };
         }
     };
 
