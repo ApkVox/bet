@@ -97,59 +97,66 @@ class FootballProvider:
             # Find match cards using the class observed in reference
             # Note: Class names like 'MatchCard_matchCard__iOv4G' might change. 
             # Ideally we look for structure, but for MVP we use the known selector.
-            match_cards = soup.find_all("a", class_="MatchCard_matchCard__iOv4G")
+            # OneFootball structure: it has date headers (e.g., class="Title_title__hngK1") 
+            # and then lists of MatchCard_matchCard__iOv4G under them.
+            # A more robust approach is to find all match cards, but also look at their parent containers or previous siblings.
+            # Let's iterate through all elements that are either date headers or match cards.
             
-            fixtures = []
-            today = datetime.now().date()
+            elements = soup.find_all(["h3", "a"])
+            current_date = datetime.now().date()
             
-            if not match_cards:
-                logger.warning("No match cards found with primary selector. trying fallback...")
-                # Fallback or generic search might be needed if class changed
-                # For now returning empty lists
-                return []
-
-            for card in match_cards:
-                try:
-                    # Extract teams
-                    # Usually found in specific sub-elements
-                    team_names = card.find_all("span", class_="SimpleMatchCardTeam_simpleMatchCardTeam__name__7Ud8D")
-                    if len(team_names) < 2:
-                        continue
-                        
-                    home_raw = team_names[0].text.strip()
-                    away_raw = team_names[1].text.strip()
-                    
-                    home_team = self.normalize_team_name(home_raw)
-                    away_team = self.normalize_team_name(away_raw)
-                    
-                    # Extract time/status
-                    # This might be "15:00" or "Live" or "FT"
-                    time_elem = card.find("span", class_="MatchCard_matchCard__status__rX10V")
-                    match_time = time_elem.text.strip() if time_elem else "00:00"
-                    
-                    # OneFootball usually groups by date headers, but extracting that is harder.
-                    # For MVP, we assume these are 'Upcoming' fixtures.
-                    # We'll assign today's date if it looks like a time, else tomorrow?
-                    # Actually, the reference api just returns strings.
-                    # We will default to Today/Tomorrow based on logic or leave date generic.
-                    # Let's try to find the date header if possible.
-                    
-                    # Finding the parent Section header usually works
-                    # But keeping it simple: treat all scrapped active matches as 'Upcoming'
-                    
-                    fixtures.append({
-                        "home_team": home_team,
-                        "away_team": away_team,
-                        "home_raw": home_raw,
-                        "away_raw": away_raw,
-                        "time": match_time,
-                        "date": str(today), # Placeholder - ideal: parse real date
-                        "league": "ENG-Premier League"
-                    })
-                    
-                except Exception as e:
-                    logger.error(f"Error parsing match card: {e}")
+            for elem in elements:
+                if elem.name == "h3" and "Title_title" in " ".join(elem.get("class", [])):
+                    # Es un header de fecha: "Today", "Tomorrow", "Saturday 27 Feb" etc.
+                    date_text = elem.text.strip().lower()
+                    if "today" in date_text or "hoy" in date_text:
+                        current_date = datetime.now().date()
+                    elif "tomorrow" in date_text or "mañana" in date_text:
+                        from datetime import timedelta
+                        current_date = (datetime.now() + timedelta(days=1)).date()
+                    else:
+                        # Para este MVP, si no es hoy o mañana, sumamos secuencialmente o usamos una lógica base
+                        # Si es un header nuevo, asumimos que es un día más adelante (esto es heurística simple)
+                        # Idealmente parseamos "27 Feb":
+                        try:
+                            # Intenta parsear fechas como "Saturday 1 Mar"
+                            import re
+                            match = re.search(r'\d+\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', elem.text.strip(), re.IGNORECASE)
+                            if match:
+                                parsed = datetime.strptime(match.group() + f" {current_date.year}", "%d %b %Y")
+                                current_date = parsed.date()
+                        except:
+                            pass
                     continue
+                
+                if elem.name == "a" and "MatchCard_matchCard__iOv4G" in " ".join(elem.get("class", [])):
+                    try:
+                        team_names = elem.find_all("span", class_="SimpleMatchCardTeam_simpleMatchCardTeam__name__7Ud8D")
+                        if len(team_names) < 2:
+                            continue
+                            
+                        home_raw = team_names[0].text.strip()
+                        away_raw = team_names[1].text.strip()
+                        
+                        home_team = self.normalize_team_name(home_raw)
+                        away_team = self.normalize_team_name(away_raw)
+                        
+                        time_elem = elem.find("span", class_="MatchCard_matchCard__status__rX10V")
+                        match_time = time_elem.text.strip() if time_elem else "00:00"
+                        
+                        fixtures.append({
+                            "home_team": home_team,
+                            "away_team": away_team,
+                            "home_raw": home_raw,
+                            "away_raw": away_raw,
+                            "time": match_time,
+                            "date": str(current_date),
+                            "league": "ENG-Premier League"
+                        })
+                        
+                    except Exception as e:
+                        logger.error(f"Error parsing match card: {e}")
+                        continue
             
             logger.info(f"Found {len(fixtures)} fixtures")
             return fixtures

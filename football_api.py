@@ -144,6 +144,7 @@ class FootballAPI:
                     
                     # Determine prediction
                     max_prob = max(home_prob, draw_prob, away_prob)
+                    prediction = "Draw"
                     if max_prob == home_prob:
                         prediction = home_team
                     elif max_prob == draw_prob:

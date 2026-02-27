@@ -124,8 +124,24 @@ export default function HistoryScreen({ sport, colors }) {
         const isLoss = item.result === 'LOSS';
         const isPending = !item.result || item.result === 'PENDING';
 
+        const leagueLogoUrl = sport === 'football'
+            ? 'https://media.api-sports.io/football/leagues/39.png'
+            : 'https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg';
+
         return (
             <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+                {/* League Badge Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <Image
+                        source={{ uri: leagueLogoUrl }}
+                        style={{ width: sport === 'football' ? 16 : 30, height: 16, marginRight: 6, tintColor: sport === 'nba' ? (theme === 'light' ? '#000' : '#fff') : undefined }}
+                        resizeMode="contain"
+                    />
+                    <Text style={{ fontSize: 10, color: colors.textTertiary, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                        {sport === 'football' ? 'Premier League' : 'NBA'}
+                    </Text>
+                </View>
+
                 <View style={styles.cardContent}>
                     <View style={styles.matchInfo}>
                         <View style={styles.teamRow}>

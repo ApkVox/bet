@@ -70,68 +70,117 @@ export default function PredictionsScreen({ sport, colors }) {
         }
     };
 
-    const renderCard = ({ item, index }) => (
-        <Animated.View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
-            {/* Match Header */}
-            <View style={styles.matchHeader}>
-                <View style={styles.teamBox}>
-                    <Image source={item.home_logo ? { uri: item.home_logo } : getTeamLogo(item.home_team)} style={styles.teamLogo} resizeMode="contain" />
-                    <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
-                        {item.home_team}
+    const renderCard = ({ item, index }) => {
+        const leagueLogoUrl = sport === 'football'
+            ? 'https://media.api-sports.io/football/leagues/39.png'
+            : 'https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg';
+
+        return (
+            <Animated.View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+                {/* League Badge Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <Image
+                        source={{ uri: leagueLogoUrl }}
+                        style={{ width: sport === 'football' ? 20 : 36, height: 20, marginRight: 8, tintColor: sport === 'nba' ? (theme === 'light' ? '#000' : '#fff') : undefined }}
+                        resizeMode="contain"
+                    />
+                    <Text style={{ fontSize: 11, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                        {sport === 'football' ? 'Premier League' : 'NBA'}
                     </Text>
                 </View>
-                <View style={[styles.vsBadge, { backgroundColor: colors.bgMuted }]}>
-                    <Text style={[styles.vsText, { color: colors.textTertiary }]}>VS</Text>
-                </View>
-                <View style={styles.teamBox}>
-                    <Image source={item.away_logo ? { uri: item.away_logo } : getTeamLogo(item.away_team)} style={styles.teamLogo} resizeMode="contain" />
-                    <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
-                        {item.away_team}
-                    </Text>
-                </View>
-            </View>
 
-            {/* Prediction Result */}
-            <View style={[styles.resultBox, { backgroundColor: colors.bgMuted }]}>
-                <Text style={[styles.winnerName, { color: colors.accent }]}>{item.winner}</Text>
-                <Text style={[styles.probability, { color: colors.text }]}>
-                    {(item.win_probability || 0).toFixed(1)}%
-                </Text>
-                <Text style={[styles.probLabel, { color: colors.textSecondary }]}>Probabilidad</Text>
-            </View>
-
-            {/* Meta Tags */}
-            <View style={styles.metaRow}>
-                {item.under_over && (
-                    <View style={[styles.metaTag, { backgroundColor: colors.bgMuted }]}>
-                        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                            {item.under_over} {item.ou_line || ''}
+                {/* Match Header */}
+                <View style={styles.matchHeader}>
+                    <View style={styles.teamBox}>
+                        <Image source={item.home_logo ? { uri: item.home_logo } : getTeamLogo(item.home_team)} style={styles.teamLogo} resizeMode="contain" />
+                        <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
+                            {item.home_team}
                         </Text>
                     </View>
-                )}
-                {item.ev_score != null && item.ev_score > 0 && (
-                    <View style={[styles.metaTag, { backgroundColor: colors.successLight }]}>
-                        <Text style={[styles.metaText, { color: colors.success }]}>
-                            +EV {item.ev_score.toFixed(1)}
+                    <View style={[styles.vsBadge, { backgroundColor: colors.bgMuted }]}>
+                        <Text style={[styles.vsText, { color: colors.textTertiary }]}>VS</Text>
+                    </View>
+                    <View style={styles.teamBox}>
+                        <Image source={item.away_logo ? { uri: item.away_logo } : getTeamLogo(item.away_team)} style={styles.teamLogo} resizeMode="contain" />
+                        <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
+                            {item.away_team}
                         </Text>
                     </View>
+                </View>
+
+                {/* Prediction Result */}
+                {sport === 'football' ? (
+                    <View style={{ marginTop: 16, flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '1' || item.prediction === item.home_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
+                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>1 (Local)</Text>
+                            <Text style={{ fontWeight: 'bold', color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text }}>
+                                {((item.probs?.home || item.prob_home || 0) * 100).toFixed(0) || 0}%
+                            </Text>
+                        </View>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === 'X' || item.prediction === 'Draw') ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
+                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>X (Empate)</Text>
+                            <Text style={{ fontWeight: 'bold', color: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.text }}>
+                                {((item.probs?.draw || item.prob_draw || 0) * 100).toFixed(0) || 0}%
+                            </Text>
+                        </View>
+                        <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '2' || item.prediction === item.away_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
+                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>2 (Visita)</Text>
+                            <Text style={{ fontWeight: 'bold', color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text }}>
+                                {((item.probs?.away || item.prob_away || 0) * 100).toFixed(0) || 0}%
+                            </Text>
+                        </View>
+                    </View>
+                ) : (
+                    <View style={[styles.resultBox, { backgroundColor: colors.bgMuted }]}>
+                        <Text style={[styles.winnerName, { color: colors.accent }]}>{item.winner}</Text>
+                        <Text style={[styles.probability, { color: colors.text }]}>
+                            {(item.win_probability || 0).toFixed(1)}%
+                        </Text>
+                        <Text style={[styles.probLabel, { color: colors.textSecondary }]}>Probabilidad</Text>
+                    </View>
                 )}
-                {item.game_status && (
-                    <View style={[styles.metaTag, {
-                        backgroundColor: item.game_status === 'WIN' ? colors.successLight
-                            : item.game_status === 'LOSS' ? colors.dangerLight : colors.warningLight
-                    }]}>
-                        <Text style={[styles.metaText, {
-                            color: item.game_status === 'WIN' ? colors.success
-                                : item.game_status === 'LOSS' ? colors.danger : colors.warning
+
+                {/* Meta Tags */}
+                <View style={[styles.metaRow, { marginTop: sport === 'football' ? 12 : 0 }]}>
+                    {sport === 'football' ? (
+                        <View style={[styles.metaTag, { backgroundColor: colors.bgMuted }]}>
+                            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                                Pronóstico: <Text style={{ color: colors.accent, fontWeight: 'bold' }}>{item.prediction}</Text>
+                            </Text>
+                        </View>
+                    ) : (
+                        item.under_over && (
+                            <View style={[styles.metaTag, { backgroundColor: colors.bgMuted }]}>
+                                <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                                    {item.under_over} {item.ou_line || ''}
+                                </Text>
+                            </View>
+                        )
+                    )}
+                    {item.ev_score != null && item.ev_score > 0 && (
+                        <View style={[styles.metaTag, { backgroundColor: colors.successLight }]}>
+                            <Text style={[styles.metaText, { color: colors.success }]}>
+                                +EV {item.ev_score.toFixed(1)}
+                            </Text>
+                        </View>
+                    )}
+                    {item.game_status && (
+                        <View style={[styles.metaTag, {
+                            backgroundColor: item.game_status === 'WIN' ? colors.successLight
+                                : item.game_status === 'LOSS' ? colors.dangerLight : colors.warningLight
                         }]}>
-                            {item.game_status === 'WIN' ? '✓ Ganada' : item.game_status === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}
-                        </Text>
-                    </View>
-                )}
-            </View>
-        </Animated.View>
-    );
+                            <Text style={[styles.metaText, {
+                                color: item.game_status === 'WIN' ? colors.success
+                                    : item.game_status === 'LOSS' ? colors.danger : colors.warning
+                            }]}>
+                                {item.game_status === 'WIN' ? '✓ Ganada' : item.game_status === 'LOSS' ? '✗ Perdida' : '⏳ Pendiente'}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            </Animated.View>
+        );
+    };
 
     return (
         <View style={[styles.container, { backgroundColor: colors.bg }]}>

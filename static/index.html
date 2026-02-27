@@ -1117,25 +1117,53 @@
                         <div class="history-day-header">${formatted}</div>
                         <div class="history-cards">
                             ${games.map(h => {
-                    const teams = h.match?.split(' vs ') || ['', ''];
-                    const home = teams[0]?.trim() || '';
-                    const away = teams[1]?.trim() || '';
+                    const matchName = h.match || h.match_id || `${h.home_team} vs ${h.away_team}`;
+                    const teams = matchName.split(' vs ');
+                    const home = h.home_team || teams[0] || 'Local';
+                    const away = h.away_team || teams[1] || 'Visita';
+                    // Determine which field contains the prediction/winner
+                    const winner = h.result === 'WIN' ? (h.winner || h.predicted_winner || h.prediction)
+                        : (h.result === 'LOSS' ? (h.prediction || h.predicted_winner || h.winner)
+                            : (h.result === 'PENDING' ? (h.prediction || h.predicted_winner || h.winner) : '-'));
+
+                    // Determine which field has the probability
+                    const prob = h.prob_model ? (h.prob_model * 100).toFixed(0) :
+                        (h.prob_home && h.prediction === home ? (h.prob_home * 100).toFixed(0) :
+                            (h.win_probability || h.probability || 0));
+
+                    // Use avatar based fallback for football, NBA svgs for nba
+                    const getLogoUrl = (sport, team) => {
+                        if (sport === 'nba') return NBA_LOGOS[team] || '';
+                        return `https://ui-avatars.com/api/?name=${encodeURIComponent(team.substring(0, 2))}&background=2d6a4f&color=fff&rounded=true&bold=true&size=100`;
+                    };
+
+                    const homeLogo = getLogoUrl(currentSport, home);
+                    const awayLogo = getLogoUrl(currentSport, away);
+                    const leagueLogo = currentSport === 'football' ?
+                        `<img src="https://media.api-sports.io/football/leagues/39.png" style="height:16px; opacity:0.8" alt="PL" onerror="this.style.display='none'">` :
+                        `<img src="https://cdn.nba.com/logos/nba/nba-logoman-word-white.svg" style="height:16px; opacity:0.8; filter:invert(1)" alt="NBA" onerror="this.style.display='none'">`;
+
                     return `
-                                    <div class="history-card">
-                                        <div class="history-teams">
-                                            <img class="history-team-logo" src="${NBA_LOGOS[home] || ''}" alt="" onerror="this.style.display='none'">
-                                            <span class="history-vs">vs</span>
-                                            <img class="history-team-logo" src="${NBA_LOGOS[away] || ''}" alt="" onerror="this.style.display='none'">
-                                        </div>
-                                        <div class="history-info">
-                                            <div class="history-match-name">${h.match}</div>
-                                            <div class="history-prediction">${h.predicted_winner} (${h.probability}%)</div>
-                                        </div>
-                                        <span class="result-badge ${h.result?.toLowerCase() || 'pending'}">
-                                            ${h.result === 'WIN' ? '✓' : h.result === 'LOSS' ? '✗' : '⏳'}
-                                        </span>
-                                    </div>
-                                `;
+                        <div class="history-item ${h.result?.toLowerCase()}">
+                            <div class="result-badge ${h.result?.toLowerCase()}">${h.result === 'WIN' ? '✅ ACERTADA' : h.result === 'LOSS' ? '❌ FALLADA' : '⏳ PENDIENTE'}</div>
+                            <div style="font-size: 10px; margin-bottom: 8px; text-transform: uppercase;">${leagueLogo}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <img src="${homeLogo}" style="width:24px; height:24px; border-radius:12px;" onerror="this.style.display='none'">
+                                    <span style="font-weight: 500">${home}</span>
+                                </div>
+                                <span style="color: var(--text-tertiary); font-size: 12px; font-weight:bold;">VS</span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-weight: 500">${away}</span>
+                                    <img src="${awayLogo}" style="width:24px; height:24px; border-radius:12px;" onerror="this.style.display='none'">
+                                </div>
+                            </div>
+                            <div style="background: var(--bg-card); padding: 8px; border-radius: var(--radius-sm); font-size: 13px; display: flex; justify-content: space-between;">
+                                <span>Predicción: <strong>${winner}</strong></span>
+                                <span style="color: var(--text-tertiary)">Prob: ${prob}%</span>
+                            </div>
+                        </div>
+                    `;
                 }).join('')}
                         </div>
                     </div>
