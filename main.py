@@ -161,21 +161,31 @@ async def predict_football():
     """
     Obtiene las predicciones de Fútbol preparadas por GitHub Actions.
     """
-    from football_logos import get_team_info
-    preds = history_db.get_upcoming_football_predictions()
-    
-    if preds:
-         for p in preds:
-             home_info = get_team_info(p['home_team'])
-             away_info = get_team_info(p['away_team'])
-             p['home_team'] = home_info['name'] # Swap to official name
-             p['away_team'] = away_info['name']
-             p['home_logo'] = home_info['logo']
-             p['away_logo'] = away_info['logo']
-         
-         return {"status": "success", "count": len(preds), "predictions": preds}
-    else:
-         return {"status": "pending_github_actions", "count": 0, "predictions": []}
+    import traceback, logging
+    logger = logging.getLogger(__name__)
+    try:
+        preds = history_db.get_upcoming_football_predictions()
+
+        if preds:
+            try:
+                from football_logos import get_team_info
+                for p in preds:
+                    home_info = get_team_info(p['home_team'])
+                    away_info = get_team_info(p['away_team'])
+                    p['home_team'] = home_info.get('name', p['home_team'])
+                    p['away_team'] = away_info.get('name', p['away_team'])
+                    p['home_logo'] = home_info.get('logo')
+                    p['away_logo'] = away_info.get('logo')
+            except Exception as logo_err:
+                logger.warning(f"football_logos enrichment failed (non-fatal): {logo_err}")
+
+            return {"status": "success", "count": len(preds), "predictions": preds}
+        else:
+            return {"status": "pending_github_actions", "count": 0, "predictions": []}
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"predict-football FAILED:\n{tb}")
+        return {"status": "error", "detail": str(e), "traceback": tb, "count": 0, "predictions": []}
 
 
 @app.get("/history/full")
@@ -191,20 +201,30 @@ async def get_full_history(days: int = 365):
 @app.get("/history/football")
 async def get_football_history_endpoint(days: int = 30):
     """Obtiene el historial de fútbol de los últimos días."""
-    from football_logos import get_team_info
-    data = history_db.get_football_history(days)
-    
-    if isinstance(data, list):
-        for p in data:
-            home_info = get_team_info(p['home_team'])
-            away_info = get_team_info(p['away_team'])
-            p['home_team'] = home_info['name']
-            p['away_team'] = away_info['name']
-            p['home_logo'] = home_info['logo']
-            p['away_logo'] = away_info['logo']
-            
-        return {"history": data}
-    return data
+    import traceback, logging
+    logger = logging.getLogger(__name__)
+    try:
+        data = history_db.get_football_history(days)
+
+        if isinstance(data, list):
+            try:
+                from football_logos import get_team_info
+                for p in data:
+                    home_info = get_team_info(p['home_team'])
+                    away_info = get_team_info(p['away_team'])
+                    p['home_team'] = home_info.get('name', p['home_team'])
+                    p['away_team'] = away_info.get('name', p['away_team'])
+                    p['home_logo'] = home_info.get('logo')
+                    p['away_logo'] = away_info.get('logo')
+            except Exception as logo_err:
+                logger.warning(f"football_logos enrichment failed (non-fatal): {logo_err}")
+
+            return {"history": data}
+        return data
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"history/football FAILED:\n{tb}")
+        return {"status": "error", "detail": str(e), "traceback": tb, "history": []}
 
 
 # ===========================================

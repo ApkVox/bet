@@ -419,68 +419,6 @@ def get_team_recent_results(team_name: str, limit: int = 5) -> list:
         ]
 
 
-def save_football_prediction(prediction_data: dict, match_id: str, date: str):
-    """Guarda una predicción de fútbol"""
-    with sqlite3.connect(DB_PATH) as conn:
-        # prediction_data comes from football_api.predict_match
-        # keys: prediction, probs{home, draw, away}, etc.
-        
-        # safely get probs
-        probs = prediction_data.get('probs', {})
-        
-        conn.execute("""
-            INSERT OR REPLACE INTO football_predictions 
-            (date, league, match_id, home_team, away_team, prediction, 
-             prob_home, prob_draw, prob_away, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
-        """, (
-            date,
-            prediction_data.get('league', 'ENG-Premier League'),
-            match_id,
-            prediction_data['home_team'],
-            prediction_data['away_team'],
-            prediction_data['prediction'],
-            probs.get('home', 0),
-            probs.get('draw', 0),
-            probs.get('away', 0)
-        ))
-        conn.commit()
-
-
-def get_football_history(days: int = 30) -> list[dict]:
-    """Obtiene historial de predicciones de fútbol"""
-    with sqlite3.connect(DB_PATH) as conn:
-        # Use explicit column names to ensure dict mapping is correct
-        cursor = conn.execute("""
-            SELECT date, league, match_id, home_team, away_team, prediction,
-                   prob_home, prob_draw, prob_away, result, created_at
-            FROM football_predictions
-            WHERE date >= date('now', '-' || ? || ' days')
-            ORDER BY date DESC, created_at DESC
-        """, (days,))
-        
-        rows = cursor.fetchall()
-        
-        return [
-            {
-                "date": row[0],
-                "league": row[1],
-                "match_id": row[2],
-                "home_team": row[3],
-                "away_team": row[4],
-                "prediction": row[5],
-                "probs": {
-                    "home": row[6],
-                    "draw": row[7],
-                    "away": row[8]
-                },
-                "result": row[9],
-                "created_at": row[10]
-            }
-            for row in rows
-        ]
-
-
 def get_upcoming_football_predictions() -> list[dict]:
     """Obtiene predicciones de fútbol pendientes para la próxima jornada (fecha >= actual)."""
     with sqlite3.connect(DB_PATH) as conn:
