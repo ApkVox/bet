@@ -1039,15 +1039,15 @@
                         <div class="prediction-result" style="margin-top: 12px; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
                             <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
                                 <div style="font-size: 12px; opacity: 0.8">Local</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_home * 100).toFixed(0)}%</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '1' || pred.prediction === pred.home_team ? 'var(--accent)' : 'inherit'}">${pred.probs?.home ? (pred.probs.home).toFixed(0) : '0'}%</div>
                             </div>
                             <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
                                 <div style="font-size: 12px; opacity: 0.8">Empate</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'inherit'}">${(pred.prob_draw * 100).toFixed(0)}%</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === 'X' || pred.prediction === 'Draw' ? 'var(--accent)' : 'inherit'}">${pred.probs?.draw ? (pred.probs.draw).toFixed(0) : '0'}%</div>
                             </div>
                             <div class="prob-box" style="text-align: center; padding: 4px; background: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'rgba(0,113,227,0.1)' : 'transparent'}; border-radius: 8px;">
                                 <div style="font-size: 12px; opacity: 0.8">Visitante</div>
-                                <div style="font-weight: bold; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'inherit'}">${(pred.prob_away * 100).toFixed(0)}%</div>
+                                <div style="font-weight: bold; color: ${pred.prediction === '2' || pred.prediction === pred.away_team ? 'var(--accent)' : 'inherit'}">${pred.probs?.away ? (pred.probs.away).toFixed(0) : '0'}%</div>
                             </div>
                         </div>
                         <div class="prediction-meta">
@@ -1128,8 +1128,10 @@
 
                     // Determine which field has the probability
                     const prob = h.prob_model ? (h.prob_model * 100).toFixed(0) :
-                        (h.prob_home && h.prediction === home ? (h.prob_home * 100).toFixed(0) :
-                            (h.win_probability || h.probability || 0));
+                        (h.probs?.home && h.prediction === home ? (h.probs.home).toFixed(0) :
+                            (h.probs?.away && h.prediction === away ? (h.probs.away).toFixed(0) :
+                                (h.probs?.draw && h.prediction === 'Draw' ? (h.probs.draw).toFixed(0) :
+                                    (h.win_probability || h.probability || 0))));
 
                     // Use avatar based fallback for football, NBA svgs for nba
                     const getLogoUrl = (sport, team) => {

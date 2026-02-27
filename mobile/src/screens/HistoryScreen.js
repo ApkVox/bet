@@ -167,19 +167,25 @@ export default function HistoryScreen({ sport, colors }) {
                         </View>
 
                         <Text style={[styles.predLabel, { color: colors.textSecondary }]}>
-                            Pred: {item.winner || 'N/A'} ({(item.win_probability || 0).toFixed(1)}%)
+                            Pred: {item.winner || item.prediction || 'N/A'} ({(
+                                item.win_probability ? item.win_probability :
+                                    (item.probs?.home && (item.prediction === '1' || item.prediction === item.home_team)) ? item.probs.home :
+                                        (item.probs?.away && (item.prediction === '2' || item.prediction === item.away_team)) ? item.probs.away :
+                                            (item.probs?.draw && (item.prediction === 'X' || item.prediction === 'Draw')) ? item.probs.draw :
+                                                0
+                            ).toFixed(1)}%)
                         </Text>
-                    </View>
-                    <View style={[
-                        styles.resultBadge,
-                        { backgroundColor: isWin ? colors.successLight : isLoss ? colors.dangerLight : colors.warningLight }
-                    ]}>
-                        <Text style={[
-                            styles.resultText,
-                            { color: isWin ? colors.success : isLoss ? colors.danger : colors.warning }
+                        <View style={[
+                            styles.resultBadge,
+                            { backgroundColor: isWin ? colors.successLight : isLoss ? colors.dangerLight : colors.warningLight }
                         ]}>
-                            {isWin ? '✓' : isLoss ? '✗' : '⏳'} {isWin ? 'Ganada' : isLoss ? 'Perdida' : 'Pendiente'}
-                        </Text>
+                            <Text style={[
+                                styles.resultText,
+                                { color: isWin ? colors.success : isLoss ? colors.danger : colors.warning }
+                            ]}>
+                                {isWin ? '✓' : isLoss ? '✗' : '⏳'} {isWin ? 'Ganada' : isLoss ? 'Perdida' : 'Pendiente'}
+                            </Text>
+                        </View>
                     </View>
                 </View>
             </View>

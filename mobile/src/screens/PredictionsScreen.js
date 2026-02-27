@@ -116,19 +116,19 @@ export default function PredictionsScreen({ sport, colors }) {
                         <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '1' || item.prediction === item.home_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
                             <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>1 (Local)</Text>
                             <Text style={{ fontWeight: 'bold', color: (item.prediction === '1' || item.prediction === item.home_team) ? colors.accent : colors.text }}>
-                                {((item.probs?.home || item.prob_home || 0) * 100).toFixed(0) || 0}%
+                                {(item.probs?.home || 0).toFixed(0)}%
                             </Text>
                         </View>
                         <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === 'X' || item.prediction === 'Draw') ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
                             <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>X (Empate)</Text>
                             <Text style={{ fontWeight: 'bold', color: (item.prediction === 'X' || item.prediction === 'Draw') ? colors.accent : colors.text }}>
-                                {((item.probs?.draw || item.prob_draw || 0) * 100).toFixed(0) || 0}%
+                                {(item.probs?.draw || 0).toFixed(0)}%
                             </Text>
                         </View>
                         <View style={{ flex: 1, padding: 8, alignItems: 'center', borderRadius: 8, backgroundColor: (item.prediction === '2' || item.prediction === item.away_team) ? 'rgba(0,113,227,0.1)' : 'transparent' }}>
                             <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>2 (Visita)</Text>
                             <Text style={{ fontWeight: 'bold', color: (item.prediction === '2' || item.prediction === item.away_team) ? colors.accent : colors.text }}>
-                                {((item.probs?.away || item.prob_away || 0) * 100).toFixed(0) || 0}%
+                                {(item.probs?.away || 0).toFixed(0)}%
                             </Text>
                         </View>
                     </View>
