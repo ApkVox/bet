@@ -1,135 +1,71 @@
----
-title: NBA Predictor
-emoji: 🏀
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
-app_port: 7860
----
+# La Fija - Predicciones Deportivas
 
-# 🏀⚽ Courtside AI
+Sistema de predicciones deportivas con Machine Learning para NBA y Futbol europeo.
 
-> **Tu Analista Deportivo Inteligente** — Predicciones NBA y Fútbol con Machine Learning e Inteligencia Artificial
+## Arquitectura
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-FF6B6B?style=for-the-badge&logo=xgboost&logoColor=white)
+- **API (Render)**: FastAPI ultraligera (~50MB RAM) que sirve predicciones pre-calculadas desde SQLite.
+- **Motor ML (GitHub Actions)**: XGBoost (NBA) y Poisson (Futbol) se ejecutan diariamente a las 3:00 AM COT.
+- **Persistencia**: GitOps - la base de datos `history.db` se commitea al repo automaticamente.
+- **Keep-Alive**: Servicio externo (cron-job.org) mantiene Render activo con pings cada 5 minutos.
 
----
+## Stack Tecnologico
 
-## ✨ Características
+| Capa | Tecnologia |
+|---|---|
+| Backend | Python 3.11, FastAPI, Uvicorn |
+| ML (NBA) | XGBoost, Pandas, sbrscrape |
+| ML (Futbol) | Distribucion Poisson, footy |
+| Frontend | HTML5, CSS3, JavaScript vanilla |
+| Base de Datos | SQLite3 |
+| CI/CD | GitHub Actions |
+| Hosting | Render (Free Tier) |
 
-| Característica | Descripción |
-|:---|:---|
-| 🎯 **Predicciones NBA** | Modelo XGBoost con 68.9% de precisión |
-| ⚽ **Predicciones Fútbol** | Modelo Poisson para Premier League y ligas europeas |
-| 🤖 **Análisis IA** | Groq LLM (Llama 3.3 70B) para análisis narrativo |
-| 🔄 **Auto-Recovery** | Keep-alive, cache invalidation y auto-refresh |
-| 🌓 **Modo Oscuro/Claro** | Toggle de tema con auto-detect del sistema |
-| 📱 **Diseño Responsive** | Optimizado para móviles (Bento Grid estilo Apple) |
-| 📜 **Historial Completo** | Tracking de WIN/LOSS con filtros |
+## Endpoints
 
----
+| Ruta | Descripcion |
+|---|---|
+| `GET /` | Frontend SPA |
+| `GET /api/health` | Health check |
+| `GET /predict-today` | Predicciones NBA del dia |
+| `GET /predict-football` | Predicciones futbol |
+| `GET /history/full` | Historial NBA |
+| `GET /history/football` | Historial futbol |
 
-## 🚀 Instalación
-
-```bash
-# Clonar
-git clone https://github.com/ApkVox/bet.git
-cd bet
-
-# Entorno virtual
-python -m venv venv
-.\venv\Scripts\activate  # Windows
-
-# Dependencias
-pip install -r requirements.txt
-
-# Configurar .env
-cp .env.example .env
-# Editar .env con tu GROQ_API_KEY
-
-# Ejecutar
-python main.py
-```
-
-Visita `http://localhost:8000`
-
----
-
-## 📡 API
-
-| Método | Endpoint | Descripción |
-|:---:|:---|:---|
-| `GET` | `/predict-today` | Predicciones NBA del día |
-| `GET` | `/predict-football` | Predicciones de fútbol (Poisson) |
-| `GET` | `/history/full` | Historial completo NBA |
-| `GET` | `/history/football` | Historial de fútbol |
-| `GET` | `/api/health` | Health check (usado por keep-alive) |
-| `GET` | `/api/update-pending` | Sincronizar resultados |
-
-Documentación Swagger: `/docs`
-
----
-
-## 📂 Estructura
+## Estructura del Proyecto
 
 ```
 bet/
-├── main.py              # API FastAPI (endpoints + scheduler)
-├── prediction_api.py    # Motor XGBoost (NBA)
-├── football_api.py      # Motor Poisson (Fútbol)
-├── footy/               # Predictor Poisson
-├── history_db.py        # Persistencia SQLite
-├── production_server.py # Entry point producción
+├── main.py                  # API FastAPI (read-only, ultraligera)
+├── prediction_api.py        # Modelo XGBoost para NBA
+├── football_api.py          # Modelo Poisson para futbol
+├── history_db.py            # Capa de acceso a SQLite
+├── generate_daily_job.py    # Script CRON para GitHub Actions
+├── production_server.py     # Punto de entrada de produccion
+├── Dockerfile               # Imagen Docker para Render
+├── requirements.txt         # Dependencias completas (dev/CI)
+├── requirements_prod.txt    # Dependencias minimas (produccion)
+├── Data/
+│   └── history.db           # Base de datos SQLite
+├── Models/                  # Modelos XGBoost entrenados
 ├── static/
-│   ├── index.html       # Frontend SPA
-│   └── js/app.js        # Lógica frontend
-├── Data/                # Bases de datos y datasets
-├── Models/              # Modelos XGBoost entrenados
-└── Dockerfile           # Deploy (non-root user)
+│   ├── index.html           # Frontend SPA
+│   └── js/app.js            # Logica del frontend
+└── .github/workflows/
+    └── daily_prediction.yml # CRON diario (3AM COT)
 ```
 
----
+## Despliegue
 
-## 🔄 Sistema Automático
+1. Fork/clone el repositorio
+2. Configurar Render con el Dockerfile
+3. Habilitar GitHub Actions (Settings > Actions > Workflow permissions > Read and write)
+4. Configurar cron-job.org para ping cada 5 min a `/api/health`
 
-El servidor incluye 4 jobs automáticos:
-
-| Job | Intervalo | Función |
-|:---|:---:|:---|
-| 🏓 Keep-Alive | 2 min | Self-ping para evitar sleep de Render |
-| 📊 Update Pending | 15 min | Actualiza scores de partidos finalizados |
-| 🔄 Auto Daily Refresh | 30 min | Valida predicciones vs datos reales de SBR |
-| 🏀 Games Cache Refresh | 15 min | Refresca partidos desde SBR |
-
-**Auto-Recovery**: Al arrancar, ejecuta validación completa y regenera predicciones stale.
-
----
-
-## 🔒 Seguridad
-
-- Dockerfile con usuario no-root (`appuser`)
-- Endpoint de debug protegido con `DEBUG_MODE` env var
-- Variables sensibles en `.env` (no versionadas)
-- Error messages sanitizados
-
----
-
-## 🌐 Despliegue
-
-**Producción:** https://bet-7b8l.onrender.com
+## Desarrollo Local
 
 ```bash
-docker build -t courtside-ai .
-docker run -p 10000:10000 --env-file .env courtside-ai
+pip install -r requirements.txt
+python production_server.py
+# Acceder en http://localhost:8080
 ```
-
----
-
-> ⚠️ **AVISO:** Herramienta educativa. Las predicciones deportivas conllevan riesgos. No apuestes dinero que no puedas perder.
-
-<div align="center">
-  <sub>Hecho con ❤️ 🏀 ⚽</sub>
-</div>

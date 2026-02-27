@@ -134,7 +134,7 @@ async def update_past_results():
 # MAIN ENTRYPOINT (GITHUB ACTIONS)
 # ==========================================
 async def run_all():
-    log("=== COURTSIDE AI: DAILY PREDICTION JOB STARTED ===")
+    log("=== LA FIJA: DAILY PREDICTION JOB STARTED ===")
     
     # 0. Actualizar resultados pendientes (Win/Loss)
     await update_past_results()
@@ -145,7 +145,7 @@ async def run_all():
     # 2. Ejecutar análisis Fútbol
     await generate_football_predictions()
     
-    log("=== COURTSIDE AI: DAILY PREDICTION JOB FINISHED ===")
+    log("=== LA FIJA: DAILY PREDICTION JOB FINISHED ===")
 
 if __name__ == "__main__":
     asyncio.run(run_all())

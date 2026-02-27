@@ -1,6 +1,6 @@
 """
 ===========================================
-FOOTBALL PREDICTION API - COURTSIDE AI
+FOOTBALL PREDICTION API - LA FIJA
 ===========================================
 Uses Poisson distribution for 1X2 predictions.
 Integrated from all_leagues_prediction repo.

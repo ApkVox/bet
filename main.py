@@ -68,8 +68,8 @@ class PredictionResponse(BaseModel):
 # INICIALIZACIÓN DE FASTAPI
 # ===========================================
 app = FastAPI(
-    title="Courtside AI API (Light)",
-    description="API de consulta de predicciones deportivas pre-calculadas",
+    title="La Fija API",
+    description="API de predicciones deportivas pre-calculadas",
     version="2.0.0"
 )
 
@@ -90,7 +90,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.on_event("startup")
 async def startup_event():
     print("===========================================")
-    print("🚀 Courtside AI Light API Arrancando...")
+    print("La Fija API arrancando...")
     print("===========================================")
     history_db.init_history_db()
 
@@ -121,7 +121,7 @@ async def predict_today():
     existing_preds = history_db.get_predictions_by_date_light(date_str)
     
     if existing_preds:
-        print(f"✅ Sirviendo {len(existing_preds)} juegos NBA desde caché DB (Light API)")
+        print(f"Sirviendo {len(existing_preds)} juegos NBA desde cache DB")
         return {
             "date": date_str,
             "total_games": len(existing_preds),
@@ -130,7 +130,7 @@ async def predict_today():
             "status": "success"
         }
     else:
-        print("⚠️ No hay datos calculados para hoy en SQLite. Notificando al Frontend.")
+        print("No hay datos calculados para hoy en SQLite.")
         return {
             "date": date_str,
             "total_games": 0,

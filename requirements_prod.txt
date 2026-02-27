@@ -1,5 +1,5 @@
 # Minimal Production Dependencies for Render
-# Courtside AI (Lightweight API Layer)
+# La Fija (Lightweight API Layer)
 
 fastapi>=0.100.0
 uvicorn>=0.22.0
