@@ -180,12 +180,11 @@ async function loadPredictions() {
         if (!response.ok) throw new Error('Error de red');
         const data = await response.json();
 
-        if (data.status === "pending_github_actions") {
+        if (data.status === "no_games_today" || !data.predictions || data.predictions.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1/-1;">
-                    <div class="empty-icon">\u23F3</div>
-                    <h3 style="font-weight:800;font-size:18px;margin-bottom:8px;">Calculando Predicciones</h3>
-                    <p style="max-width:400px;margin:0 auto;line-height:1.6;">El motor de IA esta procesando los partidos de hoy. Regresa en unos minutos.</p>
+                    <div class="empty-icon">${currentSport === 'football' ? '⚽' : '🏀'}</div>
+                    <p>No hay partidos programados o faltan cuotas para hoy.</p>
                 </div>`;
             return;
         }
@@ -462,11 +461,15 @@ async function refreshHistoryScores() {
         const res = await fetch('/history/refresh', { method: 'POST' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail || res.statusText || 'Error al actualizar');
-        const count = data.updated_count ?? 0;
-        showToast(count > 0 ? `Marcadores actualizados (${count} partidos)` : 'Historial ya estaba al día', 'success');
+
+        // Show success msg
+        showToast(data.message || 'Marcadores actualizados y cuotas refrescadas', 'success');
+
+        // Reload both the history grid AND the predictions grid to show fresh odds
         loadHistory();
+        loadPredictions();
     } catch (e) {
-        showToast('Error al actualizar marcadores: ' + (e.message || 'Reintenta en un momento'), 'error');
+        showToast('Error al actualizar: ' + (e.message || 'Reintenta en un momento'), 'error');
     } finally {
         btn.disabled = wasDisabled;
         if (icon) icon.style.animation = '';

@@ -1,0 +1,152 @@
+﻿diff --git a/main.py b/main.py
+index e5f3b70..601ecfd 100644
+--- a/main.py
++++ b/main.py
+@@ -9,6 +9,7 @@ El trabajo pesado se movi├│ a GitHub Actions (generate_daily_job.py).
+ 
+ import os
+ import sys
++import threading
+ from datetime import datetime, timezone, timedelta
+ from typing import Optional
+ 
+@@ -25,6 +26,19 @@ import uvicorn
+ # Modules that only contain DB read logic
+ import history_db
+ 
++# Servicio que actualiza marcadores de partidos pasados (PENDING -> WIN/LOSS)
++_last_history_update_run: Optional[datetime] = None
++_HISTORY_UPDATE_COOLDOWN_MINUTES = 10
++
++def _run_history_update():
++    global _last_history_update_run
++    _last_history_update_run = datetime.now(timezone.utc)
++    try:
++        from src.Services.history_service import update_pending_predictions
++        update_pending_predictions()
++    except Exception as e:
++        print(f"[main] Error actualizando historial (no cr├¡tico): {e}")
++
+ # ===========================================
+ # CONFIGURACI├ôN
+ # ===========================================
+@@ -85,7 +99,7 @@ app.add_middleware(
+         "https://lafija.web.app" # Posible futuro dominio
+     ],
+     allow_credentials=True,
+-    allow_methods=["GET", "OPTIONS"],
++    allow_methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["*"],
+ )
+ 
+@@ -109,6 +123,8 @@ async def startup_event():
+     print("La Fija API arrancando...")
+     print("===========================================")
+     history_db.init_history_db()
++    # Actualizar marcadores de partidos pasados (PENDING -> WIN/LOSS) en segundo plano
++    threading.Thread(target=_run_history_update, daemon=True).start()
+ 
+ 
+ # ===========================================
+@@ -188,9 +204,25 @@ async def predict_football():
+         return {"status": "error", "detail": str(e), "traceback": tb, "count": 0, "predictions": []}
+ 
+ 
++@app.post("/history/refresh")
++async def refresh_history_scores():
++    """Fuerza la actualizaci├│n de marcadores (PENDING -> WIN/LOSS) y devuelve el resultado."""
++    try:
++        from src.Services.history_service import update_pending_predictions
++        result = update_pending_predictions()
++        return result
++    except Exception as e:
++        print(f"[main] Error en refresh historial: {e}")
++        raise HTTPException(status_code=500, detail=str(e))
++
++
+ @app.get("/history/full")
+-async def get_full_history(days: int = 365):
+-    """Obtiene el historial NBA de los ├║ltimos d├¡as"""
++async def get_full_history(background_tasks: BackgroundTasks, days: int = 365):
++    """Obtiene el historial NBA de los ├║ltimos d├¡as. Dispara actualizaci├│n de marcadores en background."""
++    # Actualizar partidos pendientes solo si no se ha corrido recientemente (throttle)
++    now = datetime.now(timezone.utc)
++    if _last_history_update_run is None or (now - _last_history_update_run).total_seconds() > _HISTORY_UPDATE_COOLDOWN_MINUTES * 60:
++        background_tasks.add_task(_run_history_update)
+     data = history_db.get_history(days)
+     # El frontend espera { history: [...] }
+     if isinstance(data, list):
+diff --git a/static/index.html b/static/index.html
+index c09314d..8818ec6 100644
+--- a/static/index.html
++++ b/static/index.html
+@@ -591,6 +591,10 @@
+ 
+         .filter-btn:hover:not(.active) { background: var(--bg-card-hover); border-color: var(--border-hover); }
+ 
++        .filter-btn.btn-refresh { margin-left: auto; }
++        .filter-btn.btn-refresh .btn-refresh-icon { display: inline-block; }
++        .filter-btn.btn-refresh:disabled { opacity: 0.7; cursor: not-allowed; }
++
+         .history-day { margin-bottom: 32px; }
+ 
+         .history-day-header {
+@@ -984,6 +988,9 @@
+                     <button class="filter-btn" data-filter="win">Ganadas</button>
+                     <button class="filter-btn" data-filter="loss">Perdidas</button>
+                     <button class="filter-btn" data-filter="pending">Pendientes</button>
++                    <button type="button" class="filter-btn btn-refresh" id="btnRefreshScores" title="Actualizar marcadores con resultados del d├¡a anterior">
++                        <span class="btn-refresh-icon">&#8635;</span> Actualizar marcadores
++                    </button>
+                 </div>
+                 <div id="historyContainer">
+                     <div class="loading"><div class="spinner"></div><span>Cargando historial...</span></div>
+diff --git a/static/js/app.js b/static/js/app.js
+index d210a9c..5c38530 100644
+--- a/static/js/app.js
++++ b/static/js/app.js
+@@ -439,16 +439,41 @@ function renderHistory(filter) {
+     container.innerHTML = html;
+ }
+ 
+-// Filters
+-document.querySelectorAll('.filter-btn').forEach(btn => {
++// Filters (solo botones con data-filter; el de "Actualizar marcadores" tiene su propio handler)
++document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+     btn.addEventListener('click', () => {
+-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
++        document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+         btn.classList.add('active');
+         currentHistoryLimit = 20;
+         renderHistory(btn.dataset.filter);
+     });
+ });
+ 
++// Actualizar marcadores (PENDING -> WIN/LOSS) y recargar historial
++async function refreshHistoryScores() {
++    const btn = document.getElementById('btnRefreshScores');
++    if (!btn) return;
++    const wasDisabled = btn.disabled;
++    btn.disabled = true;
++    const icon = btn.querySelector('.btn-refresh-icon');
++    if (icon) icon.style.animation = 'spin 0.8s linear infinite';
++    showToast('Actualizando marcadores...', 'info');
++    try {
++        const res = await fetch('/history/refresh', { method: 'POST' });
++        const data = await res.json().catch(() => ({}));
++        if (!res.ok) throw new Error(data.detail || res.statusText || 'Error al actualizar');
++        const count = data.updated_count ?? 0;
++        showToast(count > 0 ? `Marcadores actualizados (${count} partidos)` : 'Historial ya estaba al d├¡a', 'success');
++        loadHistory();
++    } catch (e) {
++        showToast('Error al actualizar marcadores: ' + (e.message || 'Reintenta en un momento'), 'error');
++    } finally {
++        btn.disabled = wasDisabled;
++        if (icon) icon.style.animation = '';
++    }
++}
++document.getElementById('btnRefreshScores')?.addEventListener('click', refreshHistoryScores);
++
+ // Modal
+ function showDetails(index) {
+     const pred = currentPredictions[index];

@@ -148,13 +148,25 @@ async def health_check():
 async def predict_today():
     """
     Obtiene las predicciones NBA generadas hoy desde la BD.
-    Si no están listas o si es muy temprano, notifica al cliente que GitHub Actions está por correr.
+    Si no están listas, las genera en tiempo real (Self-Healing).
     """
     date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
     existing_preds = history_db.get_predictions_by_date_light(date_str)
     
+    if not existing_preds:
+        print("No hay datos NBA en SQLite. Generando On-Demand...")
+        try:
+            from generate_daily_job import generate_nba_predictions
+            # Generar predicciones en tiempo real de forma asíncrona pero esperando resultado
+            new_preds = await generate_nba_predictions()
+            if new_preds:
+                # Reload from DB specifically to get the light DB format to match frontend expectations
+                existing_preds = history_db.get_predictions_by_date_light(date_str)
+        except Exception as e:
+            print(f"Error generando NBA on-demand: {e}")
+
     if existing_preds:
-        print(f"Sirviendo {len(existing_preds)} juegos NBA desde cache DB")
+        print(f"Sirviendo {len(existing_preds)} juegos NBA")
         return {
             "date": date_str,
             "total_games": len(existing_preds),
@@ -163,25 +175,34 @@ async def predict_today():
             "status": "success"
         }
     else:
-        print("No hay datos calculados para hoy en SQLite.")
         return {
             "date": date_str,
             "total_games": 0,
             "predictions": [],
             "model_accuracy": "N/A",
-            "status": "pending_github_actions"
+            "status": "no_games_today"
         }
 
 
 @app.get("/predict-football")
 async def predict_football():
     """
-    Obtiene las predicciones de Fútbol preparadas por GitHub Actions.
+    Obtiene las predicciones de Fútbol preparadas por la BD o las genera On-Demand.
     """
     import traceback, logging
     logger = logging.getLogger(__name__)
     try:
         preds = history_db.get_upcoming_football_predictions()
+        
+        if not preds:
+            logger.info("No hay datos Fútbol en SQLite. Generando On-Demand...")
+            try:
+                from generate_daily_job import generate_football_predictions
+                new_preds = await generate_football_predictions()
+                if new_preds:
+                    preds = history_db.get_upcoming_football_predictions()
+            except Exception as e:
+                logger.error(f"Error generando Fútbol on-demand: {e}")
 
         if preds:
             try:
@@ -207,11 +228,26 @@ async def predict_football():
 
 @app.post("/history/refresh")
 async def refresh_history_scores():
-    """Fuerza la actualización de marcadores (PENDING -> WIN/LOSS) y devuelve el resultado."""
+    """Fuerza la actualización de marcadores y predicciones de hoy. (On-Demand Refresh)"""
     try:
         from src.Services.history_service import update_pending_predictions
-        # Ejecutar en thread para no bloquear el event loop (evita timeouts en Render)
+        from history_db import delete_predictions_for_date
+        from generate_daily_job import generate_nba_predictions, generate_football_predictions
+        
+        # 1. Update old results
         result = await asyncio.to_thread(update_pending_predictions)
+        
+        # 2. Force delete today's pending matches to clear old odds
+        today_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
+        deleted_count = await asyncio.to_thread(delete_predictions_for_date, today_str)
+        print(f"[main] Eliminadas {deleted_count} predicciones antiguas para el día de hoy.")
+        
+        # 3. Trigger fresh generation
+        await generate_nba_predictions()
+        await generate_football_predictions()
+        
+        result['status'] = 'success'
+        result['message'] = f'Marcadores actualizados y cuotas refrescadas para hoy.'
         return result
     except Exception as e:
         msg = str(e)

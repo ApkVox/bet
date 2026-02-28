@@ -69,6 +69,7 @@ async def generate_nba_predictions():
         predictions = predict_games(games_to_predict)
         
         saved_count = 0
+        final_preds = []
         for pred in predictions:
             pred_dict = pred if isinstance(pred, dict) else pred.dict()
             pred_dict['date'] = today_str
@@ -82,9 +83,11 @@ async def generate_nba_predictions():
             
             save_prediction(pred_dict)
             saved_count += 1
+            final_preds.append(pred_dict)
             log(f"✅ Guardado NBA: {pred_dict['away_team']} @ {pred_dict['home_team']}")
 
         log(f"Completado NBA: Guardadas {saved_count} predicciones.")
+        return final_preds
 
     except Exception as e:
         import traceback
@@ -110,9 +113,11 @@ async def generate_football_predictions():
             saved_count += 1
             
         log(f"Completado Fútbol: Guardadas {saved_count} predicciones.")
+        return preds
 
     except Exception as e:
         log(f"❌ Error crítico en Football Job: {str(e)}")
+        return []
 
 
 # ==========================================
