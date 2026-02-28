@@ -591,6 +591,10 @@
 
         .filter-btn:hover:not(.active) { background: var(--bg-card-hover); border-color: var(--border-hover); }
 
+        .filter-btn.btn-refresh { margin-left: auto; }
+        .filter-btn.btn-refresh .btn-refresh-icon { display: inline-block; }
+        .filter-btn.btn-refresh:disabled { opacity: 0.7; cursor: not-allowed; }
+
         .history-day { margin-bottom: 32px; }
 
         .history-day-header {
@@ -984,6 +988,9 @@
                     <button class="filter-btn" data-filter="win">Ganadas</button>
                     <button class="filter-btn" data-filter="loss">Perdidas</button>
                     <button class="filter-btn" data-filter="pending">Pendientes</button>
+                    <button type="button" class="filter-btn btn-refresh" id="btnRefreshScores" title="Actualizar marcadores con resultados del día anterior">
+                        <span class="btn-refresh-icon">&#8635;</span> Actualizar marcadores
+                    </button>
                 </div>
                 <div id="historyContainer">
                     <div class="loading"><div class="spinner"></div><span>Cargando historial...</span></div>

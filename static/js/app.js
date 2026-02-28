@@ -439,15 +439,40 @@ function renderHistory(filter) {
     container.innerHTML = html;
 }
 
-// Filters
-document.querySelectorAll('.filter-btn').forEach(btn => {
+// Filters (solo botones con data-filter; el de "Actualizar marcadores" tiene su propio handler)
+document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentHistoryLimit = 20;
         renderHistory(btn.dataset.filter);
     });
 });
+
+// Actualizar marcadores (PENDING -> WIN/LOSS) y recargar historial
+async function refreshHistoryScores() {
+    const btn = document.getElementById('btnRefreshScores');
+    if (!btn) return;
+    const wasDisabled = btn.disabled;
+    btn.disabled = true;
+    const icon = btn.querySelector('.btn-refresh-icon');
+    if (icon) icon.style.animation = 'spin 0.8s linear infinite';
+    showToast('Actualizando marcadores...', 'info');
+    try {
+        const res = await fetch('/history/refresh', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || res.statusText || 'Error al actualizar');
+        const count = data.updated_count ?? 0;
+        showToast(count > 0 ? `Marcadores actualizados (${count} partidos)` : 'Historial ya estaba al día', 'success');
+        loadHistory();
+    } catch (e) {
+        showToast('Error al actualizar marcadores: ' + (e.message || 'Reintenta en un momento'), 'error');
+    } finally {
+        btn.disabled = wasDisabled;
+        if (icon) icon.style.animation = '';
+    }
+}
+document.getElementById('btnRefreshScores')?.addEventListener('click', refreshHistoryScores);
 
 // Modal
 function showDetails(index) {

@@ -9,6 +9,7 @@ El trabajo pesado se movió a GitHub Actions (generate_daily_job.py).
 
 import os
 import sys
+import threading
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -24,6 +25,19 @@ import uvicorn
 
 # Modules that only contain DB read logic
 import history_db
+
+# Servicio que actualiza marcadores de partidos pasados (PENDING -> WIN/LOSS)
+_last_history_update_run: Optional[datetime] = None
+_HISTORY_UPDATE_COOLDOWN_MINUTES = 10
+
+def _run_history_update():
+    global _last_history_update_run
+    _last_history_update_run = datetime.now(timezone.utc)
+    try:
+        from src.Services.history_service import update_pending_predictions
+        update_pending_predictions()
+    except Exception as e:
+        print(f"[main] Error actualizando historial (no crítico): {e}")
 
 # ===========================================
 # CONFIGURACIÓN
@@ -85,7 +99,7 @@ app.add_middleware(
         "https://lafija.web.app" # Posible futuro dominio
     ],
     allow_credentials=True,
-    allow_methods=["GET", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -109,6 +123,8 @@ async def startup_event():
     print("La Fija API arrancando...")
     print("===========================================")
     history_db.init_history_db()
+    # Actualizar marcadores de partidos pasados (PENDING -> WIN/LOSS) en segundo plano
+    threading.Thread(target=_run_history_update, daemon=True).start()
 
 
 # ===========================================
@@ -188,9 +204,25 @@ async def predict_football():
         return {"status": "error", "detail": str(e), "traceback": tb, "count": 0, "predictions": []}
 
 
+@app.post("/history/refresh")
+async def refresh_history_scores():
+    """Fuerza la actualización de marcadores (PENDING -> WIN/LOSS) y devuelve el resultado."""
+    try:
+        from src.Services.history_service import update_pending_predictions
+        result = update_pending_predictions()
+        return result
+    except Exception as e:
+        print(f"[main] Error en refresh historial: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/history/full")
-async def get_full_history(days: int = 365):
-    """Obtiene el historial NBA de los últimos días"""
+async def get_full_history(background_tasks: BackgroundTasks, days: int = 365):
+    """Obtiene el historial NBA de los últimos días. Dispara actualización de marcadores en background."""
+    # Actualizar partidos pendientes solo si no se ha corrido recientemente (throttle)
+    now = datetime.now(timezone.utc)
+    if _last_history_update_run is None or (now - _last_history_update_run).total_seconds() > _HISTORY_UPDATE_COOLDOWN_MINUTES * 60:
+        background_tasks.add_task(_run_history_update)
     data = history_db.get_history(days)
     # El frontend espera { history: [...] }
     if isinstance(data, list):
