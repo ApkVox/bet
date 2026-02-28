@@ -9,6 +9,7 @@ El trabajo pesado se movió a GitHub Actions (generate_daily_job.py).
 
 import os
 import sys
+import asyncio
 import threading
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -209,11 +210,13 @@ async def refresh_history_scores():
     """Fuerza la actualización de marcadores (PENDING -> WIN/LOSS) y devuelve el resultado."""
     try:
         from src.Services.history_service import update_pending_predictions
-        result = update_pending_predictions()
+        # Ejecutar en thread para no bloquear el event loop (evita timeouts en Render)
+        result = await asyncio.to_thread(update_pending_predictions)
         return result
     except Exception as e:
+        msg = str(e)
         print(f"[main] Error en refresh historial: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=msg)
 
 
 @app.get("/history/full")

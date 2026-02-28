@@ -49,7 +49,7 @@ def update_pending_predictions():
                 continue
                 
             # Create a map of actual results
-            # Key: "HomeTeam vs AwayTeam", Value: WinnerName
+            # Key: mismo formato que la DB (date_away_home con espacios -> _)
             results_map = {}
             for game in games:
                 if 'status' not in game or 'final' not in game['status'].lower():
@@ -66,7 +66,7 @@ def update_pending_predictions():
                     away = away.replace("Los Angeles Clippers", "LA Clippers")
                     
                     winner = home if home_score > away_score else away
-                    match_id = f"{home} vs {away}"
+                    match_id = f"{date_str}_{away}_{home}".replace(" ", "_")
                     results_map[match_id] = winner
             
             # 3. Update DB

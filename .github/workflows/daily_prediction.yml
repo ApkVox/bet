@@ -17,8 +17,9 @@ jobs:
             - name: Checkout Repository
               uses: actions/checkout@v3
               with:
-                  # Para que el push pueda hacerse saltando ciertas reglas o trigger workflows cíclicos
                   token: ${{ secrets.GITHUB_TOKEN }}
+                  # Evita error fatal del submódulo 'promier_league_api_ref' sin URL en .gitmodules
+                  submodules: false
 
             - name: Set up Python 3.11
               uses: actions/setup-python@v4

@@ -143,7 +143,8 @@ async def update_past_results():
                      winner = g['home_team'] if home_score > away_score else g['away_team']
                      home = g['home_team'].replace("Los Angeles Clippers", "LA Clippers")
                      away = g['away_team'].replace("Los Angeles Clippers", "LA Clippers")
-                     results[f"{away} vs {home}"] = winner
+                     match_id = f"{date_str}_{away}_{home}".replace(" ", "_")
+                     results[match_id] = winner
                      
             if results:
                 update_results(date_str, results)
