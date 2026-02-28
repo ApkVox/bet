@@ -196,14 +196,17 @@ class FootballAPI:
             pred['raw_away'] = fixture.get('away_raw', fixture['away_team'])
              
             # Save to history DB (Best effort)
+            fixture_date = fixture.get('date', str(datetime.now().date()))
+            pred['date'] = fixture_date
             try:
                 import history_db
                 # We need a unique match_id. hash date+teams
-                match_id = f"{fixture.get('date', datetime.now().date())}_{fixture['home_team']}_{fixture['away_team']}"
+                match_id = f"{fixture_date}_{fixture['home_team']}_{fixture['away_team']}"
+                pred['match_id'] = match_id
                 
                 # We need to adapt the save function or create a new one for football
                 # For now, let's assume we will implement save_football_prediction in history_db
-                history_db.save_football_prediction(pred, match_id, fixture.get('date', str(datetime.now().date())))
+                history_db.save_football_prediction(pred, match_id, fixture_date)
             except Exception as e:
                 logger.debug(f"Could not save prediction history: {e}")
 

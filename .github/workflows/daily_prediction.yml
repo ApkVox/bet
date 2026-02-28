@@ -20,6 +20,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   # Evita error fatal del submódulo 'promier_league_api_ref' sin URL en .gitmodules
                   submodules: false
+                  lfs: true
 
             - name: Set up Python 3.11
               uses: actions/setup-python@v4
