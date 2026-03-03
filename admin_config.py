@@ -13,6 +13,7 @@ import secrets
 import sys
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 import bcrypt
 import jwt
@@ -226,11 +227,29 @@ def verify_token(token: str) -> bool:
 # ===========================================
 # PASSWORD RESET (token por correo)
 # ===========================================
+_reset_tokens_path: Optional[Path] = None
+
+
+def _get_reset_tokens_file() -> Path:
+    """Ruta al archivo de tokens; usa /tmp si el directorio del proyecto no es escribible (ej. Render)."""
+    global _reset_tokens_path
+    if _reset_tokens_path is not None:
+        return _reset_tokens_path
+    try:
+        with open(RESET_TOKENS_FILE, "a"):
+            pass
+        _reset_tokens_path = RESET_TOKENS_FILE
+    except (OSError, PermissionError, IOError):
+        _reset_tokens_path = Path("/tmp") / "lafija_password_reset_tokens.json"
+    return _reset_tokens_path
+
+
 def _load_reset_tokens() -> dict:
     """Carga tokens de reset desde archivo."""
-    if RESET_TOKENS_FILE.exists():
+    path = _get_reset_tokens_file()
+    if path.exists():
         try:
-            with open(RESET_TOKENS_FILE, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -238,28 +257,36 @@ def _load_reset_tokens() -> dict:
 
 
 def _save_reset_tokens(tokens: dict):
-    """Guarda tokens de reset."""
-    with open(RESET_TOKENS_FILE, "w", encoding="utf-8") as f:
-        json.dump(tokens, f, indent=0)
+    """Guarda tokens de reset. Usa /tmp si el proyecto no es escribible."""
+    path = _get_reset_tokens_file()
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(tokens, f, indent=0)
+    except (OSError, PermissionError, IOError) as e:
+        raise ValueError(f"No se puede guardar el token (permisos o disco): {e}")
 
 
 def create_password_reset_token(email: str) -> str:
     """Crea un token de recuperación y lo guarda. Devuelve el token."""
-    email = (email or "").strip().lower()
-    if not email:
-        raise ValueError("Email requerido")
-    allowed = (os.environ.get("ADMIN_RECOVERY_EMAIL", "") or "").strip().lower()
-    if allowed and email != allowed:
-        raise ValueError("El correo no coincide con el configurado para recuperación")
-    token = secrets.token_urlsafe(32)
-    expires = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
-    tokens = _load_reset_tokens()
-    # Limpiar tokens expirados
-    now = datetime.now(timezone.utc)
-    tokens = {k: v for k, v in tokens.items() if datetime.fromisoformat(v["expires"].replace("Z", "+00:00")) > now}
-    tokens[token] = {"email": email, "expires": expires.isoformat()}
-    _save_reset_tokens(tokens)
-    return token
+    try:
+        email = (email or "").strip().lower()
+        if not email:
+            raise ValueError("Email requerido")
+        allowed = (os.environ.get("ADMIN_RECOVERY_EMAIL", "") or "").strip().lower()
+        if allowed and email != allowed:
+            raise ValueError("El correo no coincide con el configurado para recuperación")
+        token = secrets.token_urlsafe(32)
+        expires = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+        tokens = _load_reset_tokens()
+        now = datetime.now(timezone.utc)
+        tokens = {k: v for k, v in tokens.items() if datetime.fromisoformat(v["expires"].replace("Z", "+00:00")) > now}
+        tokens[token] = {"email": email, "expires": expires.isoformat()}
+        _save_reset_tokens(tokens)
+        return token
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Error al crear token: {e}")
 
 
 def get_and_consume_reset_token(token: str) -> str:
@@ -297,34 +324,32 @@ def send_reset_email(to_email: str, token: str, base_url: str) -> None:
             import requests as _req
         except ImportError:
             raise ValueError("Falta la librería 'requests'. Instálala para usar Resend.")
-        from_addr = os.environ.get("RESEND_FROM", "La Fija <onboarding@resend.dev>").strip()
-        payload = {
-            "from": from_addr,
-            "to": [to_email],
-            "subject": subject,
-            "html": body_html,
-            "text": body_plain,
-        }
         try:
+            from_addr = os.environ.get("RESEND_FROM", "La Fija <onboarding@resend.dev>").strip()
+            payload = {
+                "from": from_addr,
+                "to": [to_email],
+                "subject": subject,
+                "html": body_html,
+                "text": body_plain,
+            }
             r = _req.post(
                 "https://api.resend.com/emails",
                 json=payload,
                 headers={"Authorization": f"Bearer {resend_key}"},
                 timeout=25,
             )
-        except _req.exceptions.Timeout:
-            raise ValueError("Resend no respondió a tiempo. Vuelve a intentarlo.")
-        except _req.exceptions.ConnectionError as e:
-            raise ValueError(f"No se pudo conectar con Resend: {e}")
-        except _req.exceptions.RequestException as e:
-            raise ValueError(f"Error al enviar con Resend: {e}")
-        if r.status_code not in (200, 201, 202):
-            try:
-                err_body = r.json()
-                msg = err_body.get("message") or err_body.get("name") or err_body.get("detail") or r.text[:300]
-            except Exception:
-                msg = r.text[:300] or str(r.status_code)
-            raise ValueError(f"Resend {r.status_code}: {msg}")
+            if r.status_code not in (200, 201, 202):
+                try:
+                    err_body = r.json()
+                    msg = err_body.get("message") or err_body.get("name") or err_body.get("detail") or r.text[:300]
+                except Exception:
+                    msg = r.text[:300] or str(r.status_code)
+                raise ValueError(f"Resend {r.status_code}: {msg}")
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Resend: {e}")
         return
 
     # 2) SMTP (solo funciona en planes de pago de Render; free bloquea puertos 25/465/587)

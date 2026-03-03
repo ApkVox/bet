@@ -283,6 +283,9 @@ async def admin_forgot_password(request: Request):
         token = create_password_reset_token(email)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"[admin] Error creando token: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
     base_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("SITE_URL") or str(request.base_url).rstrip("/")
     try:
         await asyncio.to_thread(send_reset_email, email, token, base_url)
@@ -290,7 +293,7 @@ async def admin_forgot_password(request: Request):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         print(f"[admin] Error enviando email de recuperación: {e}")
-        raise HTTPException(status_code=500, detail="Error al enviar el correo. Revisa RESEND_API_KEY y RESEND_FROM.")
+        raise HTTPException(status_code=503, detail=str(e))
     return {"message": "Si el correo es el del administrador, recibirás un enlace para restablecer la contraseña en unos minutos."}
 
 
