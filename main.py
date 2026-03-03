@@ -247,6 +247,18 @@ async def admin_change_password(request: Request):
     return {"status": "ok"}
 
 
+@app.get("/api/admin/email-recovery-status")
+async def admin_email_recovery_status():
+    """Indica si el envío por Resend está configurado (sin revelar secretos). Útil para diagnosticar."""
+    resend_configured = bool((os.environ.get("RESEND_API_KEY") or "").strip())
+    recovery_configured = bool((os.environ.get("ADMIN_RECOVERY_EMAIL") or "").strip())
+    return {
+        "resend_configured": resend_configured,
+        "recovery_email_configured": recovery_configured,
+        "hint": "Configura RESEND_API_KEY y ADMIN_RECOVERY_EMAIL en Render → Environment." if not resend_configured else None,
+    }
+
+
 @app.post("/api/admin/forgot-password")
 async def admin_forgot_password(request: Request):
     """Solicita recuperación: envía un token por correo al email configurado."""
@@ -273,12 +285,12 @@ async def admin_forgot_password(request: Request):
         raise HTTPException(status_code=400, detail=str(e))
     base_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("SITE_URL") or str(request.base_url).rstrip("/")
     try:
-        send_reset_email(email, token, base_url)
+        await asyncio.to_thread(send_reset_email, email, token, base_url)
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         print(f"[admin] Error enviando email de recuperación: {e}")
-        raise HTTPException(status_code=500, detail="Error al enviar el correo. Revisa la configuración SMTP.")
+        raise HTTPException(status_code=500, detail="Error al enviar el correo. Revisa RESEND_API_KEY y RESEND_FROM.")
     return {"message": "Si el correo es el del administrador, recibirás un enlace para restablecer la contraseña en unos minutos."}
 
 

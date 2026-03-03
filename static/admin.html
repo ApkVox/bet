@@ -746,9 +746,10 @@
             </form>
             <div id="forgotPasswordBlock" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid var(--border);">
                 <p class="subtitle" style="margin-bottom:12px;">Recuperación por correo</p>
+                <p id="emailRecoveryHint" class="field-hint" style="display:none; margin-bottom:12px;"></p>
                 <div class="input-group">
                     <label>Correo del administrador</label>
-                    <input type="email" id="forgotEmail" placeholder="tu@correo.com">
+                    <input type="email" id="forgotEmail" placeholder="tu@correo.com" autocomplete="email">
                 </div>
                 <button type="button" class="btn-primary" id="sendResetBtn">Enviar enlace al correo</button>
                 <p style="margin-top:10px;"><a href="#" id="backToLoginLink">Volver al inicio de sesión</a></p>
@@ -1248,11 +1249,23 @@
 
         const forgotLink = document.getElementById('forgotPasswordLink');
         if (forgotLink) {
-            forgotLink.addEventListener('click', (e) => {
+            forgotLink.addEventListener('click', async (e) => {
                 e.preventDefault();
                 document.getElementById('loginForm').style.display = 'none';
                 document.getElementById('forgotPasswordBlock').style.display = 'block';
                 document.getElementById('loginError').style.display = 'none';
+                const hintEl = document.getElementById('emailRecoveryHint');
+                if (hintEl) {
+                    try {
+                        const st = await fetch('/api/admin/email-recovery-status').then(r => r.json());
+                        if (!st.resend_configured) {
+                            hintEl.textContent = st.hint || 'Configura RESEND_API_KEY en Render (Environment).';
+                            hintEl.style.display = 'block';
+                        } else {
+                            hintEl.style.display = 'none';
+                        }
+                    } catch (_) { hintEl.style.display = 'none'; }
+                }
             });
         }
         const backToLogin = document.getElementById('backToLoginLink');
@@ -1265,7 +1278,7 @@
         }
         const sendResetBtn = document.getElementById('sendResetBtn');
         if (sendResetBtn) sendResetBtn.addEventListener('click', async () => {
-            const email = document.getElementById('forgotEmail').value.trim();
+            const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
             const errEl = document.getElementById('loginError');
             errEl.style.display = 'none';
             if (!email) {
@@ -1282,7 +1295,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
                 });
-                const data = await res.json();
+                let data;
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    data = { detail: res.statusText || 'Error del servidor' };
+                }
                 if (res.ok) {
                     errEl.style.background = 'rgba(48, 209, 88, 0.15)';
                     errEl.style.color = 'var(--success)';
@@ -1291,11 +1309,14 @@
                 } else {
                     errEl.style.background = '';
                     errEl.style.color = '';
-                    errEl.textContent = data.detail || 'Error';
+                    const detail = data.detail;
+                    errEl.textContent = (Array.isArray(detail) ? detail[0] : detail) || 'Error';
                     errEl.style.display = 'block';
                 }
             } catch (err) {
-                errEl.textContent = 'Error de conexión';
+                errEl.style.background = '';
+                errEl.style.color = '';
+                errEl.textContent = 'Error de conexión. Comprueba la URL y que RESEND_API_KEY esté en Render.';
                 errEl.style.display = 'block';
             }
             btn.disabled = false;

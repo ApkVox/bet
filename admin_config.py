@@ -293,8 +293,10 @@ def send_reset_email(to_email: str, token: str, base_url: str) -> None:
     # 1) Resend (API HTTP) — recomendado para Render free: no usa puertos SMTP
     resend_key = os.environ.get("RESEND_API_KEY", "").strip()
     if resend_key:
-        import urllib.request
-        import json as _json
+        try:
+            import requests as _req
+        except ImportError:
+            raise ValueError("Falta la librería 'requests'. Instálala para usar Resend.")
         from_addr = os.environ.get("RESEND_FROM", "La Fija <onboarding@resend.dev>").strip()
         payload = {
             "from": from_addr,
@@ -303,22 +305,26 @@ def send_reset_email(to_email: str, token: str, base_url: str) -> None:
             "html": body_html,
             "text": body_plain,
         }
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=_json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {resend_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as r:
-                if r.status not in (200, 201, 202):
-                    raise ValueError(f"Resend API error: {r.status}")
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="replace") if e.fp else ""
-            raise ValueError(f"Resend: {e.code} — {body[:200]}")
+            r = _req.post(
+                "https://api.resend.com/emails",
+                json=payload,
+                headers={"Authorization": f"Bearer {resend_key}"},
+                timeout=25,
+            )
+        except _req.exceptions.Timeout:
+            raise ValueError("Resend no respondió a tiempo. Vuelve a intentarlo.")
+        except _req.exceptions.ConnectionError as e:
+            raise ValueError(f"No se pudo conectar con Resend: {e}")
+        except _req.exceptions.RequestException as e:
+            raise ValueError(f"Error al enviar con Resend: {e}")
+        if r.status_code not in (200, 201, 202):
+            try:
+                err_body = r.json()
+                msg = err_body.get("message") or err_body.get("name") or err_body.get("detail") or r.text[:300]
+            except Exception:
+                msg = r.text[:300] or str(r.status_code)
+            raise ValueError(f"Resend {r.status_code}: {msg}")
         return
 
     # 2) SMTP (solo funciona en planes de pago de Render; free bloquea puertos 25/465/587)
