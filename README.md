@@ -78,6 +78,18 @@ python production_server.py
 **Panel de administración:** En el primer despliegue (sin `admin_settings.json`) se usa la configuración por defecto. Contraseña inicial: **`LaFijaAdmin2025!`** — cámbiala en Admin → Seguridad al entrar.
 Para configurar la contraseña en local: `python admin_config.py set-password`
 
+**Recuperar contraseña por correo:** En la pantalla de login, "¿Olvidaste tu contraseña?" envía un enlace al correo del administrador.
+
+- **Render Free:** El plan gratuito de Render **bloquea los puertos SMTP** (25, 465, 587), así que Gmail/Outlook SMTP no funcionan. Usa **Resend** (API HTTP, gratis ~100 emails/día):
+  1. Regístrate en [resend.com](https://resend.com) y crea una API Key en [resend.com/api-keys](https://resend.com/api-keys).
+  2. En Render → tu servicio → **Environment** añade:
+     - `ADMIN_RECOVERY_EMAIL`: tu correo (ej. `hasler9710@gmail.com`).
+     - `RESEND_API_KEY`: la API key de Resend (empieza por `re_`).
+     - `RESEND_FROM`: remitente, ej. `La Fija <onboarding@resend.dev>` (o un dominio verificado en Resend).
+     - `RENDER_EXTERNAL_URL` o `SITE_URL`: URL de tu sitio (ej. `https://tu-app.onrender.com`).
+  3. Guarda y redeploya. La recuperación usará la API de Resend en lugar de SMTP.
+- **Servidor con SMTP (VPS, Render paid, etc.):** Opcionalmente configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. Si además existe `RESEND_API_KEY`, se prioriza Resend.
+
 **Verificar historial (pendientes antes del 03/03/2026):**
 ```bash
 python scripts/verify_history_db.py          # listar pendientes

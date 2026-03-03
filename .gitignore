@@ -129,6 +129,7 @@ venv.bak/
 
 # Configuración local del admin (contiene password hash y JWT)
 admin_settings.json
+password_reset_tokens.json
 
 # Copias de respaldo locales
 main_reference.py

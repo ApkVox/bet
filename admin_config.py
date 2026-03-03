@@ -23,6 +23,11 @@ import jwt
 BASE_DIR = Path(__file__).resolve().parent
 SETTINGS_FILE = BASE_DIR / "admin_settings.json"
 DEFAULT_SETTINGS_FILE = BASE_DIR / "admin_settings.default.json"
+RESET_TOKENS_FILE = BASE_DIR / "password_reset_tokens.json"
+
+# Email para recuperación (variable de entorno; por defecto el del administrador)
+ADMIN_RECOVERY_EMAIL = (os.environ.get("ADMIN_RECOVERY_EMAIL") or "hasler9710@gmail.com").strip()
+RESET_TOKEN_EXPIRE_MINUTES = 60
 
 # ===========================================
 # DEFAULT SETTINGS
@@ -216,6 +221,134 @@ def verify_token(token: str) -> bool:
         return False
     except jwt.InvalidTokenError:
         return False
+
+
+# ===========================================
+# PASSWORD RESET (token por correo)
+# ===========================================
+def _load_reset_tokens() -> dict:
+    """Carga tokens de reset desde archivo."""
+    if RESET_TOKENS_FILE.exists():
+        try:
+            with open(RESET_TOKENS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_reset_tokens(tokens: dict):
+    """Guarda tokens de reset."""
+    with open(RESET_TOKENS_FILE, "w", encoding="utf-8") as f:
+        json.dump(tokens, f, indent=0)
+
+
+def create_password_reset_token(email: str) -> str:
+    """Crea un token de recuperación y lo guarda. Devuelve el token."""
+    email = (email or "").strip().lower()
+    if not email:
+        raise ValueError("Email requerido")
+    allowed = (os.environ.get("ADMIN_RECOVERY_EMAIL", "") or "").strip().lower()
+    if allowed and email != allowed:
+        raise ValueError("El correo no coincide con el configurado para recuperación")
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+    tokens = _load_reset_tokens()
+    # Limpiar tokens expirados
+    now = datetime.now(timezone.utc)
+    tokens = {k: v for k, v in tokens.items() if datetime.fromisoformat(v["expires"].replace("Z", "+00:00")) > now}
+    tokens[token] = {"email": email, "expires": expires.isoformat()}
+    _save_reset_tokens(tokens)
+    return token
+
+
+def get_and_consume_reset_token(token: str) -> str:
+    """Si el token es válido, lo elimina y devuelve el email. Si no, lanza ValueError."""
+    token = (token or "").strip()
+    if not token:
+        raise ValueError("Token inválido")
+    tokens = _load_reset_tokens()
+    data = tokens.get(token)
+    if not data:
+        raise ValueError("Token no encontrado o ya usado")
+    expires = datetime.fromisoformat(data["expires"].replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires:
+        del tokens[token]
+        _save_reset_tokens(tokens)
+        raise ValueError("Token expirado")
+    email = data["email"]
+    del tokens[token]
+    _save_reset_tokens(tokens)
+    return email
+
+
+def send_reset_email(to_email: str, token: str, base_url: str) -> None:
+    """Envía el correo con el enlace de recuperación. Usa Resend (API HTTP) si está configurado, si no SMTP.
+    En Render free solo funciona Resend: el plan free de Render bloquea puertos SMTP."""
+    reset_url = f"{base_url.rstrip('/')}/admin?reset={token}"
+    subject = "Recuperación de contraseña — Admin La Fija"
+    body_plain = f"""Hola,\n\nHas solicitado restablecer la contraseña del panel de administración.\n\nEnlace (válido 1 hora):\n{reset_url}\n\nSi no fuiste tú, ignora este correo.\n"""
+    body_html = f"""<p>Hola,</p><p>Has solicitado restablecer la contraseña del panel de administración.</p><p><a href="{reset_url}">Restablecer contraseña</a></p><p>O copia este enlace (válido 1 hora):<br><code>{reset_url}</code></p><p>Si no fuiste tú, ignora este correo.</p>"""
+
+    # 1) Resend (API HTTP) — recomendado para Render free: no usa puertos SMTP
+    resend_key = os.environ.get("RESEND_API_KEY", "").strip()
+    if resend_key:
+        import urllib.request
+        import json as _json
+        from_addr = os.environ.get("RESEND_FROM", "La Fija <onboarding@resend.dev>").strip()
+        payload = {
+            "from": from_addr,
+            "to": [to_email],
+            "subject": subject,
+            "html": body_html,
+            "text": body_plain,
+        }
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=_json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                if r.status not in (200, 201, 202):
+                    raise ValueError(f"Resend API error: {r.status}")
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace") if e.fp else ""
+            raise ValueError(f"Resend: {e.code} — {body[:200]}")
+        return
+
+    # 2) SMTP (solo funciona en planes de pago de Render; free bloquea puertos 25/465/587)
+    host = os.environ.get("SMTP_HOST", "").strip()
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER", "").strip()
+    password = os.environ.get("SMTP_PASSWORD", "").strip()
+    use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
+    from_addr = os.environ.get("SMTP_FROM", user or "noreply@lafija.com")
+    if host and user and password:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = from_addr
+        msg["To"] = to_email
+        msg.attach(MIMEText(body_plain, "plain", "utf-8"))
+        msg.attach(MIMEText(body_html, "html", "utf-8"))
+        with smtplib.SMTP(host, port) as s:
+            if use_tls:
+                s.starttls()
+            s.login(user, password)
+            s.sendmail(from_addr, [to_email], msg.as_string())
+        return
+
+    raise ValueError(
+        "Configura envío de correo: en Render free usa Resend (RESEND_API_KEY y opcional RESEND_FROM). "
+        "En servidor con SMTP: SMTP_HOST, SMTP_USER, SMTP_PASSWORD."
+    )
 
 
 # ===========================================

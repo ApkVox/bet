@@ -247,6 +247,65 @@ async def admin_change_password(request: Request):
     return {"status": "ok"}
 
 
+@app.post("/api/admin/forgot-password")
+async def admin_forgot_password(request: Request):
+    """Solicita recuperación: envía un token por correo al email configurado."""
+    from admin_config import (
+        ADMIN_RECOVERY_EMAIL,
+        create_password_reset_token,
+        send_reset_email,
+    )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    email = (body.get("email") or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Indica tu correo (el del administrador)")
+    if not ADMIN_RECOVERY_EMAIL:
+        raise HTTPException(
+            status_code=503,
+            detail="El servidor no tiene configurado ADMIN_RECOVERY_EMAIL. Contacta al administrador del servidor.",
+        )
+    try:
+        token = create_password_reset_token(email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    base_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("SITE_URL") or str(request.base_url).rstrip("/")
+    try:
+        send_reset_email(email, token, base_url)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        print(f"[admin] Error enviando email de recuperación: {e}")
+        raise HTTPException(status_code=500, detail="Error al enviar el correo. Revisa la configuración SMTP.")
+    return {"message": "Si el correo es el del administrador, recibirás un enlace para restablecer la contraseña en unos minutos."}
+
+
+@app.post("/api/admin/reset-password")
+async def admin_reset_password(request: Request):
+    """Restablece la contraseña usando el token recibido por correo."""
+    from admin_config import get_and_consume_reset_token, load_config, save_config, hash_password
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    token = (body.get("token") or "").strip()
+    new_password = (body.get("new_password") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Falta el token")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+    try:
+        get_and_consume_reset_token(token)  # valida y consume el token
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    config = load_config()
+    config["password_hash"] = hash_password(new_password)
+    save_config(config)
+    return {"message": "Contraseña actualizada. Ya puedes iniciar sesión."}
+
+
 @app.get("/api/health")
 async def health_check():
     """Endpoint simple para verificar que la DB responde."""
