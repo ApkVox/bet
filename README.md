@@ -31,6 +31,10 @@ Sistema de predicciones deportivas con Machine Learning para NBA y Futbol europe
 | `GET /predict-football` | Predicciones futbol |
 | `GET /history/full` | Historial NBA |
 | `GET /history/football` | Historial futbol |
+| `GET /admin` | Panel de administración |
+| `GET /api/settings` | Configuración pública (tema, publicidad) |
+| `POST /api/admin/login` | Login admin (JWT) |
+| `GET/POST /api/admin/settings` | Configuración (requiere JWT) |
 
 ## Estructura del Proyecto
 
@@ -68,4 +72,16 @@ bet/
 pip install -r requirements.txt
 python production_server.py
 # Acceder en http://localhost:8080
+# Panel admin: http://localhost:8080/admin
+```
+
+**Panel de administración:** La primera vez configura la contraseña con:
+```bash
+python admin_config.py set-password
+```
+
+**Verificar historial (pendientes antes del 03/03/2026):**
+```bash
+python scripts/verify_history_db.py          # listar pendientes
+python scripts/verify_history_db.py --fix    # actualizar marcadores
 ```

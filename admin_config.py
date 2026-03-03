@@ -191,11 +191,13 @@ def _get_jwt_secret() -> str:
 
 def create_token() -> str:
     """Create a JWT token for the admin."""
+    import time
     secret = _get_jwt_secret()
+    now = int(time.time())
     payload = {
         "role": "admin",
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS)
+        "iat": now,
+        "exp": now + int(TOKEN_EXPIRY_HOURS * 3600)
     }
     return jwt.encode(payload, secret, algorithm="HS256")
 

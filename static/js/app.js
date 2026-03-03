@@ -94,6 +94,46 @@ if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
 initTheme();
 
+// Configuración pública y publicidad (desde /api/settings)
+async function loadPublicSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        if (!res.ok) return;
+        const settings = await res.json();
+        const ads = settings.ads || {};
+        if (!ads.enabled) return;
+        const leftKey = (ads.left_key || '').trim();
+        const rightKey = (ads.right_key || '').trim();
+        if (leftKey) injectAdsterraBanner('left', leftKey);
+        if (rightKey) injectAdsterraBanner('right', rightKey);
+    } catch (e) {
+        console.warn('No se pudo cargar configuración pública:', e);
+    }
+}
+
+function injectAdsterraBanner(side, key) {
+    const selector = `.ad-banner.${side}`;
+    const container = document.querySelector(selector);
+    if (!container || !key) return;
+    const placeholder = container.querySelector('.ad-placeholder');
+    if (!placeholder) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ad-slot';
+    wrapper.style.cssText = 'width:100%;height:100%;min-height:250px;';
+    const atOpts = document.createElement('script');
+    atOpts.type = 'text/javascript';
+    atOpts.textContent = 'var atOptions = { key: "' + key.replace(/"/g, '\\"') + '", format: "iframe", height: 250, width: 300 };';
+    wrapper.appendChild(atOpts);
+    const extScript = document.createElement('script');
+    extScript.type = 'text/javascript';
+    extScript.src = '//www.highperformanceformat.com/' + key + '/invoke.js';
+    extScript.async = true;
+    wrapper.appendChild(extScript);
+    placeholder.replaceWith(wrapper);
+}
+
+document.addEventListener('DOMContentLoaded', loadPublicSettings);
+
 // Navigation
 function switchSection(sectionId) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
