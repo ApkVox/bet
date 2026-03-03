@@ -126,3 +126,9 @@ venv.bak/
 
 .idea
 .DS_Store
+
+# Configuración local del admin (contiene password hash y JWT)
+admin_settings.json
+
+# Copias de respaldo locales
+main_reference.py

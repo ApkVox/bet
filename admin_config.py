@@ -22,6 +22,7 @@ import jwt
 # ===========================================
 BASE_DIR = Path(__file__).resolve().parent
 SETTINGS_FILE = BASE_DIR / "admin_settings.json"
+DEFAULT_SETTINGS_FILE = BASE_DIR / "admin_settings.default.json"
 
 # ===========================================
 # DEFAULT SETTINGS
@@ -114,7 +115,10 @@ def record_attempt(ip: str):
 # SETTINGS I/O
 # ===========================================
 def load_config() -> dict:
-    """Load settings from JSON file, creating defaults if needed."""
+    """Load settings from JSON file, creating from default file if missing."""
+    if not SETTINGS_FILE.exists() and DEFAULT_SETTINGS_FILE.exists():
+        import shutil
+        shutil.copy2(DEFAULT_SETTINGS_FILE, SETTINGS_FILE)
     if SETTINGS_FILE.exists():
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:

@@ -75,10 +75,8 @@ python production_server.py
 # Panel admin: http://localhost:8080/admin
 ```
 
-**Panel de administración:** La primera vez configura la contraseña con:
-```bash
-python admin_config.py set-password
-```
+**Panel de administración:** En el primer despliegue (sin `admin_settings.json`) se usa la configuración por defecto. Contraseña inicial: **`LaFijaAdmin2025!`** — cámbiala en Admin → Seguridad al entrar.
+Para configurar la contraseña en local: `python admin_config.py set-password`
 
 **Verificar historial (pendientes antes del 03/03/2026):**
 ```bash

@@ -267,11 +267,11 @@
            ========================================== */
         .app-container {
             display: grid;
-            grid-template-columns: 1fr minmax(320px, 1100px) 1fr;
-            gap: 24px;
+            grid-template-columns: minmax(260px, 1fr) minmax(320px, 1080px) minmax(260px, 1fr);
+            gap: 16px;
             max-width: 1920px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 12px;
         }
 
         .main {
@@ -284,15 +284,18 @@
             position: sticky;
             top: 100px;
             height: calc(100vh - 140px);
+            min-height: 400px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 12px 8px;
         }
 
-        .ad-placeholder {
+        .ad-placeholder,
+        .ad-slot {
             width: 100%;
             height: 100%;
+            min-height: 250px;
             border: 1px dashed var(--border);
             background: transparent;
             border-radius: var(--radius-lg);
@@ -309,6 +312,26 @@
             transform: rotate(180deg);
             opacity: 0.4;
         }
+
+        .ad-slot {
+            opacity: 1;
+            transform: none;
+            writing-mode: horizontal-tb;
+        }
+
+        .header-promo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 20px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .header-promo-icon:hover { color: var(--accent); background: var(--accent-glow, rgba(10, 132, 255, 0.12)); }
 
         @media (max-width: 1440px) {
             .app-container { display: block; max-width: 1100px; padding: 0 20px; }
@@ -331,7 +354,7 @@
            ========================================== */
         .predictions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
 
@@ -560,6 +583,21 @@
         .meta-tag.positive { background: var(--success-bg); color: var(--success); }
         .meta-tag.negative { background: var(--danger-bg); color: var(--danger); }
 
+        .promo-download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            background: var(--bg-secondary);
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+            border: 1px solid var(--border);
+        }
+        .promo-download-btn:hover { background: var(--accent-glow, rgba(10, 132, 255, 0.12)); color: var(--accent); }
+
         /* ==========================================
            HISTORY
            ========================================== */
@@ -610,7 +648,7 @@
 
         .history-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
         }
 
@@ -928,7 +966,9 @@
             .logo-text { display: none; }
             .header .nav-tabs { display: none; }
             .mobile-nav { display: flex; }
-            .predictions-grid, .history-cards { grid-template-columns: 1fr; }
+            .predictions-grid, .history-cards {
+                grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+            }
             .section-title { font-size: 24px; }
         }
 
@@ -951,18 +991,19 @@
     <header class="header">
         <div class="header-content">
             <div class="logo">
-                <span class="logo-icon">&#127936;</span>
-                <span class="logo-text">La Fija</span>
+                <span class="logo-icon" id="headerLogoIcon" aria-hidden="true">&#127936;</span>
+                <span class="logo-text" id="headerLogoText">La Fija</span>
             </div>
             <div class="header-right">
                 <div class="sport-selector">
                     <button class="sport-btn active" data-sport="nba">&#127936; NBA</button>
-                    <button class="sport-btn" data-sport="football">&#9917; Futbol</button>
+                    <button class="sport-btn" data-sport="football" id="sportBtnFootball">&#9917; Futbol</button>
                 </div>
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-section="predictions">Predicciones</button>
                     <button class="nav-tab" data-section="history">Historial</button>
                 </nav>
+                <a href="#" id="headerPromoDownload" class="header-promo-icon" download="promo.png" title="Descargar imagen promo" style="display:none;">&#8595;</a>
                 <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">&#9790;</button>
             </div>
         </div>

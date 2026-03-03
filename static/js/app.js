@@ -94,12 +94,67 @@ if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
 initTheme();
 
-// Configuración pública y publicidad (desde /api/settings)
+// Configuración pública (guardada para promo_download y publicidad)
+let publicSettings = { features: {}, ads: {}, branding: {} };
+
+function applyBranding(branding) {
+    if (!branding) return;
+    const title = (branding.title || '').trim() || 'La Fija';
+    const subtitle = (branding.subtitle || '').trim();
+    document.title = subtitle ? title + ' — ' + subtitle : title + ' - Predicciones';
+    const logoText = document.getElementById('headerLogoText');
+    const logoIcon = document.getElementById('headerLogoIcon');
+    if (logoText) logoText.textContent = title;
+    if (logoIcon) {
+        const emoji = branding.emoji != null ? String(branding.emoji).trim() : '';
+        if (emoji === '') {
+            logoIcon.style.display = 'none';
+        } else {
+            logoIcon.style.display = '';
+            logoIcon.textContent = emoji || '\uD83C\uDFC0';
+        }
+    }
+}
+
+function applyFootballVisibility(enable) {
+    const btn = document.getElementById('sportBtnFootball');
+    if (!btn) return;
+    if (enable) {
+        btn.style.display = '';
+    } else {
+        btn.style.display = 'none';
+        if (currentSport === 'football') {
+            currentSport = 'nba';
+            document.querySelectorAll('.sport-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.sport === 'nba');
+            });
+            loadPredictions();
+            loadHistory();
+        }
+    }
+}
+
+function applyPromoHeaderIcon(enable) {
+    const a = document.getElementById('headerPromoDownload');
+    if (!a) return;
+    if (enable) {
+        a.style.display = 'inline-flex';
+        a.href = getPromoImageUrl('Charlotte Hornets', 'Dallas Mavericks', 'Charlotte Hornets', 58.1);
+        a.download = 'promo.png';
+    } else {
+        a.style.display = 'none';
+    }
+}
+
 async function loadPublicSettings() {
     try {
         const res = await fetch('/api/settings');
         if (!res.ok) return;
         const settings = await res.json();
+        publicSettings = settings;
+        applyBranding(settings.branding || {});
+        applyFootballVisibility(settings.features?.football === true);
+        applyPromoHeaderIcon(settings.features?.promo_download === true);
         const ads = settings.ads || {};
         if (!ads.enabled) return;
         const leftKey = (ads.left_key || '').trim();
@@ -119,7 +174,7 @@ function injectAdsterraBanner(side, key) {
     if (!placeholder) return;
     const wrapper = document.createElement('div');
     wrapper.className = 'ad-slot';
-    wrapper.style.cssText = 'width:100%;height:100%;min-height:250px;';
+    wrapper.style.cssText = 'width:100%;height:100%;min-height:250px;overflow:hidden;';
     const atOpts = document.createElement('script');
     atOpts.type = 'text/javascript';
     atOpts.textContent = 'var atOptions = { key: "' + key.replace(/"/g, '\\"') + '", format: "iframe", height: 250, width: 300 };';
@@ -133,6 +188,13 @@ function injectAdsterraBanner(side, key) {
 }
 
 document.addEventListener('DOMContentLoaded', loadPublicSettings);
+
+function getPromoImageUrl(home, away, winner, probability, status) {
+    const params = { home_team: home, away_team: away, winner: winner, probability: String(probability) };
+    if (status && (status.toUpperCase() === 'WIN' || status.toUpperCase() === 'GANADA')) params.status = 'GANADA';
+    else if (status && (status.toUpperCase() === 'LOSS' || status.toUpperCase() === 'PERDIDA')) params.status = 'PERDIDA';
+    return '/api/promo-image?' + new URLSearchParams(params).toString();
+}
 
 // Navigation
 function switchSection(sectionId) {

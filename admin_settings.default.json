@@ -1,6 +1,6 @@
 {
-  "password_hash": "$2b$12$jrazJCdaFfKY2F/ZK1LaQeUIIrpr2m2ZQYAKke./R3I3AWgIR8/Yu",
-  "jwt_secret": "a2b2bb1e5183c992641462f396c008fce9e53f5f8de1869ba2efc58a710b12e3",
+  "password_hash": "$2b$12$gT8s4ctGNjkyLUbEzv/aHefgcQGBqYWbv98xjhW/pGX8gEBiIsdQW",
+  "jwt_secret": "6acb638c227d2386b76c5a6dec32f1e77e173af20dbec2c409971ef555f8894e",
   "theme": {
     "dark": {
       "--accent": "#0a84ff",
@@ -30,23 +30,23 @@
     }
   },
   "branding": {
-    "title": "",
-    "emoji": "",
-    "subtitle": "Predicciones NBA"
+    "title": "La Fija",
+    "emoji": "\uD83C\uDFC0",
+    "subtitle": "Predicciones NBA y F\u00f3tbol con IA"
   },
   "features": {
-    "football": false,
+    "football": true,
     "promo_download": true,
     "dark_default": true,
     "ai_analysis": true
   },
   "announcement": {
-    "enabled": true,
+    "enabled": false,
     "text": "",
     "color": "#0a84ff"
   },
   "ads": {
-    "enabled": false,
+    "enabled": true,
     "left_key": "e2cbd291fd6e2e0a824862d3ff57a34f",
     "right_key": "e2cbd291fd6e2e0a824862d3ff57a34f"
   }

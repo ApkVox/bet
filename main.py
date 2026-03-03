@@ -20,7 +20,7 @@ TZ_COLOMBIA = timezone(timedelta(hours=-5))
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import uvicorn
 
@@ -251,6 +251,116 @@ async def admin_change_password(request: Request):
 async def health_check():
     """Endpoint simple para verificar que la DB responde."""
     return {"status": "online", "db_connected": True}
+
+
+# -------------------------------------------
+# Promo editor preview + config (admin y cards)
+# -------------------------------------------
+def _parse_promo_query(request: Request) -> tuple:
+    """Extrae home_team, away_team, winner, probability y config_override de query params."""
+    q = request.query_params
+    home_team = q.get("home_team", "Charlotte Hornets")
+    away_team = q.get("away_team", "Dallas Mavericks")
+    winner = q.get("winner", home_team)
+    prob_s = q.get("probability", "58.1")
+    try:
+        probability = float(prob_s)
+    except ValueError:
+        probability = 58.1
+    config_override = {}
+    int_keys = (
+        "logo_cy", "logo_left_cx", "logo_right_offset", "logo_max",
+        "names_y", "names_font_size", "names_max_w",
+        "box_y0", "box_y1", "box_pad_x", "box_radius", "box_border_w",
+        "label_offset_y", "label_font_size",
+        "winner_offset_y", "winner_font_size",
+        "prob_offset_y", "prob_font_size",
+        "footer_y", "footer_font_size",
+    )
+    color_keys = ("names_color", "box_border_color", "label_color", "winner_color", "prob_color", "footer_color")
+    for k in int_keys:
+        v = q.get(k)
+        if v is not None:
+            try:
+                config_override[k] = int(v)
+            except ValueError:
+                pass
+    for k in color_keys:
+        v = q.get(k)
+        if v:
+            config_override[k] = v
+    for toggle in ("show_logos", "show_names", "show_box_border", "show_label", "show_winner", "show_prob", "show_footer"):
+        v = q.get(toggle)
+        if v is not None:
+            config_override[toggle] = str(v).lower() in ("true", "1", "yes", "on")
+    return home_team, away_team, winner, probability, config_override
+
+
+@app.get("/api/promo-editor-preview")
+async def promo_editor_preview(request: Request):
+    """Genera imagen de preview para el editor de promo (query params: home_team, away_team, winner, probability + layout)."""
+    try:
+        from promo_generator import generate_promo_image
+        home_team, away_team, winner, probability, config_override = _parse_promo_query(request)
+        data = generate_promo_image(home_team, away_team, winner, probability, status=None, config_override=config_override or None)
+        return Response(content=data, media_type="image/png")
+    except Exception as e:
+        print(f"[main] promo-editor-preview error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/promo-image")
+async def promo_image(request: Request):
+    """Genera imagen de promo para una predicción (para descargar desde las cards)."""
+    try:
+        from promo_generator import generate_promo_image
+        home_team = request.query_params.get("home_team", "")
+        away_team = request.query_params.get("away_team", "")
+        winner = request.query_params.get("winner", "")
+        prob_s = request.query_params.get("probability", "0")
+        status = request.query_params.get("status")  # PENDING, WIN, LOSS -> Ganada/Perdida
+        try:
+            probability = float(prob_s)
+        except ValueError:
+            probability = 0.0
+        if not home_team or not away_team or not winner:
+            raise HTTPException(status_code=400, detail="Faltan home_team, away_team o winner")
+        status_label = None
+        if status and str(status).upper() in ("WIN", "GANADA"):
+            status_label = "GANADA"
+        elif status and str(status).upper() in ("LOSS", "PERDIDA"):
+            status_label = "PERDIDA"
+        data = generate_promo_image(home_team, away_team, winner, probability, status=status_label)
+        return Response(content=data, media_type="image/png")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[main] promo-image error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/promo-config")
+async def get_promo_config():
+    """Devuelve la configuración del editor de promo (layout)."""
+    try:
+        from promo_generator import load_config
+        return load_config()
+    except Exception as e:
+        print(f"[main] get promo-config error: {e}")
+        return {}
+
+
+@app.post("/api/promo-config")
+async def save_promo_config(request: Request):
+    """Guarda la configuración del editor de promo."""
+    try:
+        body = await request.json()
+        from promo_generator import save_config
+        save_config(body)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"[main] save promo-config error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/predict-today")
