@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Promo - La Fija</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #0d0d0d;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* LEFT PANEL - Preview */
+        .preview-panel {
+            flex: 0 0 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            border-right: 1px solid #222;
+            padding: 20px;
+        }
+        .preview-panel h2 {
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+        #preview-img {
+            max-width: 371px;
+            max-height: 673px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .preview-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0078ff, #00a8ff);
+            color: #fff;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,120,255,0.4); }
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
+        }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,197,94,0.4); }
+        .btn-outline {
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #333;
+        }
+        .btn-outline:hover { border-color: #555; color: #fff; }
+        
+        /* RIGHT PANEL - Controls */
+        .controls-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+        .controls-panel h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #f0d060, #d4a017);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .controls-panel .subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+        
+        .section {
+            background: #1a1a1a;
+            border: 1px solid #252525;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #d4a017;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title span { font-size: 16px; }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 12px;
+        }
+        .control-row label {
+            flex: 0 0 140px;
+            font-size: 12px;
+            color: #999;
+            font-weight: 500;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            accent-color: #d4a017;
+            height: 4px;
+        }
+        .control-row .value {
+            flex: 0 0 50px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 700;
+            color: #d4a017;
+            font-family: 'Montserrat', monospace;
+        }
+        .control-row input[type="color"] {
+            width: 32px;
+            height: 24px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+        }
+        .control-row select {
+            flex: 1;
+            background: #222;
+            color: #ccc;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .test-teams {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .test-teams input {
+            flex: 1;
+            min-width: 140px;
+            background: #222;
+            color: #ccc;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 420px;
+            right: 0;
+            background: #111;
+            border-top: 1px solid #222;
+            padding: 10px 24px;
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+        .status-bar .saved { color: #22c55e; font-weight: 600; display: none; }
+    </style>
+</head>
+<body>
+    <!-- PREVIEW -->
+    <div class="preview-panel">
+        <h2>Vista Previa</h2>
+        <img id="preview-img" src="" alt="Preview" />
+        <div class="preview-actions">
+            <button class="btn btn-primary" onclick="updatePreview()">🔄 Actualizar</button>
+            <button class="btn btn-success" onclick="saveConfig()">💾 Guardar Config</button>
+            <button class="btn btn-outline" onclick="resetDefaults()">↩ Reset</button>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls-panel">
+        <h1>⚙️ Editor de Promo</h1>
+        <p class="subtitle">Ajusta las posiciones, tamaños y colores. Los cambios se guardan como configuración permanente.</p>
+
+        <!-- Test Teams -->
+        <div class="section">
+            <div class="section-title"><span>🏀</span> Equipos de Prueba</div>
+            <div class="test-teams">
+                <input type="text" id="test_home" value="Charlotte Hornets" placeholder="Equipo Local" />
+                <input type="text" id="test_away" value="Dallas Mavericks" placeholder="Equipo Visitante" />
+                <input type="text" id="test_winner" value="Charlotte Hornets" placeholder="Ganador" />
+                <input type="number" id="test_prob" value="58.1" step="0.1" min="0" max="100" style="max-width:80px" />
+            </div>
+        </div>
+
+        <!-- Logo Position -->
+        <div class="section">
+            <div class="section-title"><span>🎯</span> Posición de Logos</div>
+            <div class="control-row">
+                <label>Centro Y (VS)</label>
+                <input type="range" id="logo_cy" min="150" max="350" value="240" oninput="liveUpdate(this)" />
+                <span class="value" id="logo_cy_val">240</span>
+            </div>
+            <div class="control-row">
+                <label>Logo Izq. X</label>
+                <input type="range" id="logo_left_cx" min="40" max="160" value="88" oninput="liveUpdate(this)" />
+                <span class="value" id="logo_left_cx_val">88</span>
+            </div>
+            <div class="control-row">
+                <label>Logo Der. X (inv)</label>
+                <input type="range" id="logo_right_offset" min="40" max="160" value="88" oninput="liveUpdate(this)" />
+                <span class="value" id="logo_right_offset_val">88</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Máx Logo</label>
+                <input type="range" id="logo_max" min="30" max="120" value="68" oninput="liveUpdate(this)" />
+                <span class="value" id="logo_max_val">68</span>
+            </div>
+        </div>
+
+        <!-- Team Names -->
+        <div class="section">
+            <div class="section-title"><span>✏️</span> Nombres de Equipo</div>
+            <div class="control-row">
+                <label>Posición Y</label>
+                <input type="range" id="names_y" min="270" max="400" value="308" oninput="liveUpdate(this)" />
+                <span class="value" id="names_y_val">308</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Fuente</label>
+                <input type="range" id="names_font_size" min="8" max="20" value="11" oninput="liveUpdate(this)" />
+                <span class="value" id="names_font_size_val">11</span>
+            </div>
+            <div class="control-row">
+                <label>Ancho Máx Texto</label>
+                <input type="range" id="names_max_w" min="60" max="170" value="120" oninput="liveUpdate(this)" />
+                <span class="value" id="names_max_w_val">120</span>
+            </div>
+            <div class="control-row">
+                <label>Color</label>
+                <input type="color" id="names_color" value="#373737" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <!-- Prediction Box -->
+        <div class="section">
+            <div class="section-title"><span>📦</span> Caja de Predicción</div>
+            <div class="control-row">
+                <label>Top Y</label>
+                <input type="range" id="box_y0" min="350" max="500" value="405" oninput="liveUpdate(this)" />
+                <span class="value" id="box_y0_val">405</span>
+            </div>
+            <div class="control-row">
+                <label>Bottom Y</label>
+                <input type="range" id="box_y1" min="500" max="650" value="590" oninput="liveUpdate(this)" />
+                <span class="value" id="box_y1_val">590</span>
+            </div>
+            <div class="control-row">
+                <label>Padding X</label>
+                <input type="range" id="box_pad_x" min="10" max="60" value="28" oninput="liveUpdate(this)" />
+                <span class="value" id="box_pad_x_val">28</span>
+            </div>
+            <div class="control-row">
+                <label>Borde Radius</label>
+                <input type="range" id="box_radius" min="0" max="30" value="14" oninput="liveUpdate(this)" />
+                <span class="value" id="box_radius_val">14</span>
+            </div>
+            <div class="control-row">
+                <label>Grosor Borde</label>
+                <input type="range" id="box_border_w" min="1" max="6" value="2" oninput="liveUpdate(this)" />
+                <span class="value" id="box_border_w_val">2</span>
+            </div>
+            <div class="control-row">
+                <label>Color Borde</label>
+                <input type="color" id="box_border_color" value="#beB9aa" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <!-- Label "A GANAR" -->
+        <div class="section">
+            <div class="section-title"><span>🏷️</span> Etiqueta "A GANAR EL PARTIDO"</div>
+            <div class="control-row">
+                <label>Offset Y (desde top box)</label>
+                <input type="range" id="label_offset_y" min="5" max="40" value="18" oninput="liveUpdate(this)" />
+                <span class="value" id="label_offset_y_val">18</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Fuente</label>
+                <input type="range" id="label_font_size" min="8" max="18" value="11" oninput="liveUpdate(this)" />
+                <span class="value" id="label_font_size_val">11</span>
+            </div>
+            <div class="control-row">
+                <label>Color</label>
+                <input type="color" id="label_color" value="#9b968c" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <!-- Winner Name -->
+        <div class="section">
+            <div class="section-title"><span>🏆</span> Nombre del Ganador</div>
+            <div class="control-row">
+                <label>Offset Y (desde top box)</label>
+                <input type="range" id="winner_offset_y" min="30" max="80" value="50" oninput="liveUpdate(this)" />
+                <span class="value" id="winner_offset_y_val">50</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Fuente</label>
+                <input type="range" id="winner_font_size" min="12" max="32" value="20" oninput="liveUpdate(this)" />
+                <span class="value" id="winner_font_size_val">20</span>
+            </div>
+            <div class="control-row">
+                <label>Color</label>
+                <input type="color" id="winner_color" value="#0069e1" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <!-- Probability -->
+        <div class="section">
+            <div class="section-title"><span>📊</span> Porcentaje</div>
+            <div class="control-row">
+                <label>Offset Y (desde top box)</label>
+                <input type="range" id="prob_offset_y" min="60" max="150" value="100" oninput="liveUpdate(this)" />
+                <span class="value" id="prob_offset_y_val">100</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Fuente</label>
+                <input type="range" id="prob_font_size" min="24" max="72" value="52" oninput="liveUpdate(this)" />
+                <span class="value" id="prob_font_size_val">52</span>
+            </div>
+            <div class="control-row">
+                <label>Color</label>
+                <input type="color" id="prob_color" value="#1e1e1e" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="section">
+            <div class="section-title"><span>📝</span> Footer</div>
+            <div class="control-row">
+                <label>Posición Y</label>
+                <input type="range" id="footer_y" min="610" max="665" value="642" oninput="liveUpdate(this)" />
+                <span class="value" id="footer_y_val">642</span>
+            </div>
+            <div class="control-row">
+                <label>Tamaño Fuente</label>
+                <input type="range" id="footer_font_size" min="8" max="16" value="10" oninput="liveUpdate(this)" />
+                <span class="value" id="footer_font_size_val">10</span>
+            </div>
+            <div class="control-row">
+                <label>Color</label>
+                <input type="color" id="footer_color" value="#b9b4aa" oninput="liveUpdate(this)" />
+            </div>
+        </div>
+
+        <div style="height:60px"></div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span>Plantilla: 371 × 673 px</span>
+        <span class="saved" id="saved-msg">✅ Configuración guardada</span>
+    </div>
+
+    <script>
+        let debounceTimer = null;
+
+        function liveUpdate(el) {
+            // Update value display
+            const valEl = document.getElementById(el.id + '_val');
+            if (valEl) valEl.textContent = el.value;
+            // Debounce preview update
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePreview, 400);
+        }
+
+        function getParams() {
+            return {
+                // Test teams
+                home_team: document.getElementById('test_home').value,
+                away_team: document.getElementById('test_away').value,
+                winner: document.getElementById('test_winner').value,
+                probability: parseFloat(document.getElementById('test_prob').value),
+                // Logo
+                logo_cy: parseInt(document.getElementById('logo_cy').value),
+                logo_left_cx: parseInt(document.getElementById('logo_left_cx').value),
+                logo_right_offset: parseInt(document.getElementById('logo_right_offset').value),
+                logo_max: parseInt(document.getElementById('logo_max').value),
+                // Names
+                names_y: parseInt(document.getElementById('names_y').value),
+                names_font_size: parseInt(document.getElementById('names_font_size').value),
+                names_max_w: parseInt(document.getElementById('names_max_w').value),
+                names_color: document.getElementById('names_color').value,
+                // Box
+                box_y0: parseInt(document.getElementById('box_y0').value),
+                box_y1: parseInt(document.getElementById('box_y1').value),
+                box_pad_x: parseInt(document.getElementById('box_pad_x').value),
+                box_radius: parseInt(document.getElementById('box_radius').value),
+                box_border_w: parseInt(document.getElementById('box_border_w').value),
+                box_border_color: document.getElementById('box_border_color').value,
+                // Label
+                label_offset_y: parseInt(document.getElementById('label_offset_y').value),
+                label_font_size: parseInt(document.getElementById('label_font_size').value),
+                label_color: document.getElementById('label_color').value,
+                // Winner
+                winner_offset_y: parseInt(document.getElementById('winner_offset_y').value),
+                winner_font_size: parseInt(document.getElementById('winner_font_size').value),
+                winner_color: document.getElementById('winner_color').value,
+                // Prob
+                prob_offset_y: parseInt(document.getElementById('prob_offset_y').value),
+                prob_font_size: parseInt(document.getElementById('prob_font_size').value),
+                prob_color: document.getElementById('prob_color').value,
+                // Footer
+                footer_y: parseInt(document.getElementById('footer_y').value),
+                footer_font_size: parseInt(document.getElementById('footer_font_size').value),
+                footer_color: document.getElementById('footer_color').value,
+            };
+        }
+
+        function updatePreview() {
+            const params = getParams();
+            const qs = new URLSearchParams(params).toString();
+            document.getElementById('preview-img').src = '/api/promo-editor-preview?' + qs + '&_t=' + Date.now();
+        }
+
+        async function saveConfig() {
+            const params = getParams();
+            // Remove test team params — only save layout config
+            const config = { ...params };
+            delete config.home_team;
+            delete config.away_team;
+            delete config.winner;
+            delete config.probability;
+
+            const res = await fetch('/api/promo-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            });
+            if (res.ok) {
+                const msg = document.getElementById('saved-msg');
+                msg.style.display = 'inline';
+                setTimeout(() => msg.style.display = 'none', 3000);
+            }
+        }
+
+        function resetDefaults() {
+            const defaults = {
+                logo_cy: 240, logo_left_cx: 88, logo_right_offset: 88, logo_max: 68,
+                names_y: 308, names_font_size: 11, names_max_w: 120, names_color: '#373737',
+                box_y0: 405, box_y1: 590, box_pad_x: 28, box_radius: 14, box_border_w: 2, box_border_color: '#beb9aa',
+                label_offset_y: 18, label_font_size: 11, label_color: '#9b968c',
+                winner_offset_y: 50, winner_font_size: 20, winner_color: '#0069e1',
+                prob_offset_y: 100, prob_font_size: 52, prob_color: '#1e1e1e',
+                footer_y: 642, footer_font_size: 10, footer_color: '#b9b4aa',
+            };
+            for (const [key, val] of Object.entries(defaults)) {
+                const el = document.getElementById(key);
+                if (el) {
+                    el.value = typeof val === 'number' ? val : val;
+                    const valEl = document.getElementById(key + '_val');
+                    if (valEl) valEl.textContent = val;
+                }
+            }
+            updatePreview();
+        }
+
+        // Load saved config on page load
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/promo-config');
+                if (res.ok) {
+                    const config = await res.json();
+                    for (const [key, val] of Object.entries(config)) {
+                        const el = document.getElementById(key);
+                        if (el) {
+                            el.value = val;
+                            const valEl = document.getElementById(key + '_val');
+                            if (valEl) valEl.textContent = val;
+                        }
+                    }
+                }
+            } catch(e) {}
+            updatePreview();
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>
