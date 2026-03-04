@@ -193,11 +193,8 @@ async def admin_login(request: Request):
 
 @app.get("/api/admin/settings")
 async def admin_get_settings(request: Request):
-    """Obtiene la configuración completa (solo con JWT válido)."""
-    from admin_config import verify_token, load_config
-    token = _admin_token(request)
-    if not token or not verify_token(token):
-        raise HTTPException(status_code=401, detail="No autorizado")
+    """Obtiene la configuración completa (sin contraseña por ahora)."""
+    from admin_config import load_config
     config = load_config()
     out = {k: v for k, v in config.items() if k not in ("password_hash", "jwt_secret")}
     return out
@@ -205,11 +202,8 @@ async def admin_get_settings(request: Request):
 
 @app.post("/api/admin/settings")
 async def admin_save_settings(request: Request):
-    """Guarda la configuración (solo con JWT válido)."""
-    from admin_config import verify_token, load_config, save_config
-    token = _admin_token(request)
-    if not token or not verify_token(token):
-        raise HTTPException(status_code=401, detail="No autorizado")
+    """Guarda la configuración (sin contraseña por ahora)."""
+    from admin_config import load_config, save_config
     try:
         body = await request.json()
     except Exception:
@@ -226,25 +220,8 @@ async def admin_save_settings(request: Request):
 
 @app.post("/api/admin/password")
 async def admin_change_password(request: Request):
-    """Cambia la contraseña del admin (requiere JWT y contraseña actual)."""
-    from admin_config import verify_token, load_config, save_config, verify_password, hash_password
-    token = _admin_token(request)
-    if not token or not verify_token(token):
-        raise HTTPException(status_code=401, detail="No autorizado")
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    if not body or "current_password" not in body or "new_password" not in body:
-        raise HTTPException(status_code=400, detail="Faltan current_password o new_password")
-    if len(body["new_password"]) < 6:
-        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
-    config = load_config()
-    if not verify_password(body["current_password"], config.get("password_hash") or ""):
-        raise HTTPException(status_code=401, detail="Contraseña actual incorrecta")
-    config["password_hash"] = hash_password(body["new_password"])
-    save_config(config)
-    return {"status": "ok"}
+    """Cambia la contraseña del admin (deshabilitado: acceso sin contraseña)."""
+    raise HTTPException(status_code=410, detail="El acceso con contraseña está desactivado por ahora.")
 
 
 @app.get("/api/admin/needs-initial-password")

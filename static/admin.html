@@ -1193,9 +1193,9 @@
 
     <script>
         // =============================================
-        // STATE
+        // STATE (acceso sin contraseña por ahora)
         // =============================================
-        let authToken = sessionStorage.getItem('admin_token') || '';
+        let authToken = '';
         let settings = {};
 
         const COLOR_LABELS = {
@@ -1213,264 +1213,28 @@
         };
 
         // =============================================
-        // AUTH
+        // ENTRADA DIRECTA AL PANEL (sin contraseña)
         // =============================================
-        let resetTokenFromUrl = null;
-        (function checkResetToken() {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('reset');
-            if (token) {
-                resetTokenFromUrl = token;
-                document.getElementById('loginCard').style.display = 'none';
-                document.getElementById('resetPasswordCard').style.display = 'block';
-                history.replaceState({}, '', window.location.pathname + window.location.hash);
-            }
-        })();
-
-        (async function checkNeedsInitialPassword() {
-            if (resetTokenFromUrl) return;
-            try {
-                const r = await fetch('/api/admin/needs-initial-password');
-                const data = await r.json();
-                if (data.needs_initial_password) {
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('setInitialPasswordBlock').style.display = 'block';
-                }
-            } catch (_) {}
-        })();
-
-        const setInitialPasswordBtn = document.getElementById('setInitialPasswordBtn');
-        if (setInitialPasswordBtn) {
-            setInitialPasswordBtn.addEventListener('click', async () => {
-                const pwd = document.getElementById('initialPassword').value;
-                const confirm = document.getElementById('initialPasswordConfirm').value;
-                const errEl = document.getElementById('loginError');
-                errEl.style.display = 'none';
-                if (pwd.length < 6) {
-                    errEl.textContent = 'Mínimo 6 caracteres';
-                    errEl.style.display = 'block';
-                    return;
-                }
-                if (pwd !== confirm) {
-                    errEl.textContent = 'Las contraseñas no coinciden';
-                    errEl.style.display = 'block';
-                    return;
-                }
-                setInitialPasswordBtn.disabled = true;
-                setInitialPasswordBtn.textContent = 'Guardando...';
-                try {
-                    const res = await fetch('/api/admin/set-initial-password', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: pwd })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        errEl.style.background = 'rgba(48, 209, 88, 0.15)';
-                        errEl.style.color = 'var(--success)';
-                        errEl.textContent = data.message || 'Contraseña creada. Inicia sesión.';
-                        errEl.style.display = 'block';
-                        document.getElementById('setInitialPasswordBlock').style.display = 'none';
-                        document.getElementById('loginForm').style.display = 'block';
-                    } else {
-                        errEl.style.background = '';
-                        errEl.style.color = '';
-                        errEl.textContent = (data.detail || 'Error');
-                        errEl.style.display = 'block';
-                    }
-                } catch (err) {
-                    errEl.textContent = 'Error de conexión';
-                    errEl.style.display = 'block';
-                }
-                setInitialPasswordBtn.disabled = false;
-                setInitialPasswordBtn.textContent = 'Crear contraseña';
-            });
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('loginBtn');
-            const errEl = document.getElementById('loginError');
-            btn.disabled = true;
-            btn.textContent = 'Verificando...';
-            errEl.style.display = 'none';
-
-            try {
-                const res = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: document.getElementById('loginPassword').value })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.token) {
-                    authToken = data.token;
-                    sessionStorage.setItem('admin_token', authToken);
-                    showDashboard();
-                } else {
-                    errEl.textContent = data.detail || 'Error de autenticación';
-                    errEl.style.display = 'block';
-                }
-            } catch (err) {
-                errEl.textContent = 'Error de conexión';
-                errEl.style.display = 'block';
-            }
-            btn.disabled = false;
-            btn.textContent = 'Iniciar sesión';
-        });
-
-        const forgotLink = document.getElementById('forgotPasswordLink');
-        if (forgotLink) {
-            forgotLink.addEventListener('click', async (e) => {
-                e.preventDefault();
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('forgotPasswordBlock').style.display = 'block';
-                document.getElementById('loginError').style.display = 'none';
-                const hintEl = document.getElementById('emailRecoveryHint');
-                if (hintEl) {
-                    try {
-                        const st = await fetch('/api/admin/email-recovery-status').then(r => r.json());
-                        if (!st.resend_configured) {
-                            hintEl.textContent = st.hint || 'Configura RESEND_API_KEY en Render (Environment).';
-                            hintEl.style.display = 'block';
-                        } else {
-                            hintEl.style.display = 'none';
-                        }
-                    } catch (_) { hintEl.style.display = 'none'; }
-                }
-            });
-        }
-        const backToLogin = document.getElementById('backToLoginLink');
-        if (backToLogin) {
-            backToLogin.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('forgotPasswordBlock').style.display = 'none';
-                document.getElementById('loginForm').style.display = 'block';
-            });
-        }
-        const sendResetBtn = document.getElementById('sendResetBtn');
-        if (sendResetBtn) sendResetBtn.addEventListener('click', async () => {
-            const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
-            const errEl = document.getElementById('loginError');
-            errEl.style.display = 'none';
-            if (!email) {
-                errEl.textContent = 'Indica tu correo';
-                errEl.style.display = 'block';
-                return;
-            }
-            const btn = document.getElementById('sendResetBtn');
-            btn.disabled = true;
-            btn.textContent = 'Enviando...';
-            try {
-                const res = await fetch('/api/admin/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                let data;
-                try {
-                    data = await res.json();
-                } catch (_) {
-                    data = { detail: res.statusText || 'Error del servidor' };
-                }
-                if (res.ok) {
-                    errEl.style.background = 'rgba(48, 209, 88, 0.15)';
-                    errEl.style.color = 'var(--success)';
-                    errEl.textContent = data.message || 'Revisa tu correo.';
-                    errEl.style.display = 'block';
-                } else {
-                    errEl.style.background = '';
-                    errEl.style.color = '';
-                    const detail = data.detail;
-                    errEl.textContent = (Array.isArray(detail) ? detail[0] : detail) || 'Error';
-                    errEl.style.display = 'block';
-                }
-            } catch (err) {
-                errEl.style.background = '';
-                errEl.style.color = '';
-                errEl.textContent = 'Error de conexión. Comprueba la URL y que RESEND_API_KEY esté en Render.';
-                errEl.style.display = 'block';
-            }
-            btn.disabled = false;
-            btn.textContent = 'Enviar enlace al correo';
-        });
-
-        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const token = resetTokenFromUrl;
-            const newPwd = document.getElementById('resetNewPassword').value;
-            const confirmPwd = document.getElementById('resetConfirmPassword').value;
-            const errEl = document.getElementById('resetError');
-            errEl.style.display = 'none';
-            if (newPwd !== confirmPwd) {
-                errEl.textContent = 'Las contraseñas no coinciden';
-                errEl.style.display = 'block';
-                return;
-            }
-            if (newPwd.length < 6) {
-                errEl.textContent = 'Mínimo 6 caracteres';
-                errEl.style.display = 'block';
-                return;
-            }
-            if (!token) {
-                errEl.textContent = 'Token no válido. Solicita un nuevo enlace.';
-                errEl.style.display = 'block';
-                return;
-            }
-            const btn = document.getElementById('resetSubmitBtn');
-            btn.disabled = true;
-            btn.textContent = 'Guardando...';
-            try {
-                const res = await fetch('/api/admin/reset-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, new_password: newPwd })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    resetTokenFromUrl = null;
-                    document.getElementById('resetPasswordCard').style.display = 'none';
-                    document.getElementById('loginCard').style.display = 'block';
-                    document.getElementById('loginError').style.background = 'rgba(48, 209, 88, 0.15)';
-                    document.getElementById('loginError').style.color = 'var(--success)';
-                    document.getElementById('loginError').textContent = data.message || 'Contraseña actualizada. Inicia sesión.';
-                    document.getElementById('loginError').style.display = 'block';
-                    document.getElementById('resetNewPassword').value = '';
-                    document.getElementById('resetConfirmPassword').value = '';
-                } else {
-                    errEl.textContent = data.detail || 'Error';
-                    errEl.style.display = 'block';
-                }
-            } catch (err) {
-                errEl.textContent = 'Error de conexión';
-                errEl.style.display = 'block';
-            }
-            btn.disabled = false;
-            btn.textContent = 'Restablecer contraseña';
-        });
-
         function logout() {
-            authToken = '';
-            sessionStorage.removeItem('admin_token');
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('dashboard').classList.remove('active');
-            document.getElementById('loginPassword').value = '';
+            window.location.reload();
         }
 
         async function showDashboard() {
             try {
-                const res = await fetch('/api/admin/settings', {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                if (!res.ok) { logout(); return; }
+                const res = await fetch('/api/admin/settings');
+                if (!res.ok) { showToast('Error al cargar configuración', 'error'); return; }
                 settings = await res.json();
                 populateAllFields();
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboard').classList.add('active');
-            } catch {
-                logout();
+            } catch (e) {
+                showToast('Error de conexión', 'error');
             }
         }
+
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboard').classList.add('active');
+        showDashboard();
 
         // =============================================
         // NAVIGATION
@@ -1623,7 +1387,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify(payload)
                 });
@@ -1676,7 +1439,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({ current_password: current, new_password: newPwd })
                 });
@@ -1832,12 +1594,6 @@
             showToast('Valores restaurados a defaults', 'info');
         }
 
-        // =============================================
-        // INIT
-        // =============================================
-        if (authToken) {
-            showDashboard();
-        }
     </script>
 </body>
 
