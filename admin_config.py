@@ -121,16 +121,23 @@ def record_attempt(ip: str):
 # SETTINGS I/O
 # ===========================================
 def load_config() -> dict:
-    """Load settings from JSON file, creating from default file if missing."""
+    """Load settings from JSON file. Primera vez: se crea sin contraseña para que el admin la cree al entrar."""
     if not SETTINGS_FILE.exists() and DEFAULT_SETTINGS_FILE.exists():
-        import shutil
-        shutil.copy2(DEFAULT_SETTINGS_FILE, SETTINGS_FILE)
+        with open(DEFAULT_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            initial = json.load(f)
+        initial["password_hash"] = ""  # Sin contraseña; al entrar verá "Crear contraseña"
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(initial, f, indent=2, ensure_ascii=False)
     if SETTINGS_FILE.exists():
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                 saved = json.load(f)
             merged = _deep_merge(DEFAULT_SETTINGS.copy(), saved)
-            # Reset de contraseña por env (ej. en Render: RESET_ADMIN_PASSWORD=Jaden9710G, redeploy, entrar, quitar la variable)
+            # Forzar "primera vez" una sola vez: si ya hay contraseña, la vaciamos (Render: FORCE_INITIAL_PASSWORD=1, redeploy, crear contraseña, quitar variable)
+            if os.environ.get("FORCE_INITIAL_PASSWORD", "").strip().lower() in ("1", "true", "yes") and (saved.get("password_hash") or "").strip():
+                merged["password_hash"] = ""
+                save_config(merged)
+            # Reset directo de contraseña por env (RESET_ADMIN_PASSWORD=TuContraseña, redeploy, entrar, quitar variable)
             reset_pwd = (os.environ.get("RESET_ADMIN_PASSWORD") or "").strip()
             if reset_pwd and len(reset_pwd) >= 6:
                 merged["password_hash"] = hash_password(reset_pwd)

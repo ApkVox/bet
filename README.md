@@ -75,8 +75,8 @@ python production_server.py
 # Panel admin: http://localhost:8080/admin
 ```
 
-**Panel de administración:** En el primer despliegue (sin `admin_settings.json`) se usa la configuración por defecto. Contraseña inicial: **`Jaden9710G`** — cámbiala en Admin → Seguridad al entrar. Si no puedes entrar (ej. en Render con un archivo antiguo), en Environment añade **`RESET_ADMIN_PASSWORD=Jaden9710G`**, redeploya, entra con esa contraseña y luego quita la variable.
-Para configurar la contraseña en local: `python admin_config.py set-password`
+**Panel de administración:** La primera vez que entras a `/admin` verás **«Primera vez: crea tu contraseña de administrador»**. Crea la contraseña y ya podrás entrar. Si en Render la contraseña no funciona (archivo antiguo), en Environment añade **`FORCE_INITIAL_PASSWORD=1`**, redeploya, entra a `/admin`, crea tu contraseña y luego quita la variable. Alternativa: **`RESET_ADMIN_PASSWORD=TuContraseña`** (mín. 6 caracteres) para fijar la contraseña directamente.
+En local: `python admin_config.py set-password`.
 
 **Recuperar contraseña por correo:** En la pantalla de login, "¿Olvidaste tu contraseña?" envía un enlace al correo del administrador.
 
