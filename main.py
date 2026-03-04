@@ -17,7 +17,7 @@ from typing import Optional
 # Zona horaria de Colombia (UTC-5)
 TZ_COLOMBIA = timezone(timedelta(hours=-5))
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
@@ -167,6 +167,16 @@ def _admin_token(request: Request) -> Optional[str]:
     return None
 
 
+def require_admin(request: Request):
+    """Valida JWT de administrador desde Authorization: Bearer <token>."""
+    from admin_config import verify_token
+    token = _admin_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    if not verify_token(token):
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+
 @app.post("/api/admin/login")
 async def admin_login(request: Request):
     """Login admin con contraseña; devuelve JWT."""
@@ -183,7 +193,7 @@ async def admin_login(request: Request):
     config = load_config()
     pwd_hash = config.get("password_hash") or ""
     if not pwd_hash:
-        raise HTTPException(status_code=500, detail="No hay contraseña admin configurada. Ejecuta: python admin_config.py set-password")
+        raise HTTPException(status_code=428, detail="No hay contraseña configurada. Debes crear la contraseña inicial.")
     if not verify_password(body["password"], pwd_hash):
         record_attempt(ip)
         raise HTTPException(status_code=401, detail="Contraseña incorrecta")
@@ -192,7 +202,7 @@ async def admin_login(request: Request):
 
 
 @app.get("/api/admin/settings")
-async def admin_get_settings(request: Request):
+async def admin_get_settings(_: None = Depends(require_admin)):
     """Obtiene la configuración completa (sin contraseña por ahora)."""
     from admin_config import load_config
     config = load_config()
@@ -201,7 +211,7 @@ async def admin_get_settings(request: Request):
 
 
 @app.post("/api/admin/settings")
-async def admin_save_settings(request: Request):
+async def admin_save_settings(request: Request, _: None = Depends(require_admin)):
     """Guarda la configuración (sin contraseña por ahora)."""
     from admin_config import load_config, save_config
     try:
@@ -220,8 +230,37 @@ async def admin_save_settings(request: Request):
 
 @app.post("/api/admin/password")
 async def admin_change_password(request: Request):
-    """Cambia la contraseña del admin (deshabilitado: acceso sin contraseña)."""
-    raise HTTPException(status_code=410, detail="El acceso con contraseña está desactivado por ahora.")
+    """Cambia la contraseña del admin validando la contraseña actual."""
+    from admin_config import load_config, save_config, verify_password, hash_password
+    token = _admin_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    from admin_config import verify_token
+    if not verify_token(token):
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    current_password = (body.get("current_password") or "").strip()
+    new_password = (body.get("new_password") or "").strip()
+
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+
+    config = load_config()
+    pwd_hash = (config.get("password_hash") or "").strip()
+    if not pwd_hash:
+        raise HTTPException(status_code=400, detail="No hay contraseña configurada. Crea una contraseña inicial.")
+    if not verify_password(current_password, pwd_hash):
+        raise HTTPException(status_code=401, detail="La contraseña actual no es correcta")
+    if verify_password(new_password, pwd_hash):
+        raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual")
+
+    config["password_hash"] = hash_password(new_password)
+    save_config(config)
+    return {"status": "ok", "message": "Contraseña actualizada correctamente"}
 
 
 @app.get("/api/admin/needs-initial-password")
@@ -419,7 +458,7 @@ async def promo_image(request: Request):
 
 
 @app.get("/api/promo-config")
-async def get_promo_config():
+async def get_promo_config(_: None = Depends(require_admin)):
     """Devuelve la configuración del editor de promo (layout)."""
     try:
         from promo_generator import load_config
@@ -430,7 +469,7 @@ async def get_promo_config():
 
 
 @app.post("/api/promo-config")
-async def save_promo_config(request: Request):
+async def save_promo_config(request: Request, _: None = Depends(require_admin)):
     """Guarda la configuración del editor de promo."""
     try:
         body = await request.json()

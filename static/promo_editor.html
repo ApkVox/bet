@@ -447,6 +447,11 @@
             document.getElementById('preview-img').src = '/api/promo-editor-preview?' + qs + '&_t=' + Date.now();
         }
 
+        function getAdminAuthHeaders() {
+            const token = localStorage.getItem('admin_token') || '';
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
         async function saveConfig() {
             const params = getParams();
             // Remove test team params — only save layout config
@@ -458,7 +463,7 @@
 
             const res = await fetch('/api/promo-config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getAdminAuthHeaders() },
                 body: JSON.stringify(config),
             });
             if (res.ok) {
@@ -492,7 +497,7 @@
         // Load saved config on page load
         async function loadConfig() {
             try {
-                const res = await fetch('/api/promo-config');
+                const res = await fetch('/api/promo-config', { headers: getAdminAuthHeaders() });
                 if (res.ok) {
                     const config = await res.json();
                     for (const [key, val] of Object.entries(config)) {

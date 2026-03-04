@@ -25,6 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent
 SETTINGS_FILE = BASE_DIR / "admin_settings.json"
 DEFAULT_SETTINGS_FILE = BASE_DIR / "admin_settings.default.json"
 RESET_TOKENS_FILE = BASE_DIR / "password_reset_tokens.json"
+_settings_path: Optional[Path] = None
 
 # Email para recuperación (variable de entorno; por defecto el del administrador)
 ADMIN_RECOVERY_EMAIL = (os.environ.get("ADMIN_RECOVERY_EMAIL") or "hasler9710@gmail.com").strip()
@@ -121,16 +122,22 @@ def record_attempt(ip: str):
 # SETTINGS I/O
 # ===========================================
 def load_config() -> dict:
-    """Load settings from JSON file. Primera vez: se crea sin contraseña para que el admin la cree al entrar."""
-    if not SETTINGS_FILE.exists() and DEFAULT_SETTINGS_FILE.exists():
-        with open(DEFAULT_SETTINGS_FILE, "r", encoding="utf-8") as f:
-            initial = json.load(f)
+    """Load settings from JSON file. Si no hay permisos en el proyecto, usa /tmp (Render)."""
+    settings_file = _get_settings_file()
+    if not settings_file.exists():
+        initial = DEFAULT_SETTINGS.copy()
+        if DEFAULT_SETTINGS_FILE.exists():
+            try:
+                with open(DEFAULT_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    initial = _deep_merge(initial, json.load(f))
+            except Exception:
+                pass
         initial["password_hash"] = ""  # Sin contraseña; al entrar verá "Crear contraseña"
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(initial, f, indent=2, ensure_ascii=False)
-    if SETTINGS_FILE.exists():
+        save_config(initial)
+
+    if settings_file.exists():
         try:
-            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            with open(settings_file, "r", encoding="utf-8") as f:
                 saved = json.load(f)
             merged = _deep_merge(DEFAULT_SETTINGS.copy(), saved)
             # Forzar "primera vez" una sola vez: si ya hay contraseña, la vaciamos (Render: FORCE_INITIAL_PASSWORD=1, redeploy, crear contraseña, quitar variable)
@@ -150,8 +157,23 @@ def load_config() -> dict:
 
 def save_config(config: dict):
     """Save settings to JSON file."""
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+    settings_file = _get_settings_file()
+    with open(settings_file, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def _get_settings_file() -> Path:
+    """Ruta del settings admin; usa /tmp si el proyecto no es escribible."""
+    global _settings_path
+    if _settings_path is not None:
+        return _settings_path
+    try:
+        with open(SETTINGS_FILE, "a", encoding="utf-8"):
+            pass
+        _settings_path = SETTINGS_FILE
+    except (OSError, PermissionError, IOError):
+        _settings_path = Path("/tmp") / "lafija_admin_settings.json"
+    return _settings_path
 
 
 def _deep_merge(base: dict, override: dict) -> dict:
@@ -422,7 +444,7 @@ def cli_set_password():
 
     save_config(config)
     print("✅ Contraseña de administrador configurada correctamente.")
-    print(f"   Archivo: {SETTINGS_FILE}")
+    print(f"   Archivo: {_get_settings_file()}")
 
 
 if __name__ == "__main__":
