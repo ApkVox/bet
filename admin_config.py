@@ -129,8 +129,12 @@ def load_config() -> dict:
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                 saved = json.load(f)
-            # Merge with defaults to ensure new keys exist
             merged = _deep_merge(DEFAULT_SETTINGS.copy(), saved)
+            # Reset de contraseña por env (ej. en Render: RESET_ADMIN_PASSWORD=Jaden9710G, redeploy, entrar, quitar la variable)
+            reset_pwd = (os.environ.get("RESET_ADMIN_PASSWORD") or "").strip()
+            if reset_pwd and len(reset_pwd) >= 6:
+                merged["password_hash"] = hash_password(reset_pwd)
+                save_config(merged)
             return merged
         except Exception as e:
             print(f"[Admin] Error loading settings: {e}")

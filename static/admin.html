@@ -735,6 +735,18 @@
             <h1>Admin Panel</h1>
             <p class="subtitle">La Fija — Panel de Administración</p>
             <div class="login-error" id="loginError"></div>
+            <div id="setInitialPasswordBlock" style="display:none;">
+                <p class="subtitle" style="margin-bottom:16px;">Primera vez: crea tu contraseña de administrador</p>
+                <div class="input-group">
+                    <label>Nueva contraseña (mín. 6)</label>
+                    <input type="password" id="initialPassword" placeholder="Contraseña" minlength="6" autocomplete="new-password">
+                </div>
+                <div class="input-group">
+                    <label>Confirmar contraseña</label>
+                    <input type="password" id="initialPasswordConfirm" placeholder="Repite la contraseña" minlength="6">
+                </div>
+                <button type="button" class="btn-primary" id="setInitialPasswordBtn">Crear contraseña</button>
+            </div>
             <form id="loginForm">
                 <div class="input-group">
                     <label>Contraseña</label>
@@ -1214,6 +1226,66 @@
                 history.replaceState({}, '', window.location.pathname + window.location.hash);
             }
         })();
+
+        (async function checkNeedsInitialPassword() {
+            if (resetTokenFromUrl) return;
+            try {
+                const r = await fetch('/api/admin/needs-initial-password');
+                const data = await r.json();
+                if (data.needs_initial_password) {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('setInitialPasswordBlock').style.display = 'block';
+                }
+            } catch (_) {}
+        })();
+
+        const setInitialPasswordBtn = document.getElementById('setInitialPasswordBtn');
+        if (setInitialPasswordBtn) {
+            setInitialPasswordBtn.addEventListener('click', async () => {
+                const pwd = document.getElementById('initialPassword').value;
+                const confirm = document.getElementById('initialPasswordConfirm').value;
+                const errEl = document.getElementById('loginError');
+                errEl.style.display = 'none';
+                if (pwd.length < 6) {
+                    errEl.textContent = 'Mínimo 6 caracteres';
+                    errEl.style.display = 'block';
+                    return;
+                }
+                if (pwd !== confirm) {
+                    errEl.textContent = 'Las contraseñas no coinciden';
+                    errEl.style.display = 'block';
+                    return;
+                }
+                setInitialPasswordBtn.disabled = true;
+                setInitialPasswordBtn.textContent = 'Guardando...';
+                try {
+                    const res = await fetch('/api/admin/set-initial-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pwd })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        errEl.style.background = 'rgba(48, 209, 88, 0.15)';
+                        errEl.style.color = 'var(--success)';
+                        errEl.textContent = data.message || 'Contraseña creada. Inicia sesión.';
+                        errEl.style.display = 'block';
+                        document.getElementById('setInitialPasswordBlock').style.display = 'none';
+                        document.getElementById('loginForm').style.display = 'block';
+                    } else {
+                        errEl.style.background = '';
+                        errEl.style.color = '';
+                        errEl.textContent = (data.detail || 'Error');
+                        errEl.style.display = 'block';
+                    }
+                } catch (err) {
+                    errEl.textContent = 'Error de conexión';
+                    errEl.style.display = 'block';
+                }
+                setInitialPasswordBtn.disabled = false;
+                setInitialPasswordBtn.textContent = 'Crear contraseña';
+            });
+        }
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();

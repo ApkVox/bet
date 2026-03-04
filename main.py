@@ -247,6 +247,34 @@ async def admin_change_password(request: Request):
     return {"status": "ok"}
 
 
+@app.get("/api/admin/needs-initial-password")
+async def admin_needs_initial_password():
+    """True si aún no hay contraseña configurada (primera vez)."""
+    from admin_config import load_config
+    config = load_config()
+    has_hash = (config.get("password_hash") or "").strip()
+    return {"needs_initial_password": not has_hash}
+
+
+@app.post("/api/admin/set-initial-password")
+async def admin_set_initial_password(request: Request):
+    """Establece la contraseña la primera vez (solo si aún no hay una)."""
+    from admin_config import load_config, save_config, hash_password
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    password = (body.get("password") or "").strip()
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Mínimo 6 caracteres")
+    config = load_config()
+    if (config.get("password_hash") or "").strip():
+        raise HTTPException(status_code=400, detail="Ya hay una contraseña configurada. Usa «Olvidé contraseña» o inicia sesión.")
+    config["password_hash"] = hash_password(password)
+    save_config(config)
+    return {"message": "Contraseña creada. Ya puedes iniciar sesión."}
+
+
 @app.get("/api/admin/email-recovery-status")
 async def admin_email_recovery_status():
     """Indica si el envío por Resend está configurado (sin revelar secretos). Útil para diagnosticar."""
