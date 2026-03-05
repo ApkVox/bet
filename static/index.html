@@ -317,21 +317,9 @@
             opacity: 1;
             transform: none;
             writing-mode: horizontal-tb;
+            border: none;
+            min-height: 600px;
         }
-
-        .header-promo-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-md);
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 20px;
-            transition: color 0.2s, background 0.2s;
-        }
-        .header-promo-icon:hover { color: var(--accent); background: var(--accent-glow, rgba(10, 132, 255, 0.12)); }
 
         @media (max-width: 1440px) {
             .app-container { display: block; max-width: 1100px; padding: 0 20px; }
@@ -367,6 +355,9 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .prediction-card::after {
@@ -595,8 +586,15 @@
             color: var(--accent);
             text-decoration: none;
             border: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
         }
-        .promo-download-btn:hover { background: var(--accent-glow, rgba(10, 132, 255, 0.12)); color: var(--accent); }
+        .promo-download-btn:hover { background: var(--accent-glow, rgba(10, 132, 255, 0.12)); color: var(--accent); transform: scale(1.04); }
+
+        .promo-card-dl {
+            margin-top: 10px;
+            align-self: center;
+        }
 
         /* ==========================================
            HISTORY
@@ -984,6 +982,97 @@
         .ad-link { display: block; width: 100%; height: 100%; border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.2s; }
         .ad-link:hover { transform: scale(1.02); }
         .ad-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        /* ==========================================
+           RECOMMENDATIONS
+           ========================================== */
+        .reco-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .reco-left { display: flex; flex-direction: column; gap: 16px; }
+        .reco-right { display: flex; flex-direction: column; gap: 16px; }
+
+        .reco-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl);
+            padding: 20px; position: relative; overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reco-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+        .reco-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--accent); border-radius: 3px 0 0 3px; }
+        .reco-match { font-size: 11px; font-weight: 700; color: var(--text-tertiary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .reco-pick { font-size: 16px; font-weight: 800; color: var(--accent); margin-bottom: 2px; }
+        .reco-odds { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+        .reco-reason { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+        .reco-confidence { display: inline-flex; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+        .reco-confidence.alta { background: var(--success-bg); color: var(--success); }
+        .reco-confidence.media { background: var(--warning-bg); color: var(--warning); }
+
+        .parlay-card {
+            background: var(--bg-card); border: 2px solid var(--accent); border-radius: var(--radius-xl);
+            padding: 24px; text-align: center;
+        }
+        .parlay-title { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+        .parlay-odds-value { font-size: 40px; font-weight: 900; color: var(--accent); letter-spacing: -1.5px; line-height: 1.1; }
+        .parlay-label { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; margin-bottom: 16px; }
+        .parlay-matches { display: flex; flex-direction: column; gap: 6px; text-align: left; margin-bottom: 16px; }
+        .parlay-match-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: var(--bg-secondary); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; }
+        .parlay-match-row .pm-odds { color: var(--accent); font-weight: 800; min-width: 40px; text-align: right; }
+        .parlay-match-row .pm-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+
+        .calc-section { padding-top: 16px; border-top: 1px solid var(--border); }
+        .calc-input-group { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 10px; }
+        .calc-input {
+            width: 130px; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--bg-secondary); color: var(--text-primary); font-size: 15px; font-weight: 700;
+            text-align: center; transition: border-color 0.2s; font-family: inherit;
+        }
+        .calc-input:focus { outline: none; border-color: var(--accent); }
+        .calc-currency { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+        .calc-result { font-size: 18px; font-weight: 800; color: var(--success); text-align: center; }
+        .calc-result-label { font-size: 11px; color: var(--text-tertiary); text-align: center; margin-top: 2px; }
+
+        .reco-analysis {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl);
+            padding: 20px; margin-top: 20px;
+        }
+        .reco-analysis-title { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        .reco-analysis-text { font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+
+        .reco-history-section { margin-top: 24px; }
+        .reco-history-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+        .reco-history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+        .reco-history-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 16px; position: relative; overflow: hidden;
+        }
+        .reco-history-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 3px 0 0 3px; }
+        .reco-history-card.win::before { background: var(--success); }
+        .reco-history-card.loss::before { background: var(--danger); }
+        .reco-history-card.pending::before { background: var(--warning); }
+        .rh-date { font-size: 11px; color: var(--text-tertiary); font-weight: 600; margin-bottom: 6px; }
+        .rh-picks { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
+        .rh-odds { font-size: 13px; font-weight: 700; color: var(--accent); }
+        .rh-result { display: inline-flex; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; margin-top: 6px; }
+        .rh-result.win { background: var(--success-bg); color: var(--success); }
+        .rh-result.loss { background: var(--danger-bg); color: var(--danger); }
+        .rh-result.pending { background: var(--warning-bg); color: var(--warning); }
+
+        @media (max-width: 768px) {
+            .reco-layout { grid-template-columns: 1fr; }
+        }
+
+        /* ==========================================
+           NEWS IN MODAL
+           ========================================== */
+        .news-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+        .news-headline { font-size: 16px; font-weight: 800; margin-bottom: 12px; color: var(--text-primary); }
+        .news-points { list-style: none; padding: 0; margin-bottom: 16px; }
+        .news-points li { padding: 6px 0 6px 16px; position: relative; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .news-points li::before { content: ''; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+        .news-injuries { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+        .news-injuries th { text-align: left; padding: 6px 10px; font-weight: 700; color: var(--text-tertiary); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        .news-injuries td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+        .news-impact { font-size: 13px; line-height: 1.6; color: var(--text-secondary); padding: 12px 16px; background: var(--bg-secondary); border-radius: var(--radius-sm); }
+        .news-freshness { font-size: 11px; color: var(--text-tertiary); margin-top: 10px; text-align: right; }
+        .news-loading { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 13px; }
     </style>
 </head>
 
@@ -1001,9 +1090,9 @@
                 </div>
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-section="predictions">Predicciones</button>
+                    <button class="nav-tab" data-section="recommendations">Apuestas</button>
                     <button class="nav-tab" data-section="history">Historial</button>
                 </nav>
-                <a href="#" id="headerPromoDownload" class="header-promo-icon" download="promo.png" title="Descargar imagen promo" style="display:none;">&#8595;</a>
                 <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">&#9790;</button>
             </div>
         </div>
@@ -1022,6 +1111,13 @@
                 </div>
             </section>
 
+            <section id="recommendations" class="section">
+                <h2 class="section-title">Apuestas del Dia</h2>
+                <div id="recoContainer">
+                    <div class="loading"><div class="spinner"></div><span>Analizando mejores apuestas...</span></div>
+                </div>
+            </section>
+
             <section id="history" class="section">
                 <h2 class="section-title">Historial</h2>
                 <div class="history-filters">
@@ -1029,9 +1125,7 @@
                     <button class="filter-btn" data-filter="win">Ganadas</button>
                     <button class="filter-btn" data-filter="loss">Perdidas</button>
                     <button class="filter-btn" data-filter="pending">Pendientes</button>
-                    <button type="button" class="filter-btn btn-refresh" id="btnRefreshScores" title="Actualizar marcadores con resultados del día anterior">
-                        <span class="btn-refresh-icon">&#8635;</span> Actualizar marcadores
-                    </button>
+                    <button class="filter-btn btn-refresh" id="btnRefreshScores" title="Actualizar marcadores">&#8635; Marcadores</button>
                 </div>
                 <div id="historyContainer">
                     <div class="loading"><div class="spinner"></div><span>Cargando historial...</span></div>
@@ -1044,6 +1138,7 @@
 
     <nav class="mobile-nav">
         <button class="mobile-nav-btn active" data-section="predictions"><span>&#127936;</span>Hoy</button>
+        <button class="mobile-nav-btn" data-section="recommendations"><span>&#128176;</span>Apuestas</button>
         <button class="mobile-nav-btn" data-section="history"><span>&#128220;</span>Historial</button>
         <button class="mobile-nav-btn" id="mobileThemeToggle"><span id="mobileThemeIcon">&#9790;</span>Tema</button>
     </nav>
@@ -1060,7 +1155,7 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=20260304b"></script>
 </body>
 
 </html>

@@ -31,5 +31,5 @@
   "show_label": true,
   "show_winner": true,
   "show_prob": true,
-  "show_footer": true
+  "show_footer": false
 }

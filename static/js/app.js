@@ -95,7 +95,8 @@ if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
 initTheme();
 
 // Configuración pública (guardada para promo_download y publicidad)
-let publicSettings = { features: {}, ads: {}, branding: {} };
+let publicSettings = { features: {}, ads: {}, branding: {}, betting: {} };
+let bettingConfig = { currency: 'COP', currency_symbol: '$', odds_format: 'decimal', default_stake: 50000 };
 
 function applyBranding(branding) {
     if (!branding) return;
@@ -134,16 +135,13 @@ function applyFootballVisibility(enable) {
     }
 }
 
-function applyPromoHeaderIcon(enable) {
-    const a = document.getElementById('headerPromoDownload');
-    if (!a) return;
-    if (enable) {
-        a.style.display = 'inline-flex';
-        a.href = getPromoImageUrl('Charlotte Hornets', 'Dallas Mavericks', 'Charlotte Hornets', 58.1);
-        a.download = 'promo.png';
-    } else {
-        a.style.display = 'none';
-    }
+let promoCardEnabled = false;
+
+function applyPromoDownload(enable) {
+    promoCardEnabled = enable;
+    document.querySelectorAll('.promo-card-dl').forEach(el => {
+        el.style.display = enable ? 'inline-flex' : 'none';
+    });
 }
 
 async function loadPublicSettings() {
@@ -154,37 +152,39 @@ async function loadPublicSettings() {
         publicSettings = settings;
         applyBranding(settings.branding || {});
         applyFootballVisibility(settings.features?.football === true);
-        applyPromoHeaderIcon(settings.features?.promo_download === true);
+        applyPromoDownload(settings.features?.promo_download === true);
+        if (settings.betting) {
+            bettingConfig = { ...bettingConfig, ...settings.betting };
+        }
         const ads = settings.ads || {};
         if (!ads.enabled) return;
         const leftKey = (ads.left_key || '').trim();
         const rightKey = (ads.right_key || '').trim();
-        if (leftKey) injectAdsterraBanner('left', leftKey);
-        if (rightKey) injectAdsterraBanner('right', rightKey);
+        if (leftKey) await injectAdsterraBanner('left', leftKey);
+        if (rightKey) await injectAdsterraBanner('right', rightKey);
     } catch (e) {
         console.warn('No se pudo cargar configuración pública:', e);
     }
 }
 
 function injectAdsterraBanner(side, key) {
-    const selector = `.ad-banner.${side}`;
-    const container = document.querySelector(selector);
+    const container = document.querySelector(`.ad-banner.${side}`);
     if (!container || !key) return;
     const placeholder = container.querySelector('.ad-placeholder');
     if (!placeholder) return;
     const wrapper = document.createElement('div');
     wrapper.className = 'ad-slot';
-    wrapper.style.cssText = 'width:100%;height:100%;min-height:250px;overflow:hidden;';
-    const atOpts = document.createElement('script');
-    atOpts.type = 'text/javascript';
-    atOpts.textContent = 'var atOptions = { key: "' + key.replace(/"/g, '\\"') + '", format: "iframe", height: 250, width: 300 };';
-    wrapper.appendChild(atOpts);
-    const extScript = document.createElement('script');
-    extScript.type = 'text/javascript';
-    extScript.src = '//www.highperformanceformat.com/' + key + '/invoke.js';
-    extScript.async = true;
-    wrapper.appendChild(extScript);
+    wrapper.style.cssText = 'width:160px;height:600px;margin:0 auto;overflow:hidden;';
     placeholder.replaceWith(wrapper);
+
+    return new Promise(resolve => {
+        window.atOptions = { key: key, format: 'iframe', height: 600, width: 160, params: {} };
+        const script = document.createElement('script');
+        script.src = `https://www.highperformanceformat.com/${key}/invoke.js`;
+        script.onload = resolve;
+        script.onerror = resolve;
+        wrapper.appendChild(script);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadPublicSettings);
@@ -197,6 +197,7 @@ function getPromoImageUrl(home, away, winner, probability, status) {
 }
 
 // Navigation
+let recoLoaded = false;
 function switchSection(sectionId) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.mobile-nav-btn').forEach(t => t.classList.remove('active'));
@@ -205,6 +206,11 @@ function switchSection(sectionId) {
     document.querySelector(`.nav-tab[data-section="${sectionId}"]`)?.classList.add('active');
     document.querySelector(`.mobile-nav-btn[data-section="${sectionId}"]`)?.classList.add('active');
     document.getElementById(sectionId)?.classList.add('active');
+
+    if (sectionId === 'recommendations' && !recoLoaded) {
+        recoLoaded = true;
+        loadRecommendations();
+    }
 }
 
 document.querySelectorAll('.nav-tab, .mobile-nav-btn[data-section]').forEach(btn => {
@@ -392,6 +398,7 @@ function renderPredictions(predictions) {
                     <span class="footer-label">Prediccion del modelo</span>
                     <span class="footer-value">${predLabel}</span>
                 </div>
+                <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, predLabel, maxProb)}" download="promo_${pred.home_team.replace(/\s/g,'_')}_vs_${pred.away_team.replace(/\s/g,'_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
             </div>`;
         } else {
             return `
@@ -420,9 +427,14 @@ function renderPredictions(predictions) {
                     ${pred.ev_score > 0 ? `<span class="meta-tag positive">EV +${pred.ev_score?.toFixed(1)}%</span>` : ''}
                     ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">\u26A0\uFE0F Riesgo</span>` : ''}
                 </div>
+                <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, pred.winner, pred.win_probability)}" download="promo_${pred.home_team.replace(/\s/g,'_')}_vs_${pred.away_team.replace(/\s/g,'_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
             </div>`;
         }
     }).join('');
+
+    if (promoCardEnabled) {
+        grid.querySelectorAll('.promo-card-dl').forEach(el => el.style.display = 'inline-flex');
+    }
 }
 
 function loadMoreHistory() {
@@ -482,12 +494,23 @@ function renderHistory(filter) {
                 }
             }
 
-            const winner = h.predicted_winner || h.prediction || h.winner || '-';
-            const prob = h.prob_model ? (h.prob_model * 100).toFixed(0) :
-                (h.probs?.home && (h.prediction === home) ? h.probs.home.toFixed(0) :
-                    (h.probs?.away && (h.prediction === away) ? h.probs.away.toFixed(0) :
-                        (h.probs?.draw && h.prediction === 'Draw' ? h.probs.draw.toFixed(0) :
-                            (h.win_probability || h.probability || 0))));
+            let winner = h.predicted_winner || h.winner || h.prediction || '-';
+            if (currentSport === 'football' && h.prediction) {
+                if (h.prediction === '1') winner = home;
+                else if (h.prediction === '2') winner = away;
+                else if (h.prediction === 'X') winner = 'Empate';
+            }
+            let prob;
+            if (h.prob_model) {
+                prob = (h.prob_model * 100).toFixed(0);
+            } else if (currentSport === 'football' && h.probs) {
+                if (h.prediction === '1') prob = (h.probs.home || 0).toFixed(0);
+                else if (h.prediction === '2') prob = (h.probs.away || 0).toFixed(0);
+                else if (h.prediction === 'X') prob = (h.probs.draw || 0).toFixed(0);
+                else prob = h.win_probability || h.probability || 0;
+            } else {
+                prob = h.win_probability || h.probability || 0;
+            }
 
             const homeLogo = getLogoUrl(currentSport, home, h.home_logo);
             const awayLogo = getLogoUrl(currentSport, away, h.away_logo);
@@ -579,7 +602,7 @@ async function refreshHistoryScores() {
 }
 document.getElementById('btnRefreshScores')?.addEventListener('click', refreshHistoryScores);
 
-// Modal
+// Modal with news
 function showDetails(index) {
     const pred = currentPredictions[index];
     if (!pred) return;
@@ -595,14 +618,77 @@ function showDetails(index) {
         summary = `<strong style="color:var(--accent);font-size:20px;">${pred.winner}</strong><br><span style="font-size:14px;color:var(--text-secondary)">gana con <strong>${pred.win_probability}%</strong></span>`;
     }
 
+    const oddsHtml = (pred.odds_home || pred.odds_away)
+        ? `<div style="display:flex;justify-content:center;gap:20px;margin-top:12px;">
+            ${pred.odds_home ? `<span style="font-size:13px;color:var(--text-secondary)">Local: <strong>${Number(pred.odds_home).toFixed(2)}</strong></span>` : ''}
+            ${pred.odds_away ? `<span style="font-size:13px;color:var(--text-secondary)">Visita: <strong>${Number(pred.odds_away).toFixed(2)}</strong></span>` : ''}
+           </div>` : '';
+
+    const matchId = pred.match_id || '';
+    const newsPlaceholderId = `news-${index}`;
+
     document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
     document.getElementById('modalBody').innerHTML = `
         <div style="text-align:center;margin-bottom:20px;padding:20px;background:var(--bg-secondary);border-radius:var(--radius-md);">
             ${summary}
+            ${oddsHtml}
         </div>
-        <p class="analysis-text">${pred.ai_analysis || 'Analisis de IA no disponible para este partido.'}</p>
+        <p class="analysis-text">${pred.ai_analysis || ''}</p>
+        <div id="${newsPlaceholderId}" class="news-section">
+            <div class="news-loading">Cargando noticias...</div>
+        </div>
     `;
     document.getElementById('modal').classList.add('active');
+
+    if (matchId) {
+        loadMatchNews(matchId, newsPlaceholderId);
+    } else {
+        document.getElementById(newsPlaceholderId).innerHTML = '';
+    }
+}
+
+async function loadMatchNews(matchId, containerId) {
+    try {
+        const res = await fetch(`/api/news/${encodeURIComponent(matchId)}`);
+        const data = await res.json();
+        const el = document.getElementById(containerId);
+        if (!el) return;
+
+        if (!data.found || !data.news) {
+            el.innerHTML = '<p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:12px;">Sin noticias disponibles para este partido.</p>';
+            return;
+        }
+
+        const n = data.news;
+        const pointsHtml = (n.key_points || []).map(p => `<li>${p}</li>`).join('');
+
+        let injuriesHtml = '';
+        if (n.injuries && n.injuries.length > 0) {
+            injuriesHtml = `<table class="news-injuries">
+                <thead><tr><th>Jugador</th><th>Equipo</th><th>Estado</th></tr></thead>
+                <tbody>${n.injuries.map(i => `<tr><td>${i.player || ''}</td><td>${i.team || ''}</td><td>${i.status || ''}</td></tr>`).join('')}</tbody>
+            </table>`;
+        }
+
+        let freshnessHtml = '';
+        if (n.created_at) {
+            const created = new Date(n.created_at + 'Z');
+            const diffMs = Date.now() - created.getTime();
+            const diffH = Math.floor(diffMs / 3600000);
+            freshnessHtml = `<div class="news-freshness">Actualizado hace ${diffH < 1 ? 'menos de 1 hora' : diffH + ' hora' + (diffH > 1 ? 's' : '')}</div>`;
+        }
+
+        el.innerHTML = `
+            <div class="news-headline">${n.headline || 'Resumen de noticias'}</div>
+            ${pointsHtml ? `<ul class="news-points">${pointsHtml}</ul>` : ''}
+            ${injuriesHtml}
+            ${n.impact_assessment ? `<div class="news-impact">${n.impact_assessment}</div>` : ''}
+            ${freshnessHtml}
+        `;
+    } catch (e) {
+        const el = document.getElementById(containerId);
+        if (el) el.innerHTML = '<p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:12px;">No se pudieron cargar las noticias.</p>';
+    }
 }
 
 function closeModal() {
@@ -613,9 +699,151 @@ document.getElementById('modal').addEventListener('click', e => {
     if (e.target.id === 'modal') closeModal();
 });
 
+// ==========================================
+// RECOMMENDATIONS
+// ==========================================
+
+function formatMoney(amount) {
+    const sym = bettingConfig.currency_symbol || '$';
+    const cur = bettingConfig.currency || 'COP';
+    return `${sym}${Number(amount).toLocaleString('es-CO', { maximumFractionDigits: 0 })} ${cur}`;
+}
+
+async function loadRecommendations() {
+    const container = document.getElementById('recoContainer');
+    if (!container) return;
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><span>Analizando mejores apuestas...</span></div>';
+
+    try {
+        const [recoRes, histRes] = await Promise.all([
+            fetch('/api/recommendations/today'),
+            fetch('/api/recommendations/history')
+        ]);
+        const data = recoRes.ok ? await recoRes.json() : { recommendations: [], parlay_odds: 0 };
+        const histData = histRes.ok ? await histRes.json() : { history: [] };
+        renderRecommendations(data, histData.history || []);
+    } catch (e) {
+        console.error('Error cargando recomendaciones:', e);
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">\u26A0\uFE0F</div><p>Error cargando recomendaciones</p></div>`;
+    }
+}
+
+function renderRecommendations(data, history) {
+    const container = document.getElementById('recoContainer');
+    if (!container) return;
+
+    const recos = data.recommendations || [];
+    if (!recos.length) {
+        let html = `<div class="empty-state"><div class="empty-icon">\uD83D\uDCC8</div><p>No hay recomendaciones disponibles hoy.<br><span style="font-size:13px;color:var(--text-tertiary)">Se generan cuando hay partidos NBA con valor.</span></p></div>`;
+        if (history.length) html += renderRecoHistory(history);
+        container.innerHTML = html;
+        return;
+    }
+
+    const parlayOdds = data.parlay_odds || 0;
+    const defaultStake = bettingConfig.default_stake || 50000;
+
+    const recoCardsHtml = recos.map((r, i) => `
+        <div class="reco-card animate-in" style="animation-delay:${(i * 0.08).toFixed(2)}s">
+            <div class="reco-match">${r.home_team} vs ${r.away_team}</div>
+            <div class="reco-pick">${r.pick}</div>
+            <div class="reco-odds">Cuota: <strong>${r.odds ? Number(r.odds).toFixed(2) : 'N/A'}</strong> &middot; Prob: ${r.win_probability}%</div>
+            ${r.reason ? `<div class="reco-reason">${r.reason}</div>` : ''}
+            <span class="reco-confidence ${(r.confidence || 'media').toLowerCase()}">${r.confidence || 'media'}</span>
+        </div>
+    `).join('');
+
+    const parlayMatchRows = recos.map(r =>
+        `<div class="parlay-match-row"><span class="pm-name">${r.pick}</span><span class="pm-odds">${r.odds ? Number(r.odds).toFixed(2) : '?'}</span></div>`
+    ).join('');
+
+    const potentialReturn = parlayOdds > 0 ? defaultStake * parlayOdds : 0;
+    const profit = potentialReturn - defaultStake;
+
+    let analysisHtml = '';
+    if (data.parlay_analysis || data.reasoning) {
+        analysisHtml = `
+        <div class="reco-analysis">
+            <div class="reco-analysis-title">Analisis del Agente</div>
+            <p class="reco-analysis-text">${data.parlay_analysis || data.reasoning || ''}</p>
+            ${data.risk_level ? `<div style="margin-top:10px;"><span class="reco-confidence ${data.risk_level === 'bajo' ? 'alta' : 'media'}">Riesgo: ${data.risk_level}</span></div>` : ''}
+        </div>`;
+    }
+
+    let html = `
+    <div class="reco-layout">
+        <div class="reco-left">${recoCardsHtml}</div>
+        <div class="reco-right">
+            <div class="parlay-card">
+                <div class="parlay-title">Combinada del Dia</div>
+                <div class="parlay-odds-value">${parlayOdds > 0 ? parlayOdds.toFixed(2) : 'N/A'}</div>
+                <div class="parlay-label">Cuota combinada</div>
+                <div class="parlay-matches">${parlayMatchRows}</div>
+                <div class="calc-section">
+                    <div class="calc-input-group">
+                        <span class="calc-currency">${bettingConfig.currency_symbol || '$'}</span>
+                        <input type="number" class="calc-input" id="parlayStakeInput" value="${defaultStake}" min="1000" step="1000" oninput="updateParlayCalc()">
+                        <span class="calc-currency">${bettingConfig.currency || 'COP'}</span>
+                    </div>
+                    <div class="calc-result" id="parlayPotentialReturn">${formatMoney(potentialReturn)}</div>
+                    <div class="calc-result-label">Ganancia neta: <span id="parlayProfit" style="color:var(--success);font-weight:700;">${formatMoney(profit)}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    ${analysisHtml}
+    `;
+
+    if (history.length) html += renderRecoHistory(history);
+    container.innerHTML = html;
+}
+
+function renderRecoHistory(history) {
+    const cards = history.map(h => {
+        const recos = h.recommendations || [];
+        const picks = recos.map(r => r.pick || '?').join(' + ');
+        const odds = h.parlay_odds ? Number(h.parlay_odds).toFixed(2) : 'N/A';
+        const resultClass = h.result || 'pending';
+        const resultLabel = resultClass === 'win' ? 'Ganada' : resultClass === 'loss' ? 'Perdida' : 'Pendiente';
+        const dateObj = new Date(h.date + 'T12:00:00');
+        const dateStr = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        return `
+        <div class="reco-history-card ${resultClass}">
+            <div class="rh-date">${dateStr}</div>
+            <div class="rh-picks">${picks}</div>
+            <div class="rh-odds">x${odds}</div>
+            <span class="rh-result ${resultClass}">${resultLabel}</span>
+        </div>`;
+    }).join('');
+
+    return `
+    <div class="reco-history-section">
+        <h3 class="reco-history-title">Historial de Combinadas</h3>
+        <div class="reco-history-grid">${cards}</div>
+    </div>`;
+}
+
+function updateParlayCalc() {
+    const input = document.getElementById('parlayStakeInput');
+    const returnEl = document.getElementById('parlayPotentialReturn');
+    const profitEl = document.getElementById('parlayProfit');
+    if (!input || !returnEl) return;
+
+    const stake = parseFloat(input.value) || 0;
+    const oddsText = document.querySelector('.parlay-odds-value')?.textContent;
+    const odds = parseFloat(oddsText) || 0;
+
+    if (odds > 0 && stake > 0) {
+        const total = stake * odds;
+        returnEl.textContent = formatMoney(total);
+        if (profitEl) profitEl.textContent = formatMoney(total - stake);
+    }
+}
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
     loadPredictions();
     loadHistory();
     initTheme();
 });
+

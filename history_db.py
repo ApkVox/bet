@@ -1,9 +1,9 @@
+import json
 import sqlite3
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-print(f"DEBUG: Initializing history_db module")
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "Data" / "history.db"
@@ -39,6 +39,23 @@ def _ensure_football_schema(conn: sqlite3.Connection) -> None:
     for col, col_type in required_columns.items():
         if col not in existing_columns:
             conn.execute(f"ALTER TABLE football_predictions ADD COLUMN {col} {col_type}")
+
+def _ensure_predictions_schema(conn: sqlite3.Connection) -> None:
+    """Add odds_home / odds_away columns to predictions if missing."""
+    existing = _get_table_columns(conn, "predictions")
+    if "odds_home" not in existing:
+        conn.execute("ALTER TABLE predictions ADD COLUMN odds_home REAL")
+    if "odds_away" not in existing:
+        conn.execute("ALTER TABLE predictions ADD COLUMN odds_away REAL")
+
+
+def _ensure_recommendations_schema(conn: sqlite3.Connection) -> None:
+    existing = _get_table_columns(conn, "daily_recommendations")
+    if "result" not in existing:
+        conn.execute("ALTER TABLE daily_recommendations ADD COLUMN result TEXT DEFAULT 'pending'")
+    if "reasoning" not in existing:
+        conn.execute("ALTER TABLE daily_recommendations ADD COLUMN reasoning TEXT")
+
 
 def init_history_db():
     """Crea la tabla de historial si no existe"""
@@ -87,18 +104,51 @@ def init_history_db():
             )
         """)
         _ensure_football_schema(conn)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS match_news (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                match_id TEXT NOT NULL,
+                sport TEXT DEFAULT 'nba',
+                headline TEXT,
+                key_points TEXT,
+                injuries TEXT,
+                impact_assessment TEXT,
+                confidence_modifier TEXT DEFAULT 'neutral',
+                raw_response TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(date, match_id)
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_recommendations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT UNIQUE NOT NULL,
+                sport TEXT DEFAULT 'nba',
+                recommendations TEXT,
+                parlay_analysis TEXT,
+                parlay_odds REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        _ensure_predictions_schema(conn)
+        _ensure_recommendations_schema(conn)
         conn.commit()
-    print("[OK] history.db inicializada (NBA + Football)")
+    print("[OK] history.db inicializada (NBA + Football + News + Recommendations)")
 
 
 def save_prediction(prediction_data: dict):
-    """Guarda una predicción"""
+    """Guarda una predicción NBA con cuotas separadas por equipo."""
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
             INSERT OR REPLACE INTO predictions 
             (date, match_id, home_team, away_team, predicted_winner, 
-             prob_model, prob_final, odds, ev_value, kelly_stake, warning_level, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+             prob_model, prob_final, odds, ev_value, kelly_stake, warning_level,
+             odds_home, odds_away, result)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
         """, (
             prediction_data['date'],
             prediction_data['match_id'],
@@ -110,7 +160,9 @@ def save_prediction(prediction_data: dict):
             prediction_data['market_odds'],
             prediction_data['ev_value'],
             prediction_data['kelly_stake_pct'],
-            prediction_data['warning_level']
+            prediction_data['warning_level'],
+            prediction_data.get('home_odds'),
+            prediction_data.get('away_odds'),
         ))
         conn.commit()
 
@@ -152,9 +204,8 @@ def update_results(date: str, results: dict):
     """
     with sqlite3.connect(DB_PATH) as conn:
         for match_id, actual_winner in results.items():
-            # Obtener kelly_stake y odds para calcular profit
             cursor = conn.execute("""
-                SELECT kelly_stake, odds, predicted_winner
+                SELECT kelly_stake, odds, predicted_winner, odds_home, odds_away, home_team
                 FROM predictions
                 WHERE date = ? AND match_id = ?
             """, (date, match_id))
@@ -163,15 +214,19 @@ def update_results(date: str, results: dict):
             if not row:
                 continue
             
-            kelly_stake, odds, predicted_winner = row
+            kelly_stake, odds_american, predicted_winner, odds_home, odds_away, home_team = row
             is_win = (predicted_winner == actual_winner)
             
-            # Calcular profit
             if is_win:
-                # Ganancia = stake × (odds / 100)
-                profit = kelly_stake * (abs(odds) / 100) if odds else 0
+                decimal_odds = odds_home if predicted_winner == home_team else odds_away
+                if decimal_odds and decimal_odds > 1:
+                    profit = kelly_stake * (decimal_odds - 1)
+                elif odds_american:
+                    am = float(odds_american)
+                    profit = kelly_stake * (am / 100) if am > 0 else kelly_stake * (100 / abs(am))
+                else:
+                    profit = 0
             else:
-                # Pérdida = -stake
                 profit = -kelly_stake
             
             # Actualizar
@@ -304,7 +359,8 @@ def get_predictions_by_date_light(date: str) -> list[dict]:
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute("""
             SELECT date, match_id, home_team, away_team, predicted_winner, 
-                   prob_final, odds, ev_value, kelly_stake, warning_level, result
+                   prob_final, odds, ev_value, kelly_stake, warning_level, result,
+                   odds_home, odds_away
             FROM predictions
             WHERE date = ?
         """, (date,))
@@ -314,6 +370,7 @@ def get_predictions_by_date_light(date: str) -> list[dict]:
         
         for row in rows:
             p = {
+                "match_id": row[1],
                 "home_team": row[2],
                 "away_team": row[3],
                 "winner": row[4],
@@ -323,8 +380,8 @@ def get_predictions_by_date_light(date: str) -> list[dict]:
                 "ou_probability": 0,
                 "ai_analysis": None,
                 "is_mock": False,
-                "odds_home": row[6] if row[4] == row[2] else None,
-                "odds_away": row[6] if row[4] == row[3] else None,
+                "odds_home": row[11],
+                "odds_away": row[12],
                 "ev_score": row[7],
                 "kelly_stake": row[8],
                 "warning_level": row[9],
@@ -453,6 +510,16 @@ def get_upcoming_football_predictions() -> list[dict]:
         ]
 
 
+def update_prediction_odds(match_id: str, odds_home: float, odds_away: float) -> None:
+    """Update odds for an existing prediction (used when odds were missing on initial save)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            UPDATE predictions SET odds_home = ?, odds_away = ?
+            WHERE match_id = ? AND (odds_home IS NULL OR odds_away IS NULL)
+        """, (odds_home, odds_away, match_id))
+        conn.commit()
+
+
 def get_all_prediction_dates() -> dict:
     """Returns {date_str: count} for all dates with predictions"""
     with sqlite3.connect(DB_PATH) as conn:
@@ -470,3 +537,157 @@ def get_match_ids_for_date(date: str) -> set:
             "SELECT match_id FROM predictions WHERE date = ?", (date,)
         )
         return {row[0] for row in cursor.fetchall()}
+
+
+# =============================================
+# MATCH NEWS (Groq Agent cache)
+# =============================================
+
+def save_match_news(date: str, match_id: str, news_data: dict) -> None:
+    """Persists Groq agent news for a single match."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO match_news
+            (date, match_id, sport, headline, key_points, injuries,
+             impact_assessment, confidence_modifier, raw_response)
+            VALUES (?, ?, 'nba', ?, ?, ?, ?, ?, ?)
+        """, (
+            date,
+            match_id,
+            news_data.get("headline", ""),
+            json.dumps(news_data.get("key_points", []), ensure_ascii=False),
+            json.dumps(news_data.get("injuries", []), ensure_ascii=False),
+            news_data.get("impact_assessment", ""),
+            news_data.get("confidence_modifier", "neutral"),
+            json.dumps(news_data, ensure_ascii=False),
+        ))
+        conn.commit()
+
+
+def get_match_news(match_id: str) -> Optional[dict]:
+    """Returns cached news for a single match or None."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT headline, key_points, injuries, impact_assessment,
+                   confidence_modifier, created_at
+            FROM match_news WHERE match_id = ?
+        """, (match_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "headline": row[0],
+            "key_points": json.loads(row[1]) if row[1] else [],
+            "injuries": json.loads(row[2]) if row[2] else [],
+            "impact_assessment": row[3],
+            "confidence_modifier": row[4],
+            "created_at": row[5],
+        }
+
+
+def get_news_for_date(date: str) -> list[dict]:
+    """Returns all cached news for a given date."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT match_id, headline, key_points, injuries,
+                   impact_assessment, confidence_modifier, created_at
+            FROM match_news WHERE date = ?
+        """, (date,))
+        return [
+            {
+                "match_id": r[0],
+                "headline": r[1],
+                "key_points": json.loads(r[2]) if r[2] else [],
+                "injuries": json.loads(r[3]) if r[3] else [],
+                "impact_assessment": r[4],
+                "confidence_modifier": r[5],
+                "created_at": r[6],
+            }
+            for r in cursor.fetchall()
+        ]
+
+
+def news_exist_for_date(date: str) -> bool:
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute(
+            "SELECT COUNT(*) FROM match_news WHERE date = ?", (date,)
+        )
+        return cursor.fetchone()[0] > 0
+
+
+# =============================================
+# DAILY RECOMMENDATIONS
+# =============================================
+
+def save_daily_recommendations(date: str, reco_data: dict) -> None:
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO daily_recommendations
+            (date, sport, recommendations, parlay_analysis, parlay_odds, reasoning, result)
+            VALUES (?, 'nba', ?, ?, ?, ?, 'pending')
+        """, (
+            date,
+            json.dumps(reco_data.get("recommendations", []), ensure_ascii=False),
+            reco_data.get("parlay_analysis", ""),
+            reco_data.get("parlay_odds", 0.0),
+            reco_data.get("reasoning", ""),
+        ))
+        conn.commit()
+
+
+def get_daily_recommendations(date: str) -> Optional[dict]:
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT recommendations, parlay_analysis, parlay_odds, created_at,
+                   reasoning, result
+            FROM daily_recommendations WHERE date = ?
+        """, (date,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "recommendations": json.loads(row[0]) if row[0] else [],
+            "parlay_analysis": row[1],
+            "parlay_odds": row[2],
+            "created_at": row[3],
+            "reasoning": row[4] or "",
+            "result": row[5] or "pending",
+        }
+
+
+def get_recommendations_history(limit: int = 14) -> list[dict]:
+    """Returns past daily recommendations with their results."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            SELECT date, recommendations, parlay_analysis, parlay_odds,
+                   created_at, result
+            FROM daily_recommendations
+            ORDER BY date DESC LIMIT ?
+        """, (limit,))
+        return [
+            {
+                "date": r[0],
+                "recommendations": json.loads(r[1]) if r[1] else [],
+                "parlay_analysis": r[2],
+                "parlay_odds": r[3],
+                "created_at": r[4],
+                "result": r[5] or "pending",
+            }
+            for r in cursor.fetchall()
+        ]
+
+
+def delete_daily_recommendations(date: str) -> None:
+    """Remove stale recommendations for a date so they can be regenerated."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM daily_recommendations WHERE date = ?", (date,))
+        conn.commit()
+
+
+def update_recommendation_result(date: str, result: str) -> None:
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "UPDATE daily_recommendations SET result = ? WHERE date = ?",
+            (result, date)
+        )
+        conn.commit()

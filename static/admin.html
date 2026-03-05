@@ -1,39 +1,32 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — La Fija</title>
     <meta name="robots" content="noindex, nofollow">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0a0a;
-            --bg2: #111111;
-            --bg3: #181818;
-            --bg4: #1f1f1f;
+            --bg: #060609;
+            --bg2: #0c0c14;
+            --bg3: #12121c;
+            --bg4: #1a1a26;
             --text: #f5f5f7;
-            --text2: #a1a1a6;
-            --text3: #6e6e73;
+            --text2: #a1a1aa;
+            --text3: #6b6b76;
             --accent: #0a84ff;
             --accent2: #409cff;
+            --accent-soft: rgba(10,132,255,0.1);
             --success: #30d158;
             --danger: #ff453a;
             --warning: #ff9f0a;
-            --border: rgba(255, 255, 255, 0.06);
-            --radius: 10px;
-            --radius-lg: 14px;
-            --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-            --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.2);
+            --border: rgba(255,255,255,0.06);
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -41,1157 +34,499 @@
             color: var(--text);
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
-            font-size: 14px;
+            font-size: 13px;
         }
 
-        /* LOGIN */
-        .login-wrapper {
+        /* ═══════ LOGIN ═══════ */
+        .login-wrap {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 20px;
-            background: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.08) 0%, transparent 60%);
+            padding: 24px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(10,132,255,0.12) 0%, transparent 60%);
         }
-
         .login-card {
             background: var(--bg2);
             border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 48px 40px;
+            border-radius: 22px;
+            padding: 40px 36px;
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             box-shadow: var(--shadow);
             text-align: center;
         }
-
-        .login-card h1 {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 6px;
+        .login-card h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+        .login-card .sub { color: var(--text2); font-size: 12px; margin-bottom: 28px; }
+        .login-card .lock { font-size: 44px; margin-bottom: 16px; filter: drop-shadow(0 4px 12px rgba(10,132,255,0.3)); }
+        .login-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
+        .login-tab {
+            flex: 1; padding: 8px; border-radius: 999px; border: 1px solid transparent;
+            background: transparent; color: var(--text2); font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
         }
+        .login-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+        .login-tab:disabled { opacity: 0.4; cursor: default; }
+        .login-panel { display: none; text-align: left; }
+        .login-panel.active { display: block; animation: fadeIn 0.2s ease; }
+        .login-status { font-size: 11px; color: var(--text2); margin-bottom: 12px; text-align: center; }
+        .login-status span { color: var(--accent); font-weight: 600; }
 
-        .login-card .subtitle {
-            color: var(--text2);
-            font-size: 13px;
-            margin-bottom: 32px;
+        /* ═══════ DASHBOARD LAYOUT ═══════ */
+        .app { display: none; }
+        .app.active { display: flex; min-height: 100vh; }
+
+        .topbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 30;
+            background: var(--bg2); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 20px; gap: 12px;
         }
-
-        .login-card .lock-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            filter: drop-shadow(0 4px 12px rgba(10, 132, 255, 0.3));
+        .topbar .brand { font-size: 14px; font-weight: 700; }
+        .topbar .brand span { color: var(--text2); font-weight: 400; }
+        .topbar .spacer { flex: 1; }
+        .topbar .session-tag {
+            font-size: 10px; color: var(--success); background: rgba(48,209,88,0.1);
+            padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(48,209,88,0.3);
         }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text2);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: var(--bg3);
-            color: var(--text);
-            font-size: 15px;
-            font-family: inherit;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        .input-group input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
-        }
-
-        .btn-primary {
-            width: 100%;
-            padding: 14px;
-            border-radius: var(--radius);
-            border: none;
-            background: var(--accent);
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent2);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.3);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .login-error {
-            background: rgba(255, 69, 58, 0.1);
-            color: var(--danger);
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 16px;
-            display: none;
-        }
-
-        .forgot-link { margin-top: 20px; padding-top: 4px; text-align: center; }
-        .forgot-link a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
-        .forgot-link a:hover { text-decoration: underline; }
-
-        /* DASHBOARD */
-        .dashboard {
-            display: none;
-        }
-
-        .dashboard.active {
-            display: flex;
-        }
-
-        .admin-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 52px;
-            background: var(--bg2);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            z-index: 20;
-        }
-
-        .admin-topbar .brand {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .admin-topbar .brand span { color: var(--text2); font-weight: 500; }
 
         .sidebar {
-            width: 248px;
-            min-height: 100vh;
-            background: var(--bg2);
-            border-right: 1px solid var(--border);
-            padding: 68px 0 24px;
-            position: fixed;
-            left: 0;
-            top: 0;
-            z-index: 10;
+            width: 220px; min-height: 100vh; background: var(--bg2);
+            border-right: 1px solid var(--border); padding: 62px 8px 16px;
+            position: fixed; left: 0; top: 0; z-index: 20;
+        }
+        .sidebar .sec-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text3); padding: 14px 12px 6px;
+        }
+        .nav-btn {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 9px 12px; border-radius: 10px; border: none; background: none;
+            color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer;
+            transition: background 0.12s, color 0.12s; text-align: left;
+        }
+        .nav-btn:hover { color: var(--text); background: var(--bg3); }
+        .nav-btn.active { color: var(--accent); background: var(--accent-soft); }
+        .nav-btn .ico { font-size: 15px; width: 20px; text-align: center; }
+        .nav-btn.logout-btn { color: var(--danger); margin-top: auto; }
+        .nav-btn.logout-btn:hover { background: rgba(255,69,58,0.1); }
+        .sidebar-bottom { position: absolute; bottom: 16px; left: 8px; right: 8px; }
+
+        .main {
+            margin-left: 220px; flex: 1; padding: 62px 32px 32px; min-height: 100vh;
         }
 
-        .sidebar-header {
-            padding: 0 20px 16px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 8px;
+        /* ═══════ SECTION PANELS ═══════ */
+        .sec { display: none; }
+        .sec.active { display: block; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+        .sec-header { margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+        .sec-header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+        .sec-header p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+        /* ═══════ CARD ═══════ */
+        .card {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+            padding: 20px 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
         }
+        .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .card .desc { font-size: 11px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
 
-        .sidebar-header h2 {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text3);
+        /* ═══════ FORM ELEMENTS ═══════ */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .fg { margin-bottom: 0; }
+        .fg label {
+            display: block; font-size: 11px; font-weight: 600; color: var(--text2);
+            margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;
         }
-
-        .sidebar-header p {
-            font-size: 13px;
-            color: var(--text2);
-            margin-top: 2px;
+        .fg input[type="text"], .fg input[type="password"], .fg textarea {
+            width: 100%; padding: 9px 12px; border-radius: 9px;
+            border: 1px solid var(--border); background: var(--bg3);
+            color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+            transition: border 0.15s;
         }
+        .fg input:focus, .fg textarea:focus { border-color: var(--accent); }
+        .fg textarea { resize: vertical; min-height: 56px; }
+        .fg .hint { font-size: 10px; color: var(--text3); margin-top: 3px; }
 
-        .nav-items { padding: 0 8px; }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            color: var(--text2);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            font-family: inherit;
-            border-radius: var(--radius);
+        .color-wrap { display: flex; align-items: center; gap: 8px; }
+        .color-wrap input[type="color"] {
+            -webkit-appearance: none; border: 2px solid var(--border); border-radius: 8px;
+            width: 36px; height: 32px; cursor: pointer; background: transparent; padding: 2px;
         }
+        .color-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+        .color-wrap input[type="text"] { flex: 1; }
 
-        .nav-item:hover {
-            color: var(--text);
-            background: var(--bg3);
-        }
-
-        .nav-item.active {
-            color: var(--accent);
-            background: rgba(10, 132, 255, 0.1);
-        }
-
-        .nav-item .nav-icon {
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-            opacity: 0.9;
-        }
-
-        .nav-item.logout {
-            color: var(--danger);
-            margin-top: 16px;
-            position: absolute;
-            bottom: 24px;
-            width: 232px;
-            left: 8px;
-        }
-
-        .nav-item.logout:hover {
-            background: rgba(255, 69, 58, 0.1);
-        }
-
-        .main-content {
-            margin-left: 248px;
-            flex: 1;
-            padding: 68px 40px 40px;
-            min-height: 100vh;
-        }
-
-        .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .page-header h1 {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        /* SETTINGS PANELS */
-        .settings-panel {
-            display: none;
-        }
-
-        .settings-panel.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px)
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0)
-            }
-        }
-
-        .settings-card {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 24px 28px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow-card);
-        }
-
-        .settings-card h3 {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            letter-spacing: -0.01em;
-        }
-
-        .settings-card .card-desc {
-            font-size: 13px;
-            color: var(--text2);
-            margin-bottom: 20px;
-            line-height: 1.45;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .form-row.single {
-            grid-template-columns: 1fr;
-        }
-
-        .form-group {
-            margin-bottom: 0;
-        }
-
-        .field-hint {
-            display: block;
-            font-size: 11px;
-            color: var(--text3);
-            margin-top: 4px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text2);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .form-group input[type="text"],
-        .form-group input[type="password"],
-        .form-group textarea {
-            width: 100%;
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg3);
-            color: var(--text);
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            transition: border 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: var(--accent);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        /* COLOR PICKER */
-        .color-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .color-input-wrapper input[type="color"] {
-            -webkit-appearance: none;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            width: 40px;
-            height: 36px;
-            cursor: pointer;
-            background: transparent;
-            padding: 2px;
-        }
-
-        .color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
-            padding: 0;
-        }
-
-        .color-input-wrapper input[type="color"]::-webkit-color-swatch {
-            border: none;
-            border-radius: 5px;
-        }
-
-        .color-input-wrapper input[type="text"] {
-            flex: 1;
-        }
-
-        /* TOGGLE */
         .toggle-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 0;
-            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
         }
-
-        .toggle-row:last-child {
-            border-bottom: none;
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-info h4 { font-size: 13px; font-weight: 600; }
+        .toggle-info p { font-size: 11px; color: var(--text2); margin-top: 1px; }
+        .toggle-sw { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+        .toggle-sw input { opacity: 0; width: 0; height: 0; }
+        .toggle-sl {
+            position: absolute; cursor: pointer; inset: 0;
+            background: var(--bg4); border-radius: 13px; transition: 0.25s;
         }
-
-        .toggle-info h4 {
-            font-size: 14px;
-            font-weight: 600;
+        .toggle-sl::before {
+            content: ''; position: absolute; height: 20px; width: 20px;
+            left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.25s;
         }
+        .toggle-sw input:checked + .toggle-sl { background: var(--accent); }
+        .toggle-sw input:checked + .toggle-sl::before { transform: translateX(18px); }
 
-        .toggle-info p {
-            font-size: 12px;
-            color: var(--text2);
-            margin-top: 2px;
+        /* ═══════ BUTTONS ═══════ */
+        .bar { display: flex; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px;
+            border-radius: 10px; border: none; font-size: 13px; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.2s;
         }
+        .btn-p { background: var(--accent); color: #fff; }
+        .btn-p:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(10,132,255,0.3); }
+        .btn-o { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-o:hover { border-color: var(--text2); background: rgba(255,255,255,0.03); }
+        .btn-d { background: rgba(255,69,58,0.1); color: var(--danger); }
+        .btn-d:hover { background: rgba(255,69,58,0.2); }
 
-        .toggle-switch {
-            position: relative;
-            width: 48px;
-            height: 28px;
+        /* ═══════ TOAST ═══════ */
+        .toast-box {
+            position: fixed; top: 16px; right: 16px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 6px;
         }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            inset: 0;
-            background: var(--bg4);
-            border-radius: 14px;
-            transition: 0.3s;
-        }
-
-        .toggle-slider::before {
-            content: '';
-            position: absolute;
-            height: 22px;
-            width: 22px;
-            left: 3px;
-            bottom: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        .toggle-switch input:checked+.toggle-slider {
-            background: var(--accent);
-        }
-
-        .toggle-switch input:checked+.toggle-slider::before {
-            transform: translateX(20px);
-        }
-
-        /* BUTTONS */
-        .btn-save {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 28px;
-            border-radius: var(--radius);
-            border: none;
-            background: var(--accent);
-            color: #fff;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-
-        .btn-save:hover {
-            background: var(--accent2);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(10, 132, 255, 0.3);
-        }
-
-        .btn-outline {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 28px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .btn-outline:hover {
-            border-color: var(--text2);
-            background: rgba(255, 255, 255, 0.04);
-        }
-
-        .actions-bar {
-            display: flex;
-            gap: 12px;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-
-        /* TOAST */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
         .toast {
-            padding: 14px 20px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 280px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            animation: slideIn 0.3s ease;
+            padding: 11px 16px; border-radius: 10px; font-size: 12px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; min-width: 260px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: slideIn 0.25s ease;
+        }
+        .toast.ok { background: rgba(48,209,88,0.12); color: var(--success); border: 1px solid rgba(48,209,88,0.25); }
+        .toast.err { background: rgba(255,69,58,0.12); color: var(--danger); border: 1px solid rgba(255,69,58,0.25); }
+        .toast.info { background: rgba(10,132,255,0.12); color: var(--accent); border: 1px solid rgba(10,132,255,0.25); }
+        @keyframes slideIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+
+        /* ═══════ PROMO IFRAME ═══════ */
+        .promo-frame {
+            width: 100%; min-height: 800px; border-radius: var(--radius);
+            border: 1px solid var(--border); background: var(--bg);
         }
 
-        .toast.success {
-            background: rgba(48, 209, 88, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(48, 209, 88, 0.2);
+        /* ═══════ STAT BLOCKS (dashboard) ═══════ */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .stat {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+            padding: 16px 18px;
         }
+        .stat .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+        .stat .val { font-size: 20px; font-weight: 800; margin-top: 4px; }
+        .stat .val.green { color: var(--success); }
+        .stat .val.blue { color: var(--accent); }
 
-        .toast.error {
-            background: rgba(255, 69, 58, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(255, 69, 58, 0.2);
-        }
-
-        .toast.info {
-            background: rgba(10, 132, 255, 0.15);
-            color: var(--accent);
-            border: 1px solid rgba(10, 132, 255, 0.2);
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(20px)
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0)
-            }
-        }
-
-        /* RANGE SLIDER for Promo Editor */
-        .slider-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-
-        .slider-row label {
-            flex: 0 0 110px;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text2);
-        }
-
-        .slider-row input[type="range"] {
-            flex: 1;
-            accent-color: var(--accent);
-            height: 4px;
-            cursor: pointer;
-        }
-
-        .slider-row .slider-val {
-            flex: 0 0 32px;
-            text-align: right;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--accent);
-            font-family: 'Inter', monospace;
-        }
-
-        .promo-preview-area {
-            display: flex;
-            gap: 24px;
-            margin-bottom: 20px;
-        }
-
-        .promo-preview-area .preview-col {
-            flex: 0 0 auto;
-            text-align: center;
-        }
-
-        .promo-preview-area .controls-col {
-            flex: 1;
-        }
-
-        #promoPreviewImg {
-            max-width: 280px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--border);
-        }
-
-        .promo-test-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .promo-test-inputs input {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg3);
-            color: var(--text);
-            font-size: 12px;
-            font-family: inherit;
-        }
-
-        /* RESPONSIVE */
-        @media(max-width:768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                min-height: auto;
-                position: relative;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .sidebar-header {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding-bottom: 16px;
-            }
-
-            .nav-items {
-                display: flex;
-                overflow-x: auto;
-                padding: 0 16px;
-                gap: 4px;
-            }
-
-            .nav-item {
-                padding: 10px 16px;
-                white-space: nowrap;
-                border-right: none !important;
-                border-radius: 8px;
-            }
-
-            .nav-item.active {
-                border-right: none !important;
-                border-bottom: 2px solid var(--accent);
-            }
-
-            .nav-item.logout {
-                position: relative;
-                bottom: auto;
-                width: auto;
-            }
-
-            .main-content {
-                margin-left: 0;
-                padding: 20px;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .dashboard.active {
-                flex-direction: column;
-            }
+        /* ═══════ RESPONSIVE ═══════ */
+        @media(max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 58px 16px 16px; }
+            .form-row { grid-template-columns: 1fr; }
+            .promo-frame { min-height: 600px; }
         }
     </style>
 </head>
-
 <body>
 
-    <!-- LOGIN SCREEN -->
-    <div class="login-wrapper" id="loginScreen">
-        <div class="login-card" id="loginCard">
-            <div class="lock-icon">🔐</div>
-            <h1>Admin Panel</h1>
-            <p class="subtitle">La Fija — Panel de Administración</p>
-            <div class="login-error" id="loginError"></div>
-            <div id="setInitialPasswordBlock" style="display:none;">
-                <p class="subtitle" style="margin-bottom:16px;">Primera vez: crea tu contraseña de administrador</p>
-                <div class="input-group">
-                    <label>Nueva contraseña (mín. 6)</label>
-                    <input type="password" id="initialPassword" placeholder="Contraseña" minlength="6" autocomplete="new-password">
-                </div>
-                <div class="input-group">
-                    <label>Confirmar contraseña</label>
-                    <input type="password" id="initialPasswordConfirm" placeholder="Repite la contraseña" minlength="6">
-                </div>
-                <button type="button" class="btn-primary" id="setInitialPasswordBtn">Crear contraseña</button>
-            </div>
-            <form id="loginForm">
-                <div class="input-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required
-                        autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn-primary" id="loginBtn">Iniciar sesión</button>
-                <p class="forgot-link" id="forgotLinkWrap"><a href="#" id="forgotPasswordLink">¿Olvidaste tu contraseña?</a></p>
-            </form>
-            <div id="forgotPasswordBlock" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid var(--border);">
-                <p class="subtitle" style="margin-bottom:12px;">Recuperación por correo</p>
-                <p id="emailRecoveryHint" class="field-hint" style="display:none; margin-bottom:12px;"></p>
-                <div class="input-group">
-                    <label>Correo del administrador</label>
-                    <input type="email" id="forgotEmail" placeholder="tu@correo.com" autocomplete="email">
-                </div>
-                <button type="button" class="btn-primary" id="sendResetBtn">Enviar enlace al correo</button>
-                <p style="margin-top:10px;"><a href="#" id="backToLoginLink">Volver al inicio de sesión</a></p>
-            </div>
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div class="login-wrap" id="loginScreen">
+    <div class="login-card">
+        <div class="lock">🔐</div>
+        <h1>Admin Panel</h1>
+        <p class="sub">La Fija — Panel de Administración</p>
+        <p class="login-status" id="statusText">Comprobando estado…</p>
+
+        <div class="login-tabs">
+            <button class="login-tab active" id="tabCreate">Crear cuenta inicial</button>
+            <button class="login-tab" id="tabLogin">Iniciar sesión</button>
         </div>
-        <div class="login-card" id="resetPasswordCard" style="display:none;">
-            <div class="lock-icon">🔑</div>
-            <h1>Nueva contraseña</h1>
-            <p class="subtitle">Introduce tu nueva contraseña (mín. 6 caracteres)</p>
-            <div class="login-error" id="resetError"></div>
-            <form id="resetPasswordForm">
-                <div class="input-group">
-                    <label>Nueva contraseña</label>
-                    <input type="password" id="resetNewPassword" placeholder="Nueva contraseña" minlength="6" required>
-                </div>
-                <div class="input-group">
-                    <label>Confirmar contraseña</label>
-                    <input type="password" id="resetConfirmPassword" placeholder="Repite la contraseña" minlength="6" required>
-                </div>
-                <button type="submit" class="btn-primary" id="resetSubmitBtn">Restablecer contraseña</button>
-            </form>
+
+        <div class="login-panel active" id="panelCreate">
+            <div class="fg" style="margin-bottom:12px;">
+                <label>Nueva contraseña (mín. 6)</label>
+                <input type="password" id="createPwd" autocomplete="new-password">
+            </div>
+            <div class="fg" style="margin-bottom:12px;">
+                <label>Confirmar contraseña</label>
+                <input type="password" id="createPwd2" autocomplete="new-password">
+            </div>
+            <button class="btn btn-p" style="width:100%" id="btnCreate">Crear cuenta</button>
+            <div class="login-msg" id="createMsg" style="margin-top:10px;font-size:12px;"></div>
+        </div>
+
+        <div class="login-panel" id="panelLogin">
+            <div class="fg" style="margin-bottom:12px;">
+                <label>Contraseña</label>
+                <input type="password" id="loginPwd" autocomplete="current-password">
+            </div>
+            <button class="btn btn-p" style="width:100%" id="btnLogin">Iniciar sesión</button>
+            <div class="login-msg" id="loginMsg" style="margin-top:10px;font-size:12px;"></div>
         </div>
     </div>
+</div>
 
-    <!-- DASHBOARD -->
-    <div class="dashboard" id="dashboard">
-        <header class="admin-topbar">
-            <span class="brand">Panel de administración <span>— La Fija</span></span>
-        </header>
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>Menú</h2>
-                <p>Configuración del sitio</p>
+<!-- ═══════════════════ APP (DASHBOARD) ═══════════════════ -->
+<div class="app" id="app">
+    <header class="topbar">
+        <span class="brand">Panel de administración <span>— La Fija</span></span>
+        <div class="spacer"></div>
+        <span class="session-tag" id="sessionTag">Sesión activa</span>
+    </header>
+
+    <aside class="sidebar">
+        <div class="sec-label">General</div>
+        <button class="nav-btn active" data-sec="dashboard"><span class="ico">📊</span> Dashboard</button>
+        <button class="nav-btn" data-sec="branding"><span class="ico">🏷️</span> Branding</button>
+        <button class="nav-btn" data-sec="theme"><span class="ico">🎨</span> Tema y Colores</button>
+        <button class="nav-btn" data-sec="features"><span class="ico">⚙️</span> Funciones</button>
+
+        <div class="sec-label">Contenido</div>
+        <button class="nav-btn" data-sec="announcement"><span class="ico">📢</span> Anuncio</button>
+        <button class="nav-btn" data-sec="ads"><span class="ico">📺</span> Publicidad</button>
+        <button class="nav-btn" data-sec="betting"><span class="ico">💰</span> Apuestas</button>
+        <button class="nav-btn" data-sec="promo"><span class="ico">🖼️</span> Editor Promo</button>
+
+        <div class="sec-label">Sistema</div>
+        <button class="nav-btn" data-sec="security"><span class="ico">🔒</span> Seguridad</button>
+
+        <div class="sidebar-bottom">
+            <button class="nav-btn logout-btn" id="btnLogout"><span class="ico">🚪</span> Cerrar sesión</button>
+        </div>
+    </aside>
+
+    <div class="main">
+
+        <!-- ── DASHBOARD ── -->
+        <div class="sec active" id="sec-dashboard">
+            <div class="sec-header">
+                <h1>Dashboard</h1>
+                <p>Vista rápida del estado del sistema y configuración activa.</p>
             </div>
-            <div class="nav-items">
-                <button class="nav-item active" data-panel="theme">
-                    <span class="nav-icon">🎨</span> Tema y Colores
-                </button>
-                <button class="nav-item" data-panel="branding">
-                    <span class="nav-icon">🏷️</span> Branding
-                </button>
-                <button class="nav-item" data-panel="features">
-                    <span class="nav-icon">⚙️</span> Funciones
-                </button>
-                <button class="nav-item" data-panel="announcement">
-                    <span class="nav-icon">📢</span> Anuncio
-                </button>
-                <button class="nav-item" data-panel="ads">
-                    <span class="nav-icon">📺</span> Publicidad
-                </button>
-                <button class="nav-item" data-panel="promo">
-                    <span class="nav-icon">🖼️</span> Editor Promo
-                </button>
-                <button class="nav-item" data-panel="security">
-                    <span class="nav-icon">🔒</span> Seguridad
-                </button>
-                <button class="nav-item logout" onclick="logout()">
-                    <span class="nav-icon">🚪</span> Cerrar sesión
-                </button>
+            <div class="stats">
+                <div class="stat"><div class="label">Estado API</div><div class="val green" id="dHealthVal">…</div></div>
+                <div class="stat"><div class="label">Nombre del sitio</div><div class="val blue" id="dBrandVal">…</div></div>
+                <div class="stat"><div class="label">Token TTL</div><div class="val" id="dTtlVal">1h</div></div>
+                <div class="stat"><div class="label">Fútbol</div><div class="val" id="dFootballVal">…</div></div>
             </div>
-        </aside>
-
-        <div class="main-content">
-            <div class="page-header">
-                <h1 id="panelTitle">🎨 Tema y Colores</h1>
-                <span style="font-size:12px;color:var(--text3)" id="sessionInfo"></span>
-            </div>
-
-            <!-- THEME PANEL -->
-            <div class="settings-panel active" id="panel-theme">
-                <div class="settings-card">
-                    <h3>Modo Oscuro</h3>
-                    <p class="card-desc">Personaliza los colores del tema oscuro de tu sitio</p>
-                    <div class="form-row" id="darkColorInputs"></div>
+            <div class="card">
+                <h3>Acciones rápidas</h3>
+                <p class="desc">Refrescar datos o navegar a secciones importantes.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-o" id="btnRefreshHistory">🔄 Refrescar historial y cuotas</button>
+                    <button class="btn btn-o" onclick="navTo('promo')">🖼️ Abrir editor de promos</button>
+                    <button class="btn btn-o" onclick="navTo('branding')">🏷️ Editar branding</button>
                 </div>
-                <div class="settings-card">
-                    <h3>Modo Claro</h3>
-                    <p class="card-desc">Personaliza los colores del tema claro de tu sitio</p>
-                    <div class="form-row" id="lightColorInputs"></div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="saveSettings()">💾 Guardar cambios</button>
-                    <button class="btn-outline" onclick="resetThemeDefaults()">↩️ Restaurar defaults</button>
-                </div>
-            </div>
-
-            <!-- BRANDING PANEL -->
-            <div class="settings-panel" id="panel-branding">
-                <div class="settings-card">
-                    <h3>Identidad del Sitio</h3>
-                    <p class="card-desc">Configura el nombre y logo de tu sitio web</p>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Nombre del sitio</label>
-                            <input type="text" id="brandTitle" placeholder="La Fija">
-                        </div>
-                        <div class="form-group">
-                            <label>Emoji del Header</label>
-                            <input type="text" id="brandEmoji" placeholder="🏀" maxlength="4">
-                            <small class="field-hint">Dejar vacío para no mostrar emoji</small>
-                        </div>
-                    </div>
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label>Descripción / Subtitulo</label>
-                            <textarea id="brandSubtitle" placeholder="Predicciones NBA con IA"></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="saveSettings()">💾 Guardar cambios</button>
-                </div>
-            </div>
-
-            <!-- FEATURES PANEL -->
-            <div class="settings-panel" id="panel-features">
-                <div class="settings-card">
-                    <h3>Funcionalidades</h3>
-                    <p class="card-desc">Activa o desactiva funciones del sitio</p>
-                    <div class="toggle-row">
-                        <div class="toggle-info">
-                            <h4>⚽ Sección de Fútbol</h4>
-                            <p>Muestra el botón de predicciones de fútbol en el header</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="featFootball">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-row">
-                        <div class="toggle-info">
-                            <h4>📥 Descargar Promo</h4>
-                            <p>Botón de descarga de imagen promocional en cada tarjeta</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="featPromo">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-row">
-                        <div class="toggle-info">
-                            <h4>🌙 Modo Oscuro por Defecto</h4>
-                            <p>Los nuevos visitantes ven el sitio en modo oscuro</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="featDark">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-row">
-                        <div class="toggle-info">
-                            <h4>🤖 Análisis de IA</h4>
-                            <p>Muestra el análisis de IA en los detalles de cada partido</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="featAI">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="saveSettings()">💾 Guardar cambios</button>
-                </div>
-            </div>
-
-            <!-- ANNOUNCEMENT PANEL -->
-            <div class="settings-panel" id="panel-announcement">
-                <div class="settings-card">
-                    <h3>Banner de Anuncio</h3>
-                    <p class="card-desc">Muestra un banner en la parte superior del sitio</p>
-                    <div class="toggle-row"
-                        style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px;">
-                        <div class="toggle-info">
-                            <h4>Activar Banner</h4>
-                            <p>Muestra el mensaje en la parte superior del sitio</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="annEnabled">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Texto del Anuncio</label>
-                            <input type="text" id="annText" placeholder="🔥 ¡Nuevo modelo de IA disponible!">
-                        </div>
-                        <div class="form-group">
-                            <label>Color del Banner</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="annColorPicker" value="#0a84ff">
-                                <input type="text" id="annColorText" placeholder="#0a84ff">
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;padding:14px;border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:#fff;"
-                        id="annPreview">
-                        Vista previa del anuncio
-                    </div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="saveSettings()">💾 Guardar cambios</button>
-                </div>
-            </div>
-
-            <!-- ADS PANEL -->
-            <div class="settings-panel" id="panel-ads">
-                <div class="settings-card">
-                    <h3>Gestión de Publicidad</h3>
-                    <p class="card-desc">Configura los banners de Adsterra</p>
-                    <div class="toggle-row"
-                        style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px;">
-                        <div class="toggle-info">
-                            <h4>Activar Publicidad</h4>
-                            <p>Muestra los banners de Adsterra en los laterales</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="adsEnabled">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Clave Banner Izquierdo</label>
-                            <input type="text" id="adsLeftKey" placeholder="e2cbd291...">
-                        </div>
-                        <div class="form-group">
-                            <label>Clave Banner Derecho</label>
-                            <input type="text" id="adsRightKey" placeholder="e2cbd291...">
-                        </div>
-                    </div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="saveSettings()">💾 Guardar cambios</button>
-                </div>
-            </div>
-
-            <!-- SECURITY PANEL -->
-            <div class="settings-panel" id="panel-security">
-                <div class="settings-card">
-                    <h3>Cambiar Contraseña</h3>
-                    <p class="card-desc">Actualiza la contraseña del panel de administración</p>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Contraseña Actual</label>
-                            <input type="password" id="secCurrent" placeholder="••••••">
-                        </div>
-                        <div class="form-group">
-                            <label>Nueva Contraseña</label>
-                            <input type="password" id="secNew" placeholder="Mínimo 6 caracteres">
-                        </div>
-                    </div>
-                    <div class="actions-bar" style="border-top:none;padding-top:8px;">
-                        <button class="btn-save" onclick="changePassword()">🔐 Cambiar contraseña</button>
-                    </div>
-                </div>
-                <div class="settings-card">
-                    <h3>Información de Sesión</h3>
-                    <p class="card-desc">Detalles de tu sesión actual</p>
-                    <div style="font-size:13px;color:var(--text2);line-height:1.8;">
-                        <div>🟢 <strong>Estado:</strong> Sesión activa</div>
-                        <div>⏱️ <strong>Expiración:</strong> 1 hora desde el login</div>
-                        <div>🛡️ <strong>Protección:</strong> bcrypt + JWT (HS256)</div>
-                        <div>🚫 <strong>Rate limit:</strong> 5 intentos / 15 min</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PROMO EDITOR PANEL -->
-            <div class="settings-panel" id="panel-promo">
-                <div class="settings-card">
-                    <h3>Editor Visual de Promo</h3>
-                    <p class="card-desc">Ajusta posiciones, tamaños y colores de las imágenes promocionales. Los cambios
-                        se aplican a todas las descargas de promo.</p>
-
-                    <!-- Test Inputs + Preview -->
-                    <div class="promo-preview-area">
-                        <div class="preview-col">
-                            <img id="promoPreviewImg" src="" alt="Preview" />
-                            <div style="margin-top:12px">
-                                <button class="btn-save" onclick="updatePromoPreview()"
-                                    style="padding:8px 16px;font-size:12px">🔄 Actualizar</button>
-                            </div>
-                        </div>
-                        <div class="controls-col">
-                            <p style="font-size:11px;color:var(--text3);margin-bottom:10px">EQUIPOS DE PRUEBA</p>
-                            <div class="promo-test-inputs">
-                                <input type="text" id="promo_test_home" value="Charlotte Hornets" placeholder="Local" />
-                                <input type="text" id="promo_test_away" value="Dallas Mavericks"
-                                    placeholder="Visitante" />
-                                <input type="text" id="promo_test_winner" value="Charlotte Hornets"
-                                    placeholder="Ganador" />
-                                <input type="number" id="promo_test_prob" value="58.1" step="0.1"
-                                    style="max-width:100px" />
-                            </div>
-
-                            <!-- Logo Controls -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_logos" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 🎯 LOGOS
-                            </p>
-                            <div class="slider-row"><label>Centro Y (nivelar VS)</label><input type="range"
-                                    id="p_logo_cy" min="150" max="350" value="240" oninput="pSlider(this)" /><span
-                                    class="slider-val" id="p_logo_cy_v">240</span></div>
-                            <div class="slider-row"><label>Logo Izq. X</label><input type="range" id="p_logo_left_cx"
-                                    min="40" max="160" value="88" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_logo_left_cx_v">88</span></div>
-                            <div class="slider-row"><label>Logo Der. offset</label><input type="range"
-                                    id="p_logo_right_offset" min="40" max="160" value="88"
-                                    oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_logo_right_offset_v">88</span></div>
-                            <div class="slider-row"><label>Tamaño Máx</label><input type="range" id="p_logo_max"
-                                    min="30" max="120" value="68" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_logo_max_v">68</span></div>
-
-                            <!-- Names -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_names" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> ✏️ NOMBRES
-                            </p>
-                            <div class="slider-row"><label>Posición Y</label><input type="range" id="p_names_y"
-                                    min="270" max="400" value="308" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_names_y_v">308</span></div>
-                            <div class="slider-row"><label>Fuente</label><input type="range" id="p_names_font_size"
-                                    min="8" max="20" value="11" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_names_font_size_v">11</span></div>
-                            <div class="slider-row"><label>Ancho Máx</label><input type="range" id="p_names_max_w"
-                                    min="60" max="170" value="120" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_names_max_w_v">120</span></div>
-                            <div class="slider-row"><label>Color</label><input type="color" id="p_names_color"
-                                    value="#373737" oninput="pSlider(this)" /></div>
-
-                            <!-- Box -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_box_border" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 📦 BORDE CAJA
-                            </p>
-                            <div class="slider-row"><label>Top Y</label><input type="range" id="p_box_y0" min="350"
-                                    max="500" value="405" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_box_y0_v">405</span></div>
-                            <div class="slider-row"><label>Bottom Y</label><input type="range" id="p_box_y1" min="500"
-                                    max="650" value="590" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_box_y1_v">590</span></div>
-                            <div class="slider-row"><label>Padding X</label><input type="range" id="p_box_pad_x"
-                                    min="10" max="60" value="28" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_box_pad_x_v">28</span></div>
-                            <div class="slider-row"><label>Borde Radius</label><input type="range" id="p_box_radius"
-                                    min="0" max="30" value="14" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_box_radius_v">14</span></div>
-                            <div class="slider-row"><label>Grosor Borde</label><input type="range" id="p_box_border_w"
-                                    min="1" max="6" value="2" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_box_border_w_v">2</span></div>
-                            <div class="slider-row"><label>Color Borde</label><input type="color"
-                                    id="p_box_border_color" value="#beb9aa" oninput="pSlider(this)" /></div>
-
-                            <!-- Label -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_label" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 🏷️ ETIQUETA
-                            </p>
-                            <div class="slider-row"><label>Offset Y</label><input type="range" id="p_label_offset_y"
-                                    min="5" max="40" value="18" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_label_offset_y_v">18</span></div>
-                            <div class="slider-row"><label>Fuente</label><input type="range" id="p_label_font_size"
-                                    min="8" max="18" value="11" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_label_font_size_v">11</span></div>
-                            <div class="slider-row"><label>Color</label><input type="color" id="p_label_color"
-                                    value="#9b968c" oninput="pSlider(this)" /></div>
-
-                            <!-- Winner -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_winner" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 🏆 GANADOR
-                            </p>
-                            <div class="slider-row"><label>Offset Y</label><input type="range" id="p_winner_offset_y"
-                                    min="30" max="80" value="50" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_winner_offset_y_v">50</span></div>
-                            <div class="slider-row"><label>Fuente</label><input type="range" id="p_winner_font_size"
-                                    min="12" max="32" value="20" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_winner_font_size_v">20</span></div>
-                            <div class="slider-row"><label>Color</label><input type="color" id="p_winner_color"
-                                    value="#0069e1" oninput="pSlider(this)" /></div>
-
-                            <!-- Prob -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_prob" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 📊 PORCENTAJE
-                            </p>
-                            <div class="slider-row"><label>Offset Y</label><input type="range" id="p_prob_offset_y"
-                                    min="60" max="150" value="100" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_prob_offset_y_v">100</span></div>
-                            <div class="slider-row"><label>Fuente</label><input type="range" id="p_prob_font_size"
-                                    min="24" max="72" value="52" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_prob_font_size_v">52</span></div>
-                            <div class="slider-row"><label>Color</label><input type="color" id="p_prob_color"
-                                    value="#1e1e1e" oninput="pSlider(this)" /></div>
-
-                            <!-- Footer -->
-                            <p
-                                style="font-size:11px;color:var(--accent);margin:16px 0 8px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px">
-                                <input type="checkbox" id="p_show_footer" checked onchange="pSlider(this)"
-                                    style="accent-color:var(--accent)" /> 📝 FOOTER
-                            </p>
-                            <div class="slider-row"><label>Posición Y</label><input type="range" id="p_footer_y"
-                                    min="610" max="665" value="642" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_footer_y_v">642</span></div>
-                            <div class="slider-row"><label>Fuente</label><input type="range" id="p_footer_font_size"
-                                    min="8" max="16" value="10" oninput="pSlider(this)" /><span class="slider-val"
-                                    id="p_footer_font_size_v">10</span></div>
-                            <div class="slider-row"><label>Color</label><input type="color" id="p_footer_color"
-                                    value="#b9b4aa" oninput="pSlider(this)" /></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="actions-bar">
-                    <button class="btn-save" onclick="savePromoConfig()">💾 Guardar configuración</button>
-                    <button class="btn-outline" onclick="resetPromoDefaults()">↩️ Restaurar defaults</button>
-                </div>
+                <div id="refreshMsg" style="margin-top:10px;font-size:11px;color:var(--text2);"></div>
             </div>
         </div>
+
+        <!-- ── BRANDING ── -->
+        <div class="sec" id="sec-branding">
+            <div class="sec-header"><h1>Branding</h1><p>Identidad visual del sitio.</p></div>
+            <div class="card">
+                <h3>Identidad del Sitio</h3>
+                <p class="desc">Configura el nombre y logo de tu sitio web.</p>
+                <div class="form-row">
+                    <div class="fg"><label>Nombre</label><input type="text" id="brandTitle" placeholder="La Fija"></div>
+                    <div class="fg"><label>Emoji</label><input type="text" id="brandEmoji" placeholder="🏀" maxlength="4"><p class="hint">Dejar vacío para no mostrar emoji.</p></div>
+                </div>
+                <div class="form-row single">
+                    <div class="fg"><label>Subtítulo</label><textarea id="brandSubtitle" placeholder="Predicciones deportivas con IA"></textarea></div>
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+            </div>
+        </div>
+
+        <!-- ── THEME ── -->
+        <div class="sec" id="sec-theme">
+            <div class="sec-header"><h1>Tema y Colores</h1><p>Personaliza los colores del sitio.</p></div>
+            <div class="card">
+                <h3>Modo Oscuro</h3>
+                <p class="desc">Colores que se usan cuando el sitio está en modo oscuro.</p>
+                <div class="form-row" id="darkColors"></div>
+            </div>
+            <div class="card">
+                <h3>Modo Claro</h3>
+                <p class="desc">Colores que se usan cuando el sitio está en modo claro.</p>
+                <div class="form-row" id="lightColors"></div>
+            </div>
+            <div class="bar">
+                <button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button>
+                <button class="btn btn-o" onclick="resetTheme()">↩️ Restaurar defaults</button>
+            </div>
+        </div>
+
+        <!-- ── FEATURES ── -->
+        <div class="sec" id="sec-features">
+            <div class="sec-header"><h1>Funciones</h1><p>Activa o desactiva módulos del sitio.</p></div>
+            <div class="card">
+                <div class="toggle-row">
+                    <div class="toggle-info"><h4>⚽ Sección de Fútbol</h4><p>Predicciones de fútbol en el header.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="featFootball"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info"><h4>📥 Descargar Promo</h4><p>Botón de descarga de imagen en cada tarjeta.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="featPromo"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info"><h4>🌙 Modo Oscuro por Defecto</h4><p>Los visitantes nuevos ven el sitio en dark.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="featDark"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info"><h4>🤖 Análisis de IA</h4><p>Texto de análisis en detalles de cada partido.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="featAI"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+            </div>
+        </div>
+
+        <!-- ── ANNOUNCEMENT ── -->
+        <div class="sec" id="sec-announcement">
+            <div class="sec-header"><h1>Anuncio</h1><p>Configura un banner informativo en la parte superior del sitio.</p></div>
+            <div class="card">
+                <div class="toggle-row" style="margin-bottom:14px;">
+                    <div class="toggle-info"><h4>Activar Banner</h4><p>Muestra el mensaje en la parte superior del sitio.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="annEnabled"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="form-row">
+                    <div class="fg"><label>Texto del Anuncio</label><input type="text" id="annText" placeholder="🔥 ¡Nuevo modelo de IA disponible!"></div>
+                    <div class="fg">
+                        <label>Color del Banner</label>
+                        <div class="color-wrap">
+                            <input type="color" id="annColorPick" value="#0a84ff">
+                            <input type="text" id="annColorHex" placeholder="#0a84ff">
+                        </div>
+                    </div>
+                </div>
+                <div id="annPreview" style="margin-top:10px;padding:12px;border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:#fff;">
+                    Vista previa del anuncio
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+            </div>
+        </div>
+
+        <!-- ── ADS ── -->
+        <div class="sec" id="sec-ads">
+            <div class="sec-header"><h1>Publicidad</h1><p>Configuración de banners de Adsterra.</p></div>
+            <div class="card">
+                <div class="toggle-row" style="margin-bottom:14px;">
+                    <div class="toggle-info"><h4>Activar Publicidad</h4><p>Muestra los banners de Adsterra en los laterales.</p></div>
+                    <label class="toggle-sw"><input type="checkbox" id="adsEnabled"><span class="toggle-sl"></span></label>
+                </div>
+                <div class="form-row">
+                    <div class="fg"><label>Clave Banner Izquierdo</label><input type="text" id="adsLeft" placeholder="e2cbd291…"></div>
+                    <div class="fg"><label>Clave Banner Derecho</label><input type="text" id="adsRight" placeholder="e2cbd291…"></div>
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+            </div>
+        </div>
+
+        <!-- ── BETTING CONFIG ── -->
+        <div class="sec" id="sec-betting">
+            <div class="sec-header"><h1>Apuestas</h1><p>Configura moneda, formato de cuotas y monto por defecto para la calculadora.</p></div>
+            <div class="card">
+                <h3>Configuración de Moneda y Cuotas</h3>
+                <p class="desc">Estos valores se usan en la sección de recomendaciones y calculadora de combinadas del sitio público.</p>
+                <div class="form-row">
+                    <div class="fg">
+                        <label>Moneda</label>
+                        <select id="betCurrency" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
+                            <option value="COP">COP - Peso Colombiano</option>
+                            <option value="USD">USD - Dolar Estadounidense</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="MXN">MXN - Peso Mexicano</option>
+                            <option value="ARS">ARS - Peso Argentino</option>
+                            <option value="BRL">BRL - Real Brasileño</option>
+                        </select>
+                    </div>
+                    <div class="fg">
+                        <label>Simbolo de Moneda</label>
+                        <input type="text" id="betCurrencySymbol" placeholder="$" maxlength="4">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="fg">
+                        <label>Formato de Cuotas</label>
+                        <select id="betOddsFormat" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
+                            <option value="decimal">Decimal (1.85, 2.10)</option>
+                            <option value="american">Americano (+150, -200)</option>
+                        </select>
+                        <p class="hint">Decimal es el formato más común en Latinoamérica.</p>
+                    </div>
+                    <div class="fg">
+                        <label>Monto por Defecto</label>
+                        <input type="text" id="betDefaultStake" placeholder="50000">
+                        <p class="hint">Monto pre-cargado en la calculadora de combinadas.</p>
+                    </div>
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+            </div>
+            <div class="card">
+                <h3>API de Inteligencia Artificial</h3>
+                <p class="desc">Clave de la API de Groq para el agente de noticias y analisis de apuestas. Se obtiene en <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>.</p>
+                <div class="form-row single">
+                    <div class="fg">
+                        <label>Groq API Key</label>
+                        <input type="password" id="betGroqKey" placeholder="gsk_...">
+                        <p class="hint">Se guarda de forma segura. Dejar vacio para usar la clave por defecto del servidor.</p>
+                    </div>
+                </div>
+                <div class="bar"><button class="btn btn-p" onclick="saveGroqKey()">💾 Guardar API Key</button></div>
+            </div>
+        </div>
+
+        <!-- ── PROMO EDITOR ── -->
+        <div class="sec" id="sec-promo">
+            <div class="sec-header"><h1>Editor de Promos</h1><p>Ajusta el layout de las imágenes promocionales.</p></div>
+            <div class="card" style="padding:14px;">
+                <iframe class="promo-frame" id="promoFrame" src="" loading="lazy"></iframe>
+            </div>
+        </div>
+
+        <!-- ── SECURITY ── -->
+        <div class="sec" id="sec-security">
+            <div class="sec-header"><h1>Seguridad</h1><p>Gestiona tu contraseña y sesión.</p></div>
+            <div class="card">
+                <h3>Cambiar Contraseña</h3>
+                <p class="desc">Actualiza la contraseña del panel de administración.</p>
+                <div class="form-row">
+                    <div class="fg"><label>Contraseña Actual</label><input type="password" id="secCurrent" placeholder="••••••"></div>
+                    <div class="fg"><label>Nueva Contraseña</label><input type="password" id="secNew" placeholder="Mínimo 6 caracteres"></div>
+                </div>
+                <div class="bar" style="border-top:none;padding-top:4px;">
+                    <button class="btn btn-p" id="btnChangePwd">🔐 Cambiar contraseña</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Información de Sesión</h3>
+                <p class="desc">Detalles técnicos de tu sesión.</p>
+                <div style="font-size:12px;color:var(--text2);line-height:2;">
+                    <div>🟢 <strong>Estado:</strong> Sesión activa</div>
+                    <div>⏱️ <strong>Expiración:</strong> 1 hora desde el login</div>
+                    <div>🛡️ <strong>Protección:</strong> bcrypt + JWT (HS256)</div>
+                    <div>🚫 <strong>Rate limit:</strong> 5 intentos / 15 min</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Cerrar Sesión</h3>
+                <p class="desc">Borra el token de este navegador.</p>
+                <button class="btn btn-d" id="btnLogout2">🚪 Cerrar sesión</button>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <div class="toast-container" id="toastContainer"></div>
+<div class="toast-box" id="toastBox"></div>
 
-    <script src="/static/js/admin.js?v=20260304"></script>
+<script src="/static/js/admin.js?v=20260304b"></script>
 </body>
-
 </html>

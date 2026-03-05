@@ -8,7 +8,7 @@ This replaces the broken random-based predictions in main.py.
 import gc
 import re
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -450,7 +450,11 @@ def predict_games(games: list, default_game_date: Optional[date] = None) -> list
             results.append({"error": "Missing team names"})
             continue
         
-        prediction = predict_game(home, away, ou_line if ou_line else 220.0, game_date)
+        prediction = predict_game(
+            home, away, ou_line if ou_line else 220.0, game_date,
+            home_odds=game.get("home_odds"),
+            away_odds=game.get("away_odds"),
+        )
         results.append(prediction)
     
     

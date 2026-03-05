@@ -27,6 +27,9 @@ import uvicorn
 # Modules that only contain DB read logic
 import history_db
 
+import admin_auth
+import site_settings
+
 # Servicio que actualiza marcadores de partidos pasados (PENDING -> WIN/LOSS)
 _last_history_update_run: Optional[datetime] = None
 _HISTORY_UPDATE_COOLDOWN_MINUTES = 10
@@ -57,8 +60,8 @@ class MatchPrediction(BaseModel):
     ai_analysis: Optional[str] = None
     is_mock: bool = False
     
-    odds_home: Optional[int] = None
-    odds_away: Optional[int] = None
+    odds_home: Optional[float] = None
+    odds_away: Optional[float] = None
     implied_prob: Optional[float] = None
     ev_score: Optional[float] = None
     kelly_stake: Optional[float] = None
@@ -109,7 +112,7 @@ app.add_middleware(
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
@@ -142,24 +145,27 @@ async def serve_frontend():
 
 @app.get("/admin")
 async def serve_admin():
-    """Sirve el panel de administración."""
+    """Sirve la pantalla de login de administración."""
     return FileResponse('static/admin.html')
+
+
+@app.get("/promo-editor")
+async def serve_promo_editor():
+    """Editor visual de promos (requiere haber hecho login en /admin)."""
+    return FileResponse('static/promo_editor.html')
 
 
 @app.get("/api/settings")
 async def get_public_settings():
     """Configuración pública (tema, branding, anuncios) para el frontend."""
-    try:
-        from admin_config import get_public_config
-        return get_public_config()
-    except Exception as e:
-        print(f"[main] Error cargando config pública: {e}")
-        return {"theme": {}, "branding": {}, "features": {}, "announcement": {}, "ads": {"enabled": False}}
+    return site_settings.get_public_settings()
 
 
 # -------------------------------------------
-# Admin API (autenticación JWT)
+# Admin API (login + cuenta inicial)
 # -------------------------------------------
+
+
 def _admin_token(request: Request) -> Optional[str]:
     auth = request.headers.get("Authorization")
     if auth and auth.startswith("Bearer "):
@@ -169,200 +175,131 @@ def _admin_token(request: Request) -> Optional[str]:
 
 def require_admin(request: Request):
     """Valida JWT de administrador desde Authorization: Bearer <token>."""
-    from admin_config import verify_token
     token = _admin_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="No autenticado")
-    if not verify_token(token):
+    if not token or not admin_auth.verify_token(token):
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+
+@app.get("/api/admin/status")
+async def admin_status():
+    """
+    Devuelve el estado básico del módulo de administración:
+    - has_admin: si ya existe una cuenta admin
+    - token_ttl_hours: duración de los JWT
+    """
+    return {
+        "has_admin": admin_auth.has_admin(),
+        "token_ttl_hours": admin_auth.TOKEN_EXPIRY_HOURS,
+    }
+
+
+@app.post("/api/admin/create-initial")
+async def admin_create_initial(request: Request):
+    """
+    Crea la cuenta inicial de administrador.
+    Solo se permite si todavía no existe un admin.
+    Body: { "password": "..." }
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    password = (body.get("password") or "").strip()
+    if not password:
+        raise HTTPException(status_code=400, detail="Falta contraseña")
+
+    if admin_auth.has_admin():
+        raise HTTPException(status_code=400, detail="Ya existe una cuenta de administrador")
+
+    try:
+        admin_auth.create_initial_admin(password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"status": "ok", "message": "Cuenta de administrador creada correctamente"}
 
 
 @app.post("/api/admin/login")
 async def admin_login(request: Request):
-    """Login admin con contraseña; devuelve JWT."""
-    from admin_config import load_config, verify_password, create_token, check_rate_limit, record_attempt
+    """
+    Login admin con contraseña; devuelve un JWT.
+    Body: { "password": "..." }
+    """
     try:
         body = await request.json()
     except Exception:
         body = {}
-    if not body or "password" not in body:
+
+    password = (body.get("password") or "").strip()
+    if not password:
         raise HTTPException(status_code=400, detail="Falta contraseña")
+
     ip = request.client.host if request.client else "unknown"
-    if not check_rate_limit(ip):
+    if not admin_auth.check_rate_limit(ip):
         raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 15 minutos.")
-    config = load_config()
-    pwd_hash = config.get("password_hash") or ""
-    if not pwd_hash:
-        raise HTTPException(status_code=428, detail="No hay contraseña configurada. Debes crear la contraseña inicial.")
-    if not verify_password(body["password"], pwd_hash):
-        record_attempt(ip)
-        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-    token = create_token()
+
+    try:
+        token = admin_auth.login_with_password(password)
+    except ValueError as e:
+        admin_auth.record_attempt(ip)
+        raise HTTPException(status_code=401, detail=str(e))
+
     return {"token": token}
+
+
+@app.post("/api/admin/change-password")
+async def admin_change_password(request: Request, _: None = Depends(require_admin)):
+    """Cambia la contraseña del admin validando la actual."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    current = (body.get("current_password") or "").strip()
+    new_pwd = (body.get("new_password") or "").strip()
+
+    if not current or not new_pwd:
+        raise HTTPException(status_code=400, detail="Faltan campos obligatorios")
+
+    try:
+        admin_auth.change_password(current, new_pwd)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"status": "ok", "message": "Contraseña actualizada correctamente"}
 
 
 @app.get("/api/admin/settings")
 async def admin_get_settings(_: None = Depends(require_admin)):
-    """Obtiene la configuración completa (sin contraseña por ahora)."""
-    from admin_config import load_config
-    config = load_config()
-    out = {k: v for k, v in config.items() if k not in ("password_hash", "jwt_secret")}
-    return out
+    """
+    Obtiene la configuración completa del sitio para el panel de administración.
+    No incluye ninguna credencial sensible.
+    """
+    return site_settings.load_settings()
 
 
 @app.post("/api/admin/settings")
 async def admin_save_settings(request: Request, _: None = Depends(require_admin)):
-    """Guarda la configuración (sin contraseña por ahora)."""
-    from admin_config import load_config, save_config
+    """
+    Guarda la configuración del sitio.
+    Solo se actualizan las claves de alto nivel conocidas.
+    """
     try:
         body = await request.json()
     except Exception:
         body = None
-    if not body:
-        raise HTTPException(status_code=400, detail="Body vacío")
-    config = load_config()
-    for key in ("theme", "branding", "features", "announcement", "ads"):
+
+    if not isinstance(body, dict) or not body:
+        raise HTTPException(status_code=400, detail="Body vacío o inválido")
+
+    cfg = site_settings.load_settings()
+    for key in ("theme", "branding", "features", "announcement", "ads", "betting"):
         if key in body:
-            config[key] = body[key]
-    save_config(config)
+            cfg[key] = body[key]
+
+    site_settings.save_settings(cfg)
     return {"status": "ok"}
-
-
-@app.post("/api/admin/password")
-async def admin_change_password(request: Request):
-    """Cambia la contraseña del admin validando la contraseña actual."""
-    from admin_config import load_config, save_config, verify_password, hash_password
-    token = _admin_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="No autenticado")
-    from admin_config import verify_token
-    if not verify_token(token):
-        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
-
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    current_password = (body.get("current_password") or "").strip()
-    new_password = (body.get("new_password") or "").strip()
-
-    if len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
-
-    config = load_config()
-    pwd_hash = (config.get("password_hash") or "").strip()
-    if not pwd_hash:
-        raise HTTPException(status_code=400, detail="No hay contraseña configurada. Crea una contraseña inicial.")
-    if not verify_password(current_password, pwd_hash):
-        raise HTTPException(status_code=401, detail="La contraseña actual no es correcta")
-    if verify_password(new_password, pwd_hash):
-        raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual")
-
-    config["password_hash"] = hash_password(new_password)
-    save_config(config)
-    return {"status": "ok", "message": "Contraseña actualizada correctamente"}
-
-
-@app.get("/api/admin/needs-initial-password")
-async def admin_needs_initial_password():
-    """True si aún no hay contraseña configurada (primera vez)."""
-    from admin_config import load_config
-    config = load_config()
-    has_hash = (config.get("password_hash") or "").strip()
-    return {"needs_initial_password": not has_hash}
-
-
-@app.post("/api/admin/set-initial-password")
-async def admin_set_initial_password(request: Request):
-    """Establece la contraseña la primera vez (solo si aún no hay una)."""
-    from admin_config import load_config, save_config, hash_password
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    password = (body.get("password") or "").strip()
-    if len(password) < 6:
-        raise HTTPException(status_code=400, detail="Mínimo 6 caracteres")
-    config = load_config()
-    if (config.get("password_hash") or "").strip():
-        raise HTTPException(status_code=400, detail="Ya hay una contraseña configurada. Usa «Olvidé contraseña» o inicia sesión.")
-    config["password_hash"] = hash_password(password)
-    save_config(config)
-    return {"message": "Contraseña creada. Ya puedes iniciar sesión."}
-
-
-@app.get("/api/admin/email-recovery-status")
-async def admin_email_recovery_status():
-    """Indica si el envío por Resend está configurado (sin revelar secretos). Útil para diagnosticar."""
-    resend_configured = bool((os.environ.get("RESEND_API_KEY") or "").strip())
-    recovery_configured = bool((os.environ.get("ADMIN_RECOVERY_EMAIL") or "").strip())
-    return {
-        "resend_configured": resend_configured,
-        "recovery_email_configured": recovery_configured,
-        "hint": "Configura RESEND_API_KEY y ADMIN_RECOVERY_EMAIL en Render → Environment." if not resend_configured else None,
-    }
-
-
-@app.post("/api/admin/forgot-password")
-async def admin_forgot_password(request: Request):
-    """Solicita recuperación: envía un token por correo al email configurado."""
-    from admin_config import (
-        ADMIN_RECOVERY_EMAIL,
-        create_password_reset_token,
-        send_reset_email,
-    )
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    email = (body.get("email") or "").strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="Indica tu correo (el del administrador)")
-    if not ADMIN_RECOVERY_EMAIL:
-        raise HTTPException(
-            status_code=503,
-            detail="El servidor no tiene configurado ADMIN_RECOVERY_EMAIL. Contacta al administrador del servidor.",
-        )
-    try:
-        token = create_password_reset_token(email)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        print(f"[admin] Error creando token: {e}")
-        raise HTTPException(status_code=503, detail=str(e))
-    base_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("SITE_URL") or str(request.base_url).rstrip("/")
-    try:
-        await asyncio.to_thread(send_reset_email, email, token, base_url)
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except Exception as e:
-        print(f"[admin] Error enviando email de recuperación: {e}")
-        raise HTTPException(status_code=503, detail=str(e))
-    return {"message": "Si el correo es el del administrador, recibirás un enlace para restablecer la contraseña en unos minutos."}
-
-
-@app.post("/api/admin/reset-password")
-async def admin_reset_password(request: Request):
-    """Restablece la contraseña usando el token recibido por correo."""
-    from admin_config import get_and_consume_reset_token, load_config, save_config, hash_password
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    token = (body.get("token") or "").strip()
-    new_password = (body.get("new_password") or "").strip()
-    if not token:
-        raise HTTPException(status_code=400, detail="Falta el token")
-    if len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
-    try:
-        get_and_consume_reset_token(token)  # valida y consume el token
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    config = load_config()
-    config["password_hash"] = hash_password(new_password)
-    save_config(config)
-    return {"message": "Contraseña actualizada. Ya puedes iniciar sesión."}
 
 
 @app.get("/api/health")
@@ -633,6 +570,88 @@ async def get_football_history_endpoint(days: int = 30):
         tb = traceback.format_exc()
         logger.error(f"history/football FAILED:\n{tb}")
         return {"status": "error", "detail": str(e), "traceback": tb, "history": []}
+
+
+# -------------------------------------------
+# Groq API Key management
+# -------------------------------------------
+
+@app.post("/api/admin/groq-key")
+async def save_groq_key(request: Request, _: None = Depends(require_admin)):
+    """Saves the Groq API key as an environment variable (runtime only)."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Body inválido")
+    key = (body.get("key") or "").strip()
+    if not key or not key.startswith("gsk_"):
+        raise HTTPException(status_code=400, detail="API key inválida (debe empezar con gsk_)")
+    os.environ["GROQ_API_KEY"] = key
+    return {"status": "ok", "message": "API Key actualizada para esta sesión del servidor."}
+
+
+# -------------------------------------------
+# News API (Groq agent cache)
+# -------------------------------------------
+
+@app.get("/api/news/today")
+async def get_today_news():
+    """Returns all cached news for today's NBA matches."""
+    date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
+    return {"date": date_str, "news": history_db.get_news_for_date(date_str)}
+
+
+@app.get("/api/news/{match_id:path}")
+async def get_match_news(match_id: str):
+    """Returns cached news for a specific match."""
+    data = history_db.get_match_news(match_id)
+    if not data:
+        return {"found": False, "news": None}
+    return {"found": True, "news": data}
+
+
+# -------------------------------------------
+# Recommendations API
+# -------------------------------------------
+
+@app.get("/api/recommendations/today")
+async def get_recommendations_today():
+    """Returns today's betting recommendations (generates on first call)."""
+    date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
+    try:
+        from recommendations import generate_recommendations
+        data = await generate_recommendations(date_str)
+        return {"date": date_str, "status": "ok", **data}
+    except Exception as e:
+        print(f"[main] recommendations error: {e}")
+        return {"date": date_str, "status": "error", "recommendations": [], "parlay_odds": 0}
+
+
+@app.get("/api/recommendations/history")
+async def get_recommendations_history():
+    """Returns past parlay recommendations with win/loss results."""
+    return {"history": history_db.get_recommendations_history(14)}
+
+
+@app.post("/api/recommendations/calculate")
+async def calculate_parlay_endpoint(request: Request):
+    """Calculate potential profit for a parlay bet.
+    Body: { "amount": 50000, "odds": [1.85, 2.10, 1.65] }
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Body inválido")
+
+    amount = float(body.get("amount", 0))
+    odds_list = body.get("odds", [])
+
+    if amount <= 0 or not odds_list:
+        raise HTTPException(status_code=400, detail="Monto y cuotas requeridos")
+
+    from recommendations import calculate_parlay as calc
+    result = calc([float(o) for o in odds_list], amount)
+    return result
 
 
 # ===========================================
