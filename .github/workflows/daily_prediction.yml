@@ -1,55 +1,103 @@
-name: Daily NBA & Football Predictions
+name: Daily NBA Predictions
 
 on:
-    schedule:
-        # Corre a las 08:00 UTC (3:00 AM Colombia/EST)
-        - cron: "0 8 * * *"
-    workflow_dispatch:
-        # Permite ejecutarlo manualmente desde GitHub
+  schedule:
+    - cron: "0 8 * * *"      # 08:00 UTC = 03:00 AM Colombia
+    - cron: "0 15 * * *"     # 15:00 UTC = 10:00 AM Colombia (backup)
+  workflow_dispatch:
+
+concurrency:
+  group: predictions-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-    generate-predictions:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
+  generate-predictions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
 
-        steps:
-            - name: Checkout Repository
-              uses: actions/checkout@v3
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  # Evita error fatal del submódulo 'promier_league_api_ref' sin URL en .gitmodules
-                  submodules: false
-                  lfs: true
+    steps:
+      - name: Checkout (latest main)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: false
+          lfs: true
+          fetch-depth: 0
+          ref: main
 
-            - name: Set up Python 3.11
-              uses: actions/setup-python@v4
-              with:
-                  python-version: "3.11"
-                  cache: "pip"
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-            - name: Install dependencies
-              run: |
-                  python -m pip install --upgrade pip
-                  pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-            - name: Delete invalid XGBoost Cache files (if any)
-              run: |
-                  # Limpia archivos temporales que impiden que Dmatrix corra limpio
-                  rm -rf *.model || true
+      - name: Clean stale cache files
+        run: rm -rf *.model __pycache__ || true
 
-            - name: Run Predictions Engine (generate_daily_job.py)
-              env:
-                  GROQ_API_KEY: "${{ secrets.GROQ_API_KEY }}"
-                  ODDS_API_KEY: "${{ secrets.ODDS_API_KEY }}"
-              run: |
-                  python generate_daily_job.py
+      - name: Run Predictions Engine
+        id: predictions
+        env:
+          GROQ_API_KEY: "${{ secrets.GROQ_API_KEY }}"
+          ODDS_API_KEY: "${{ secrets.ODDS_API_KEY }}"
+        run: |
+          python generate_daily_job.py 2>&1 | tee job_output.log
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
-            - name: Commit and Push Updated History DB
-              run: |
-                  git config --global user.name "CourtsideAI-Bot"
-                  git config --global user.email "bot@courtside.ai"
-                  git add Data/history.db
-                  git diff-index --quiet HEAD || git commit -m "🤖 [Bot] Auto-update predictions history (CRON)"
-                  git pull --rebase origin main
-                  git push
+      - name: Check predictions result
+        run: |
+          EXIT_CODE="${{ steps.predictions.outputs.exit_code }}"
+          if [ "$EXIT_CODE" != "0" ] && [ -n "$EXIT_CODE" ]; then
+            echo "::warning::Predictions engine exited with code $EXIT_CODE"
+          fi
+          if [ ! -f Data/history.db ]; then
+            echo "::error::history.db not found after predictions"
+            exit 1
+          fi
+          echo "Predictions completed. DB size: $(du -h Data/history.db | cut -f1)"
+
+      - name: Push DB update
+        run: |
+          git config user.name "CourtsideAI-Bot"
+          git config user.email "bot@courtside.ai"
+
+          git add Data/history.db
+
+          if git diff-index --quiet HEAD; then
+            echo "No changes to history.db, nothing to push."
+            exit 0
+          fi
+
+          git commit -m "🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
+
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+
+            git fetch origin main
+            git rebase origin/main --strategy-option=theirs || {
+              echo "Rebase conflict on binary — accepting ours"
+              git checkout --theirs Data/history.db
+              git add Data/history.db
+              git rebase --continue || git rebase --abort
+              git add Data/history.db
+              git diff-index --quiet HEAD || git commit -m "🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
+            }
+
+            if git push origin main; then
+              echo "Push succeeded on attempt $i"
+              exit 0
+            fi
+
+            echo "Push failed, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "::warning::All push attempts failed. DB update not persisted."
+          exit 0
