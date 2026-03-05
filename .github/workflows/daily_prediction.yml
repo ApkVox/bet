@@ -50,6 +50,6 @@ jobs:
                   git config --global user.name "CourtsideAI-Bot"
                   git config --global user.email "bot@courtside.ai"
                   git add Data/history.db
-                  # Solo hace commit si hubo cambios reales en history.db
                   git diff-index --quiet HEAD || git commit -m "🤖 [Bot] Auto-update predictions history (CRON)"
+                  git pull --rebase origin main
                   git push
