@@ -3,8 +3,10 @@
 import os
 import sys
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
+
+TZ_COLOMBIA = timezone(timedelta(hours=-5))
 
 # Forzamos entorno para los imports relativos locales
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -17,7 +19,7 @@ import sbrscrape
 
 # Logging helper
 def log(msg: str):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] [JOB] {msg}")
 
 # ==========================================
@@ -81,7 +83,7 @@ async def generate_nba_predictions():
             log("No hay juegos NBA programados para hoy.")
             return
 
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
         existing = get_predictions_by_date(today_str)
         if existing and len(existing) >= len(games):
             log(f"Predicciones NBA para hoy ({len(existing)}) ya existen en BD. Actualizando cuotas si faltan...")
@@ -234,7 +236,7 @@ async def update_past_results():
 # ==========================================
 async def run_news_and_recommendations():
     """Fetch Groq news for today's NBA matches and generate recommendations."""
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
     try:
         preds = history_db.get_predictions_by_date_light(today_str)
         if not preds:
