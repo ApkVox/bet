@@ -2,23 +2,26 @@ name: Daily NBA Predictions
 
 on:
   schedule:
-    - cron: "0 8 * * *"      # 08:00 UTC = 03:00 AM Colombia
-    - cron: "0 15 * * *"     # 15:00 UTC = 10:00 AM Colombia (backup)
+    - cron: "0 8 * * *"     # 08:00 UTC = 03:00 AM Colombia
+    - cron: "0 15 * * *"    # 15:00 UTC = 10:00 AM Colombia (backup)
   workflow_dispatch:
 
 concurrency:
-  group: predictions-${{ github.ref }}
+  group: predictions-job
   cancel-in-progress: false
 
 jobs:
   generate-predictions:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: write
 
     steps:
-      - name: Checkout (latest main)
+      # ─────────────────────────────────────────────
+      # 1. Checkout siempre con el estado más reciente
+      # ─────────────────────────────────────────────
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -27,6 +30,9 @@ jobs:
           fetch-depth: 0
           ref: main
 
+      # ─────────────────────────────────────────────
+      # 2. Python + dependencias
+      # ─────────────────────────────────────────────
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -38,66 +44,85 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Clean stale cache files
-        run: rm -rf *.model __pycache__ || true
+      # ─────────────────────────────────────────────
+      # 3. Limpiar archivos temporales
+      # ─────────────────────────────────────────────
+      - name: Clean stale files
+        run: |
+          rm -rf *.model __pycache__ || true
 
+      # ─────────────────────────────────────────────
+      # 4. Ejecutar el motor de predicciones
+      # ─────────────────────────────────────────────
       - name: Run Predictions Engine
-        id: predictions
         env:
           GROQ_API_KEY: "${{ secrets.GROQ_API_KEY }}"
           ODDS_API_KEY: "${{ secrets.ODDS_API_KEY }}"
         run: |
-          python generate_daily_job.py 2>&1 | tee job_output.log
-          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          python generate_daily_job.py
+          echo "ENGINE_STATUS=$?" >> "$GITHUB_ENV"
 
-      - name: Check predictions result
+      # ─────────────────────────────────────────────
+      # 5. Verificar que la BD existe
+      # ─────────────────────────────────────────────
+      - name: Verify DB
         run: |
-          EXIT_CODE="${{ steps.predictions.outputs.exit_code }}"
-          if [ "$EXIT_CODE" != "0" ] && [ -n "$EXIT_CODE" ]; then
-            echo "::warning::Predictions engine exited with code $EXIT_CODE"
-          fi
           if [ ! -f Data/history.db ]; then
-            echo "::error::history.db not found after predictions"
+            echo "::error::history.db no encontrado tras predicciones"
             exit 1
           fi
-          echo "Predictions completed. DB size: $(du -h Data/history.db | cut -f1)"
+          echo "DB OK — tamaño: $(du -h Data/history.db | cut -f1)"
 
-      - name: Push DB update
+      # ─────────────────────────────────────────────
+      # 6. Commit + Push robusto (sin rebase, usa merge)
+      #    Los archivos binarios LFS no soportan rebase;
+      #    usamos "merge -X ours" para aceptar siempre
+      #    nuestra versión de history.db en conflicto.
+      # ─────────────────────────────────────────────
+      - name: Commit and Push DB
         run: |
-          git config user.name "CourtsideAI-Bot"
+          git config user.name  "CourtsideAI-Bot"
           git config user.email "bot@courtside.ai"
 
+          # Solo trackeamos la BD, ignoramos logs u otros artefactos del job
           git add Data/history.db
 
           if git diff-index --quiet HEAD; then
-            echo "No changes to history.db, nothing to push."
+            echo "Sin cambios en history.db — nada que pushear."
             exit 0
           fi
 
-          git commit -m "🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
+          COMMIT_MSG="🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
+          git commit -m "$COMMIT_MSG"
 
-          MAX_RETRIES=3
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Push attempt $i/$MAX_RETRIES..."
-
-            git fetch origin main
-            git rebase origin/main --strategy-option=theirs || {
-              echo "Rebase conflict on binary — accepting ours"
-              git checkout --theirs Data/history.db
-              git add Data/history.db
-              git rebase --continue || git rebase --abort
-              git add Data/history.db
-              git diff-index --quiet HEAD || git commit -m "🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
-            }
+          for attempt in 1 2 3; do
+            echo "=== Intento de push $attempt/3 ==="
 
             if git push origin main; then
-              echo "Push succeeded on attempt $i"
+              echo "Push exitoso en el intento $attempt."
               exit 0
             fi
 
-            echo "Push failed, retrying in 5s..."
+            echo "Push rechazado — sincronizando con origin/main..."
+
+            # Traer los últimos cambios del remoto
+            git fetch origin main
+
+            # Merge: si hay conflicto en history.db (binario LFS),
+            # nos quedamos con NUESTRA versión (la recién generada).
+            git merge origin/main \
+              --no-edit \
+              --strategy=recursive \
+              --strategy-option=ours \
+              -m "🤖 [Bot] Merge remote before push (attempt $attempt)" \
+              || true
+
+            # Por si el merge no aplicó el commit automáticamente
+            git add Data/history.db
+            git diff-index --quiet HEAD || git commit -m "$COMMIT_MSG (retry $attempt)"
+
             sleep 5
           done
 
-          echo "::warning::All push attempts failed. DB update not persisted."
+          echo "::warning::Todos los intentos de push fallaron. Las predicciones se sirvieron via self-healing de Render."
           exit 0
