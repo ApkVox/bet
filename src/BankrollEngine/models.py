@@ -14,10 +14,10 @@ class BankrollState(BaseModel):
     id: int
     current_units: float
     initial_units: float
-    peak_units: float
-    max_drawdown: float
-    kelly_fraction: float
-    status: str
+    peak_units: float = 0.0       # default for legacy DBs without this column
+    max_drawdown: float = 0.0     # default for legacy DBs without this column
+    kelly_fraction: float = 0.25  # default Kelly fraction
+    status: str = "ACTIVE"
     last_updated: datetime
     
     model_config = ConfigDict(from_attributes=True)

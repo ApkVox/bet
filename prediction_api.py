@@ -344,28 +344,27 @@ def predict_game(
         winner = away_team
         win_prob = away_prob
     
-    # Shadow Bettor Integration (Audit Decisions)
-    shadow = get_shadow_bettor()
-    
-    # Home Bet Evaluation
+    # Shadow Bettor Integration (Audit Decisions — optional, never blocks predictions)
     home_decision = None
-    if home_odds:
-        home_decision = shadow.process_game(
-            game_id=f"{game_date}_{home_team}_HOME",
-            probability=home_prob_raw,
-            odds=home_odds,
-            game_date=datetime(game_date.year, game_date.month, game_date.day) # Convert to datetime
-        )
-
-    # Away Bet Evaluation
     away_decision = None
-    if away_odds:
-        away_decision = shadow.process_game(
-            game_id=f"{game_date}_{away_team}_AWAY",
-            probability=away_prob_raw,
-            odds=away_odds,
-            game_date=datetime(game_date.year, game_date.month, game_date.day)
-        )
+    try:
+        shadow = get_shadow_bettor()
+        if home_odds:
+            home_decision = shadow.process_game(
+                game_id=f"{game_date}_{home_team}_HOME",
+                probability=home_prob_raw,
+                odds=home_odds,
+                game_date=datetime(game_date.year, game_date.month, game_date.day),
+            )
+        if away_odds:
+            away_decision = shadow.process_game(
+                game_id=f"{game_date}_{away_team}_AWAY",
+                probability=away_prob_raw,
+                odds=away_odds,
+                game_date=datetime(game_date.year, game_date.month, game_date.day),
+            )
+    except Exception as shadow_err:
+        print(f"[shadow_bettor] Skipped (non-critical): {shadow_err}")
     
     # O/U Prediction — raw XGBoost softmax (no calibrator to save memory)
     features_with_ou = np.append(features, ou_line).reshape(1, -1)
