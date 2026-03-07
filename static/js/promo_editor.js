@@ -89,6 +89,28 @@ function getParams() {
     };
 }
 
+const DEFAULTS = {
+    logo_cy: 240, logo_left_cx: 88, logo_right_offset: 88, logo_max: 68,
+    names_y: 308, names_font_size: 11, names_max_w: 120, names_color: "#373737",
+    box_y0: 405, box_y1: 590, box_pad_x: 28, box_radius: 14, box_border_w: 2, box_border_color: "#beb9aa",
+    label_offset_y: 18, label_font_size: 11, label_color: "#9b968c",
+    winner_offset_y: 50, winner_font_size: 20, winner_color: "#0069e1",
+    prob_offset_y: 100, prob_font_size: 52, prob_color: "#1e1e1e",
+    footer_y: 642, footer_font_size: 10, footer_color: "#b9b4aa",
+    show_logos: true, show_names: true, show_box_border: true, show_label: true, show_winner: true, show_prob: true, show_footer: true,
+};
+
+function getMinimalParams() {
+    const p = getParams();
+    const out = { home_team: p.home_team, away_team: p.away_team, winner: p.winner, probability: p.probability };
+    for (const [k, v] of Object.entries(p)) {
+        if (k in out) continue;
+        const def = DEFAULTS[k];
+        if (def !== undefined && String(v) !== String(def)) out[k] = v;
+    }
+    return out;
+}
+
 let _previewAbort = null;
 let _previewDebounce = null;
 
@@ -101,24 +123,39 @@ async function updatePreview() {
 async function _doPreview(params) {
     if (_previewAbort) _previewAbort.abort();
     _previewAbort = new AbortController();
-    const body = { ...params };
-    try {
-        const res = await fetch("/api/promo-editor-preview", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-            body: JSON.stringify(body),
-            signal: _previewAbort.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
+    const minimal = getMinimalParams();
+    const body = JSON.stringify(minimal);
+    const setImg = (blob) => {
         const url = URL.createObjectURL(blob);
         const img = $("preview-img");
         if (img._prevUrl) URL.revokeObjectURL(img._prevUrl);
         img._prevUrl = url;
         img.src = url;
+    };
+    try {
+        const res = await fetch("/api/promo-editor-preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+            body,
+            signal: _previewAbort.signal,
+        });
+        if (res.ok) {
+            setImg(await res.blob());
+            return;
+        }
+        if (res.status === 413 || res.status === 414) {
+            const qs = new URLSearchParams(params).toString();
+            const getRes = await fetch(`/api/promo-editor-preview?${qs}&_t=${Date.now()}`, { signal: _previewAbort.signal });
+            if (getRes.ok) {
+                setImg(await getRes.blob());
+                return;
+            }
+        }
+        throw new Error(`HTTP ${res.status}`);
     } catch (e) {
         if (e.name === "AbortError") return;
         console.warn("Preview error:", e);
+        $("statusMsg").textContent = "Error cargando preview. Intenta de nuevo.";
     }
 }
 
