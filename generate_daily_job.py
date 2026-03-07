@@ -33,9 +33,33 @@ def log(msg: str):
 # ODDS UTILITIES
 # ==========================================
 def get_single_odd(odds_data):
-    if isinstance(odds_data, dict) and odds_data:
-        return float(odds_data.get('bet365', list(odds_data.values())[0]))
-    return float(odds_data) if odds_data else None
+    """Extrae un único valor numérico de odds_data, que puede ser un float,
+    int, string o un dict de bookmakers (formato sbrscrape >= 0.0.10)."""
+    if odds_data is None:
+        return None
+    if isinstance(odds_data, dict):
+        if not odds_data:
+            return None
+        # Preferir bet365, luego draftkings, luego el primer valor disponible
+        for bookie in ('bet365', 'draftkings', 'fanduel', 'betmgm', 'caesars', 'fanatics'):
+            val = odds_data.get(bookie)
+            if val is not None and not isinstance(val, dict):
+                try:
+                    return float(val)
+                except (TypeError, ValueError):
+                    continue
+        # Fallback: primer valor no-dict del dict
+        for val in odds_data.values():
+            if val is not None and not isinstance(val, dict):
+                try:
+                    return float(val)
+                except (TypeError, ValueError):
+                    continue
+        return None
+    try:
+        return float(odds_data)
+    except (TypeError, ValueError):
+        return None
 
 
 def american_to_decimal(american_odds):

@@ -17,7 +17,7 @@ pandas>=2.0.0
 
 # AI Integration (solo DeepSeek)
 openai>=1.0.0
-duckduckgo-search>=3.0.0
+ddgs>=8.0.0  # Antes: duckduckgo-search (renombrado en v8)
 
 # Config store (Supabase/PostgreSQL)
 psycopg2-binary>=2.9.0

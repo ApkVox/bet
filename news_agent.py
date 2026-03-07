@@ -17,22 +17,45 @@ SEARCH_RESULTS = 6
 MAX_CONTEXT_CHARS = 1200
 
 
+def _get_ddgs():
+    """Obtiene la clase DDGS compatible con las versiones v5-v8 del paquete.
+    El paquete fue renombrado de 'duckduckgo_search' a 'ddgs' en v8.
+    """
+    try:
+        # Nuevo nombre del paquete (ddgs >= 8.x)
+        from ddgs import DDGS
+        return DDGS
+    except ImportError:
+        pass
+    try:
+        # Nombre antiguo (duckduckgo_search < 8.x)
+        from duckduckgo_search import DDGS
+        return DDGS
+    except ImportError:
+        return None
+
+
 def _search_web(home_team: str, away_team: str) -> str:
     """Búsqueda web con DuckDuckGo. Contexto corto para evitar prompts grandes."""
+    DDGS = _get_ddgs()
+    if DDGS is None:
+        return "Sin resultados (duckduckgo_search / ddgs no instalado)."
+    year = time.strftime("%Y")
+    query = f"NBA {home_team} vs {away_team} news injuries {year}"
     try:
-        from duckduckgo_search import DDGS
-        query = f"NBA {home_team} vs {away_team} news injuries 2025"
         snippets = []
         with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=SEARCH_RESULTS):
-                title = r.get("title", "")
-                body = r.get("body", "")
-                s = f"{title}: {body[:120]}" if body else title
+            results = list(ddgs.text(query, max_results=SEARCH_RESULTS))
+        for r in results:
+            title = r.get("title", "")
+            body = r.get("body", "")
+            s = f"{title}: {body[:120]}" if body else title
+            if s.strip():
                 snippets.append(s)
         text = "\n".join(snippets[:6])
         return text[:MAX_CONTEXT_CHARS] if len(text) > MAX_CONTEXT_CHARS else text or "Sin resultados."
     except Exception as e:
-        return f"Error búsqueda: {e}"
+        return f"Sin resultados (error búsqueda: {type(e).__name__})"
 
 
 def _build_prompt(home_team: str, away_team: str, date_str: str, web_context: str) -> str:
