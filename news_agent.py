@@ -1,48 +1,66 @@
 """
-NBA News Research Agent using Groq compound model with web search.
+NBA News Research Agent - Groq (web search integrado) o DeepSeek (con duckduckgo).
 Fetches and caches relevant news for each NBA match of the day.
+Evita 413 (prompt largo) y 429 (rate limit) con prompt corto, fallback DeepSeek y round-robin.
 """
 import asyncio
 import json
 import os
+import re
 import time
 from datetime import datetime
 
-from groq import Groq
-from groq import APIConnectionError
+from groq import Groq, APIConnectionError
 from tenacity import retry, stop_after_attempt, retry_if_exception, wait_exponential
 
 import history_db
 
 GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
-MODEL = "groq/compound"
-THROTTLE_SECONDS = 2.5
+DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+# auto=round-robin si ambos; groq|deepseek=forzar uno
+NEWS_PROVIDER = (os.getenv("NEWS_PROVIDER") or "auto").strip().lower()
+GROQ_MODEL = "groq/compound"
+DEEPSEEK_MODEL = "deepseek-chat"
+THROTTLE_SECONDS = 6.0
+THROTTLE_AFTER_GROQ = 12.0
 MAX_RETRIES = 3
+DEEPSEEK_SEARCH_RESULTS = 8
 
 
-def _build_prompt(home_team: str, away_team: str, date_str: str) -> str:
-    return f"""Eres un analista experto de la NBA. Investiga las noticias más recientes y relevantes para el partido NBA **{home_team} vs {away_team}** programado para el **{date_str}**.
+def _search_web_duckduckgo(home_team: str, away_team: str) -> str:
+    """Busca noticias NBA con duckduckgo y devuelve contexto para el LLM."""
+    try:
+        from duckduckgo_search import DDGS
+        query = f"NBA {home_team} vs {away_team} news injuries 2025"
+        snippets = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=DEEPSEEK_SEARCH_RESULTS):
+                title = r.get("title", "")
+                body = r.get("body", "")
+                if title or body:
+                    snippets.append(f"- {title}: {body[:200]}" if body else f"- {title}")
+        return "\n".join(snippets[:6]) if snippets else "No se encontraron resultados de búsqueda."
+    except Exception as e:
+        return f"Error en búsqueda: {e}"
 
-Busca en la web información actualizada sobre:
-- Lesiones confirmadas o dudas de jugadores clave de ambos equipos
-- Rachas de victorias/derrotas recientes de ambos equipos
-- Noticias de último momento (trades, suspensiones, load management, descansos)
-- Condiciones especiales (back-to-back, viajes largos, rivalidades históricas)
-- Rendimiento reciente de jugadores estrella
 
-Responde EXCLUSIVAMENTE con un JSON válido (sin markdown, sin texto fuera del JSON) con esta estructura:
-{{
-  "headline": "título breve del contexto clave del partido",
-  "key_points": ["punto relevante 1", "punto relevante 2", "punto relevante 3"],
-  "injuries": [{{"player": "nombre", "team": "equipo", "status": "out/questionable/probable"}}],
-  "impact_assessment": "párrafo breve explicando cómo estas noticias afectan el pronóstico del partido",
-  "confidence_modifier": "higher|neutral|lower"
-}}
+def _build_prompt_groq(home_team: str, away_team: str, date_str: str) -> str:
+    """Prompt corto para evitar 413 (Request Entity Too Large)."""
+    return f"""Analista NBA. Busca noticias para {home_team} vs {away_team} ({date_str}): lesiones, rachas, load management.
+Responde SOLO JSON válido: {{"headline":"...","key_points":["...","...","..."],"injuries":[{{"player":"","team":"","status":"out/questionable/probable"}}],"impact_assessment":"...","confidence_modifier":"higher|neutral|lower"}}
+Español. Sin noticias: key_points ["Sin noticias relevantes"], injuries []."""
 
-Reglas:
-- Responde siempre en español.
-- Si no encuentras noticias relevantes, devuelve key_points con ["Sin noticias relevantes encontradas"] e injuries vacío.
-- El campo confidence_modifier indica si las noticias refuerzan (higher), no afectan (neutral) o debilitan (lower) la confianza en el favorito."""
+
+def _build_prompt_deepseek(home_team: str, away_team: str, date_str: str, web_context: str) -> str:
+    return f"""Eres un analista experto de la NBA. Con la información de búsqueda web siguiente, resume las noticias relevantes para el partido **{home_team} vs {away_team}** ({date_str}).
+
+CONTEXTO DE BÚSQUEDA WEB:
+{web_context}
+
+Responde EXCLUSIVAMENTE con un JSON válido (sin markdown, sin texto fuera del JSON):
+{{"headline":"título breve del contexto clave","key_points":["punto 1","punto 2","punto 3"],"injuries":[{{"player":"nombre","team":"equipo","status":"out/questionable/probable"}}],"impact_assessment":"párrafo breve sobre cómo afectan al pronóstico","confidence_modifier":"higher|neutral|lower"}}
+
+Reglas: Responde en español. Si no hay noticias relevantes: key_points ["Sin noticias relevantes encontradas"], injuries []. confidence_modifier: higher|neutral|lower según impacto en el favorito."""
 
 
 def _parse_response(content: str) -> dict:
@@ -65,44 +83,107 @@ def _parse_response(content: str) -> dict:
         }
 
 
-def _create_groq_client():
-    """Crea cliente Groq con header para versión latest del compound."""
-    return Groq(
-        api_key=GROQ_API_KEY,
-        default_headers={"Groq-Model-Version": "latest"},
-    )
-
-
 def _is_retryable_error(e: Exception) -> bool:
-    """Errores de conexión o red que merecen reintento."""
+    """Errores de conexión/red que merecen reintento. 429/413 se manejan en caller."""
     if isinstance(e, (APIConnectionError, ConnectionError, OSError)):
         return True
     msg = str(e).lower()
-    return "connection" in msg or "timeout" in msg or "network" in msg
+    if "connection" in msg or "timeout" in msg or "network" in msg:
+        return True
+    if "429" in msg or "413" in msg or "request_too_large" in msg:
+        return False
+    return False
+
+
+def _parse_retry_after_seconds(e: Exception) -> float:
+    """Extrae segundos de 'Please try again in 130ms' o '3.204s' del error 429."""
+    msg = str(e)
+    m = re.search(r"try again in (\d+(?:\.\d+)?)\s*(ms|s)?", msg, re.I)
+    if not m:
+        return 5.0
+    val = float(m.group(1))
+    unit = (m.group(2) or "s").lower()
+    return val / 1000.0 if unit == "ms" else val
+
+
+def _use_groq() -> bool:
+    return (NEWS_PROVIDER == "groq" or (NEWS_PROVIDER == "auto" and GROQ_API_KEY)) and bool(GROQ_API_KEY)
+
+
+def _use_deepseek() -> bool:
+    return (NEWS_PROVIDER == "deepseek" or (NEWS_PROVIDER == "auto" and DEEPSEEK_API_KEY)) and bool(DEEPSEEK_API_KEY)
+
+
+def _use_groq_for_match(match_index: int) -> bool:
+    """Round-robin: Groq para índices pares, DeepSeek para impares cuando ambos están configurados."""
+    if NEWS_PROVIDER != "auto" or not (GROQ_API_KEY and DEEPSEEK_API_KEY):
+        return _use_groq()
+    return match_index % 2 == 0
 
 
 @retry(
     stop=stop_after_attempt(MAX_RETRIES),
     retry=retry_if_exception(_is_retryable_error),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    wait=wait_exponential(multiplier=1, min=3, max=15),
     reraise=True,
 )
-def fetch_single_match_news(home_team: str, away_team: str, date_str: str) -> dict:
-    """Call Groq compound model with web search for a single match."""
-    if not GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY no configurada. Añádela en GitHub Secrets o Render Environment.")
-    client = _create_groq_client()
-    prompt = _build_prompt(home_team, away_team, date_str)
-
+def _fetch_with_groq(home_team: str, away_team: str, date_str: str) -> dict:
+    """Groq compound con búsqueda web integrada."""
+    client = Groq(api_key=GROQ_API_KEY, default_headers={"Groq-Model-Version": "latest"})
+    prompt = _build_prompt_groq(home_team, away_team, date_str)
     response = client.chat.completions.create(
-        model=MODEL,
+        model=GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=2048,
     )
+    return _parse_response(response.choices[0].message.content)
 
-    raw = response.choices[0].message.content
-    return _parse_response(raw)
+
+@retry(
+    stop=stop_after_attempt(MAX_RETRIES),
+    retry=retry_if_exception(_is_retryable_error),
+    wait=wait_exponential(multiplier=1, min=3, max=15),
+    reraise=True,
+)
+def _fetch_with_deepseek(home_team: str, away_team: str, date_str: str) -> dict:
+    """DeepSeek con búsqueda web via duckduckgo."""
+    from openai import OpenAI
+    web_context = _search_web_duckduckgo(home_team, away_team)
+    prompt = _build_prompt_deepseek(home_team, away_team, date_str, web_context)
+    client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+    response = client.chat.completions.create(
+        model=DEEPSEEK_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=2048,
+    )
+    return _parse_response(response.choices[0].message.content)
+
+
+def fetch_single_match_news(home_team: str, away_team: str, date_str: str, match_index: int = 0) -> dict:
+    """Obtiene noticias usando Groq o DeepSeek según configuración (round-robin si ambos)."""
+    use_groq = _use_groq_for_match(match_index)
+    if use_groq:
+        try:
+            return _fetch_with_groq(home_team, away_team, date_str)
+        except Exception as e:
+            err_str = str(e).lower()
+            is_413 = "413" in err_str or "request_too_large" in err_str
+            is_429 = "429" in err_str or "rate_limit" in err_str
+            if (is_413 or is_429) and _use_deepseek():
+                return _fetch_with_deepseek(home_team, away_team, date_str)
+            if is_429 and not _use_deepseek():
+                wait_s = _parse_retry_after_seconds(e)
+                time.sleep(wait_s)
+                return _fetch_with_groq(home_team, away_team, date_str)
+            raise
+    if _use_deepseek():
+        return _fetch_with_deepseek(home_team, away_team, date_str)
+    raise ValueError(
+        "Ningún proveedor configurado. Añade GROQ_API_KEY o DEEPSEEK_API_KEY en GitHub Secrets. "
+        "Opcional: NEWS_PROVIDER=groq|deepseek|auto"
+    )
 
 
 def _cached_news_has_errors(news_list: list[dict]) -> bool:
@@ -119,12 +200,13 @@ def _cached_news_has_errors(news_list: list[dict]) -> bool:
 async def fetch_news_for_matches(date_str: str, predictions: list[dict]) -> list[dict]:
     """
     Fetch news for all NBA matches and cache in DB.
-    Runs sequentially with throttle to respect Groq rate limits.
-    Skips if news already exist for this date (salvo que tengan errores previos).
+    Round-robin Groq/DeepSeek si ambos configurados. Throttle mayor tras Groq.
     """
-    if not GROQ_API_KEY:
-        print("[NEWS] GROQ_API_KEY no configurada. Omitiendo noticias. Añádela en GitHub Secrets.")
+    if not _use_groq() and not _use_deepseek():
+        print("[NEWS] Ni GROQ_API_KEY ni DEEPSEEK_API_KEY configuradas. Omitiendo noticias.")
         return []
+    both = GROQ_API_KEY and DEEPSEEK_API_KEY and NEWS_PROVIDER == "auto"
+    print(f"[NEWS] Proveedor: {'Round-robin Groq+DeepSeek' if both else ('Groq' if _use_groq() else 'DeepSeek')}")
 
     cached = history_db.get_news_for_date(date_str) if history_db.news_exist_for_date(date_str) else []
     if cached and not _cached_news_has_errors(cached):
@@ -134,15 +216,16 @@ async def fetch_news_for_matches(date_str: str, predictions: list[dict]) -> list
         print(f"[NEWS] Noticias cacheadas con errores para {date_str}, re-intentando fetch.")
 
     results = []
-    for pred in predictions:
+    for i, pred in enumerate(predictions):
         home = pred.get("home_team", "")
         away = pred.get("away_team", "")
         match_id = pred.get("match_id", f"{date_str}_{away}_{home}".replace(" ", "_"))
+        used_groq = _use_groq_for_match(i)
 
         try:
             print(f"[NEWS] Investigando: {home} vs {away} ...")
             news = await asyncio.to_thread(
-                fetch_single_match_news, home, away, date_str
+                fetch_single_match_news, home, away, date_str, i
             )
             history_db.save_match_news(date_str, match_id, news)
             results.append({"match_id": match_id, **news})
@@ -159,7 +242,8 @@ async def fetch_news_for_matches(date_str: str, predictions: list[dict]) -> list
             history_db.save_match_news(date_str, match_id, fallback)
             results.append({"match_id": match_id, **fallback})
 
-        time.sleep(THROTTLE_SECONDS)
+        throttle = THROTTLE_AFTER_GROQ if used_groq else THROTTLE_SECONDS
+        time.sleep(throttle)
 
     print(f"[NEWS] Completado: {len(results)} partidos investigados.")
     return results
