@@ -7,49 +7,23 @@ Maneja:
 - Login con contraseña (bcrypt)
 - Emisión y validación de JWT
 - Rate limiting básico por IP
+
+Persistencia: config_store (Supabase cuando DATABASE_URL está definida).
 """
 
 from __future__ import annotations
 
-import os
-import json
 import time
 import secrets
-from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 import bcrypt
 import jwt
 
-# ===========================================
-# PATHS / STORAGE
-# ===========================================
+import config_store
 
-BASE_DIR = Path(__file__).resolve().parent
-ADMIN_FILE = BASE_DIR / "admin_auth.json"
-_admin_path: Optional[Path] = None
-
-
-def _get_admin_file() -> Path:
-    """
-    Devuelve la ruta usada para almacenar la config del admin.
-    Si el proyecto no es escribible (Render free), usa /tmp.
-    """
-    global _admin_path
-    if _admin_path is not None:
-        return _admin_path
-
-    try:
-        # Intentar crear el archivo en el proyecto
-        ADMIN_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(ADMIN_FILE, "a", encoding="utf-8"):
-            pass
-        _admin_path = ADMIN_FILE
-    except (OSError, PermissionError):
-        # Fallback a /tmp (disco efímero pero escribible en Render)
-        _admin_path = Path("/tmp") / "lafija_admin_auth.json"
-
-    return _admin_path
+# Clave en config_store
+CONFIG_KEY = "admin_auth"
 
 
 def _default_admin_config() -> Dict[str, Any]:
@@ -62,29 +36,18 @@ def _default_admin_config() -> Dict[str, Any]:
 
 def load_admin_config() -> Dict[str, Any]:
     """
-    Carga la configuración del admin desde JSON.
+    Carga la configuración del admin (Supabase o archivo).
     Si no existe, devuelve un objeto por defecto (sin admin creado).
     """
-    path = _get_admin_file()
-    if not path.exists():
-        return _default_admin_config()
-
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        base = _default_admin_config()
-        base.update(data or {})
-        return base
-    except Exception:
-        # En caso de corrupción, empezamos clean (sin admin)
-        return _default_admin_config()
+    base = _default_admin_config()
+    data = config_store.get(CONFIG_KEY, base)
+    base.update(data or {})
+    return base
 
 
 def save_admin_config(cfg: Dict[str, Any]) -> None:
-    """Guarda la configuración del admin en disco."""
-    path = _get_admin_file()
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    """Guarda la configuración del admin (Supabase o archivo)."""
+    config_store.set(CONFIG_KEY, cfg)
 
 
 def has_admin() -> bool:

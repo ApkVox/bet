@@ -12,6 +12,9 @@ requests>=2.31.0
 bcrypt>=4.0.0
 PyJWT>=2.8.0
 
+# Config store (Supabase/PostgreSQL)
+psycopg2-binary>=2.9.0
+
 # ML & Data
 xgboost>=2.0.0
 numpy>=1.24.0

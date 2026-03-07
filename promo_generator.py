@@ -3,8 +3,7 @@
 Promotional Image Generator V5 (Configurable)
 ===========================================
 All layout parameters can be overridden via a config dict.
-The editor UI saves config to promo_config.json; when generating
-promo images, we load that config as defaults.
+The editor UI saves config via config_store (Supabase o archivo).
 """
 
 import io
@@ -13,11 +12,13 @@ import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
+import config_store
+
 BASE_DIR = Path(__file__).resolve().parent
 LOGOS_DIR = BASE_DIR / "static" / "img" / "nba_logos"
 FONTS_DIR = BASE_DIR / "static" / "fonts"
 TEMPLATE_PATH = BASE_DIR / "static" / "img" / "promo_v3_template.png"
-CONFIG_PATH = BASE_DIR / "promo_config.json"
+CONFIG_KEY = "promo_config"
 
 # Montserrat font family
 FONT_EXTRABOLD = FONTS_DIR / "Montserrat-ExtraBold.ttf"
@@ -65,22 +66,17 @@ DEFAULTS = {
 
 
 def load_config() -> dict:
-    """Load saved config, falling back to defaults."""
+    """Load saved config (Supabase o archivo), falling back to defaults."""
     cfg = dict(DEFAULTS)
-    if CONFIG_PATH.exists():
-        try:
-            with open(CONFIG_PATH, "r") as f:
-                saved = json.load(f)
-            cfg.update(saved)
-        except Exception:
-            pass
+    saved = config_store.get(CONFIG_KEY, {})
+    if saved:
+        cfg.update(saved)
     return cfg
 
 
 def save_config(cfg: dict):
-    """Persist config to disk."""
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(cfg, f, indent=2)
+    """Persist config (Supabase o archivo)."""
+    config_store.set(CONFIG_KEY, cfg)
 
 
 def _hex_to_rgba(hex_color: str) -> tuple:

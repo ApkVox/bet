@@ -20,6 +20,9 @@ groq>=0.4.0
 tenacity>=8.2.0
 duckduckgo-search>=3.0.0
 
+# Config store (Supabase/PostgreSQL)
+psycopg2-binary>=2.9.0
+
 # Utilities
 requests>=2.31.0
 toml>=0.10.0

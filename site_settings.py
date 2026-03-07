@@ -10,19 +10,16 @@ Módulo ligero para manejar la configuración pública del sitio:
 - announcement: banner superior
 - ads: configuración de anuncios
 
-Optimizado para Render: si el proyecto no es escribible, usa /tmp.
+Persistencia: config_store (Supabase cuando DATABASE_URL está definida).
 """
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
-BASE_DIR = Path(__file__).resolve().parent
-SETTINGS_FILE = BASE_DIR / "site_settings.json"
-_settings_path: Optional[Path] = None
+import config_store
 
+CONFIG_KEY = "site_settings"
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "theme": {
@@ -83,23 +80,6 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 }
 
 
-def _get_settings_file() -> Path:
-    """Devuelve la ruta del archivo de settings, con fallback a /tmp en Render."""
-    global _settings_path
-    if _settings_path is not None:
-        return _settings_path
-
-    try:
-        SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(SETTINGS_FILE, "a", encoding="utf-8"):
-            pass
-        _settings_path = SETTINGS_FILE
-    except (OSError, PermissionError):
-        _settings_path = Path("/tmp") / "lafija_site_settings.json"
-
-    return _settings_path
-
-
 def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
     """Fusiona override dentro de base de forma profunda."""
     result = base.copy()
@@ -117,29 +97,19 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
 
 def load_settings() -> Dict[str, Any]:
     """
-    Carga la configuración desde JSON, fusionada con DEFAULT_SETTINGS.
-    Si el archivo no existe o está corrupto, retorna defaults.
+    Carga la configuración (Supabase o archivo), fusionada con DEFAULT_SETTINGS.
+    Si no existe o está corrupto, retorna defaults.
     """
-    path = _get_settings_file()
-
-    if not path.exists():
+    data = config_store.get(CONFIG_KEY, {})
+    if not data:
         save_settings(DEFAULT_SETTINGS.copy())
         return DEFAULT_SETTINGS.copy()
-
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return _deep_merge(DEFAULT_SETTINGS.copy(), data or {})
-    except Exception:
-        # En caso de error, no rompemos la app.
-        return DEFAULT_SETTINGS.copy()
+    return _deep_merge(DEFAULT_SETTINGS.copy(), data)
 
 
 def save_settings(cfg: Dict[str, Any]) -> None:
-    """Guarda la configuración completa en disco."""
-    path = _get_settings_file()
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    """Guarda la configuración (Supabase o archivo)."""
+    config_store.set(CONFIG_KEY, cfg)
 
 
 def get_public_settings() -> Dict[str, Any]:
