@@ -94,6 +94,11 @@ def _get_from_db(key: str) -> dict | None:
         return None
 
 
+class ConfigStoreError(Exception):
+    """Error con mensaje amigable para el usuario."""
+    pass
+
+
 def _set_in_db(key: str, value: dict) -> None:
     """Escribe un valor en la tabla app_config."""
     url = _get_db_url()
@@ -101,7 +106,20 @@ def _set_in_db(key: str, value: dict) -> None:
         raise ValueError("DATABASE_URL no configurada")
 
     import psycopg2
-    conn = psycopg2.connect(url)
+    try:
+        conn = psycopg2.connect(url)
+    except Exception as e:
+        err = str(e).lower()
+        if "password" in err or "authentication" in err:
+            raise ConfigStoreError(
+                "Contraseña de Supabase incorrecta. Verifica en Project Settings → Database y usa Reset password si es necesario."
+            ) from e
+        if "connection" in err or "refused" in err or "timeout" in err:
+            raise ConfigStoreError(
+                "No se puede conectar a Supabase. Usa Connection pooler (Session mode) en lugar de Direct."
+            ) from e
+        raise ConfigStoreError(f"Error de conexión: {e}") from e
+
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -115,6 +133,13 @@ def _set_in_db(key: str, value: dict) -> None:
                 (key, json.dumps(value))
             )
         conn.commit()
+    except Exception as e:
+        err = str(e).lower()
+        if "app_config" in err or "relation" in err or "does not exist" in err:
+            raise ConfigStoreError(
+                "La tabla app_config no existe. Ejecuta el SQL de scripts/init_app_config.sql en Supabase (SQL Editor)."
+            ) from e
+        raise ConfigStoreError(f"Error al guardar: {e}") from e
     finally:
         conn.close()
 
@@ -174,9 +199,11 @@ def set(key: str, value: dict) -> None:
         try:
             _set_in_db(key, value)
             return
+        except ConfigStoreError:
+            raise
         except Exception as e:
             print(f"[config_store] DB write failed for key={key}: {e}")
-            raise
+            raise ConfigStoreError(f"Error de base de datos: {e}") from e
 
     # Fallback a archivo
     path = _get_fallback_path(key)

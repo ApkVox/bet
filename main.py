@@ -217,11 +217,10 @@ async def admin_create_initial(request: Request):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        from config_store import ConfigStoreError
         print(f"[main] create-initial error: {type(e).__name__}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Error al guardar. Revisa que DATABASE_URL sea correcta y usa Connection pooler (Session) si Direct falla."
-        )
+        detail = str(e) if isinstance(e, ConfigStoreError) else "Error al guardar. Revisa DATABASE_URL y la tabla app_config en Supabase."
+        raise HTTPException(status_code=500, detail=detail)
 
     return {"status": "ok", "message": "Cuenta de administrador creada correctamente"}
 
