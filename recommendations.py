@@ -1,110 +1,59 @@
 """
-NBA Betting Recommendations Engine.
-Selects the best bets of the day and builds a parlay (combinada)
-using prediction data + Groq analysis.
+NBA Betting Recommendations Engine - DeepSeek.
+Solo NBA. Selecciona las mejores apuestas del día y genera combinada (parlay).
 """
 import asyncio
 import json
 import os
-import time
-
-from groq import Groq
 
 import history_db
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-MODEL = "groq/compound"
+DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+MODEL = "deepseek-chat"
 
 
 def _score_prediction(pred: dict) -> float:
-    """Score a prediction for recommendation ranking.
-    Higher = better candidate for the parlay."""
+    """Puntúa predicción para ranking. Mayor = mejor candidato."""
     prob = pred.get("win_probability") or pred.get("prob_final") or 0
     ev = pred.get("ev_score") or pred.get("ev_value") or 0
-    warning = (pred.get("warning_level") or "NORMAL").upper()
-
-    if warning == "HIGH":
+    if (pred.get("warning_level") or "").upper() == "HIGH":
         return -1
-
     odds_winner = pred.get("odds_home") if pred.get("winner") == pred.get("home_team") else pred.get("odds_away")
-    odds_bonus = 0
-    if odds_winner and odds_winner > 0:
-        odds_bonus = min(odds_winner / 5.0, 0.5)
-
+    odds_bonus = min(odds_winner / 5.0, 0.5) if odds_winner and odds_winner > 0 else 0
     return (prob * 0.55) + (max(ev, 0) * 0.35) + (odds_bonus * 0.10)
 
 
 def select_candidates(predictions: list[dict], top_n: int = 5) -> list[dict]:
-    """Pre-filter and rank predictions, returning the top N candidates."""
-    scored = []
-    for p in predictions:
-        s = _score_prediction(p)
-        if s > 0:
-            scored.append((s, p))
+    """Pre-filtra y ordena predicciones, devuelve top N."""
+    scored = [(s, p) for p in predictions if (s := _score_prediction(p)) > 0]
     scored.sort(key=lambda x: x[0], reverse=True)
     return [p for _, p in scored[:top_n]]
 
 
 def calculate_parlay(odds_list: list[float], amount: float) -> dict:
-    """Calculate parlay return from decimal odds."""
+    """Calcula retorno de parlay desde cuotas decimales."""
     combined = 1.0
     for o in odds_list:
         if o and o > 0:
             combined *= o
     potential = amount * combined
-    profit = potential - amount
-    return {
-        "combined_odds": round(combined, 3),
-        "stake": amount,
-        "potential_return": round(potential, 2),
-        "profit": round(profit, 2),
-    }
+    return {"combined_odds": round(combined, 3), "stake": amount, "potential_return": round(potential, 2), "profit": round(potential - amount, 2)}
 
 
-def _build_reco_prompt(candidates: list[dict], news_by_match: dict) -> str:
-    matches_text = ""
-    for i, c in enumerate(candidates, 1):
-        home = c.get("home_team", "?")
-        away = c.get("away_team", "?")
-        winner = c.get("winner", "?")
-        prob = c.get("win_probability", 0)
-        odds_h = c.get("odds_home") or "N/A"
-        odds_a = c.get("odds_away") or "N/A"
-        ev = c.get("ev_score") or c.get("ev_value") or 0
+def _build_prompt(candidates: list[dict], news_by_match: dict) -> str:
+    """Prompt compacto para evitar 413."""
+    lines = []
+    for i, c in enumerate(candidates[:5], 1):
         mid = c.get("match_id", "")
-        news_headline = news_by_match.get(mid, {}).get("headline", "Sin noticias")
-
-        matches_text += f"""
-{i}. **{home} vs {away}**
-   - Ganador predicho: {winner} ({prob}%)
-   - Cuota local: {odds_h} | Cuota visitante: {odds_a}
-   - EV: {ev}
-   - Noticias: {news_headline}
-"""
-
-    return f"""Eres un analista experto en apuestas NBA. Analiza los siguientes partidos candidatos y selecciona los 3 MEJORES para una apuesta combinada (parlay) del día.
-
-PARTIDOS CANDIDATOS:
+        news = news_by_match.get(mid, {}).get("headline", "Sin noticias")[:80]
+        lines.append(f"{i}. {c.get('home_team')} vs {c.get('away_team')} -> {c.get('winner')} ({c.get('win_probability',0)}%). Cuota: {c.get('odds_home') or c.get('odds_away')}. EV:{c.get('ev_score') or 0}. Noticias: {news}")
+    matches_text = "\n".join(lines)
+    return f"""Analista NBA. Partidos candidatos:
 {matches_text}
 
-Criterios de selección:
-1. Alta probabilidad de acierto
-2. Cuotas que ofrezcan valor (EV positivo o cercano)
-3. Noticias que refuercen la predicción (sin lesiones clave del favorito)
-4. Diversificación de riesgo (no concentrar todo en favoritos extremos)
-
-Responde EXCLUSIVAMENTE con un JSON válido (sin markdown, sin texto fuera del JSON):
-{{
-  "selected_indices": [1, 2, 3],
-  "reasoning": "explicación breve de por qué estos 3 partidos forman la mejor combinada",
-  "individual_analyses": [
-    {{"match": "Equipo1 vs Equipo2", "pick": "ganador elegido", "confidence": "alta|media", "reason": "razón breve"}}
-  ],
-  "risk_level": "bajo|medio|alto",
-  "parlay_assessment": "evaluación general de la combinada"
-}}
-
-Responde siempre en español."""
+Selecciona los 3 MEJORES para parlay. Responde SOLO JSON:
+{{"selected_indices":[1,2,3],"reasoning":"...","individual_analyses":[{{"match":"...","pick":"...","confidence":"alta|media","reason":"..."}}],"risk_level":"bajo|medio|alto","parlay_assessment":"..."}}
+Español."""
 
 
 def _parse_reco_response(content: str) -> dict:
@@ -116,66 +65,48 @@ def _parse_reco_response(content: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        return {
-            "selected_indices": [1, 2, 3],
-            "reasoning": text[:400],
-            "individual_analyses": [],
-            "risk_level": "medio",
-            "parlay_assessment": "No se pudo procesar el análisis del agente.",
-        }
+        return {"selected_indices": [1, 2, 3], "reasoning": text[:300], "individual_analyses": [], "risk_level": "medio", "parlay_assessment": "Error parsing."}
 
 
 def generate_recommendations_sync(date_str: str) -> dict:
-    """
-    Main entry: read predictions + news from DB, select candidates,
-    call Groq for final analysis, persist and return result.
-    """
+    """Lee predicciones + noticias, llama DeepSeek, persiste y retorna."""
     existing = history_db.get_daily_recommendations(date_str)
     if existing:
         recos = existing.get("recommendations", [])
-        has_odds = any(r.get("odds") for r in recos)
-        if has_odds or not recos:
+        if any(r.get("odds") for r in recos) or not recos:
             return existing
-        print(f"[RECO] Recomendaciones para {date_str} tienen cuotas NULL, regenerando...")
         history_db.delete_daily_recommendations(date_str)
 
     predictions = history_db.get_predictions_by_date_light(date_str)
     if not predictions:
-        return {"recommendations": [], "parlay_analysis": "No hay partidos disponibles.", "parlay_odds": 0}
+        return {"recommendations": [], "parlay_analysis": "No hay partidos.", "parlay_odds": 0}
 
     candidates = select_candidates(predictions)
     if len(candidates) < 2:
-        return {"recommendations": [], "parlay_analysis": "Insuficientes partidos con valor para recomendar.", "parlay_odds": 0}
+        return {"recommendations": [], "parlay_analysis": "Insuficientes partidos con valor.", "parlay_odds": 0}
 
     news_list = history_db.get_news_for_date(date_str)
     news_by_match = {n["match_id"]: n for n in news_list}
 
-    try:
-        client = Groq(api_key=GROQ_API_KEY)
-        prompt = _build_reco_prompt(candidates, news_by_match)
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=2048,
-        )
-        analysis = _parse_reco_response(response.choices[0].message.content)
-    except Exception as e:
-        print(f"[RECO] Error Groq: {e}")
-        analysis = {
-            "selected_indices": list(range(1, min(4, len(candidates) + 1))),
-            "reasoning": "Selección automática por puntuación (agente no disponible).",
-            "individual_analyses": [],
-            "risk_level": "medio",
-            "parlay_assessment": str(e)[:200],
-        }
+    analysis = {"selected_indices": [1, 2, 3], "reasoning": "Selección automática.", "individual_analyses": [], "risk_level": "medio", "parlay_assessment": ""}
+    if DEEPSEEK_API_KEY:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+            prompt = _build_prompt(candidates, news_by_match)
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=1024,
+            )
+            analysis = _parse_reco_response(response.choices[0].message.content)
+        except Exception as e:
+            print(f"[RECO] Error DeepSeek: {e}")
+            analysis["parlay_assessment"] = str(e)[:150]
 
     selected_indices = analysis.get("selected_indices", [1, 2, 3])
-    selected = []
-    for idx in selected_indices:
-        if 1 <= idx <= len(candidates):
-            selected.append(candidates[idx - 1])
-
+    selected = [candidates[i - 1] for i in selected_indices if 1 <= i <= len(candidates)]
     if not selected:
         selected = candidates[:3]
 
@@ -186,13 +117,7 @@ def generate_recommendations_sync(date_str: str) -> dict:
         odds_val = item.get("odds_home") if winner == item.get("home_team") else item.get("odds_away")
         if odds_val:
             odds_for_parlay.append(float(odds_val))
-
-        individual = next(
-            (a for a in analysis.get("individual_analyses", [])
-             if item.get("home_team", "") in a.get("match", "")),
-            {}
-        )
-
+        individual = next((a for a in analysis.get("individual_analyses", []) if item.get("home_team", "") in a.get("match", "")), {})
         reco_items.append({
             "match_id": item.get("match_id", ""),
             "home_team": item.get("home_team", ""),
@@ -205,7 +130,6 @@ def generate_recommendations_sync(date_str: str) -> dict:
         })
 
     parlay = calculate_parlay(odds_for_parlay, 50000) if odds_for_parlay else {"combined_odds": 0}
-
     result = {
         "recommendations": reco_items,
         "parlay_analysis": analysis.get("parlay_assessment", analysis.get("reasoning", "")),
@@ -213,7 +137,6 @@ def generate_recommendations_sync(date_str: str) -> dict:
         "risk_level": analysis.get("risk_level", "medio"),
         "reasoning": analysis.get("reasoning", ""),
     }
-
     history_db.save_daily_recommendations(date_str, result)
     print(f"[RECO] Guardadas {len(reco_items)} recomendaciones para {date_str}")
     return result

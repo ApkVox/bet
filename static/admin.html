@@ -471,15 +471,15 @@
             </div>
             <div class="card">
                 <h3>API de Inteligencia Artificial</h3>
-                <p class="desc">Clave de la API de Groq para el agente de noticias y analisis de apuestas. Se obtiene en <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>.</p>
+                <p class="desc">Clave de DeepSeek para noticias NBA y recomendaciones. Se obtiene en <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--accent)">platform.deepseek.com</a>.</p>
                 <div class="form-row single">
                     <div class="fg">
-                        <label>Groq API Key</label>
-                        <input type="password" id="betGroqKey" placeholder="gsk_...">
-                        <p class="hint">Se guarda de forma segura. Dejar vacio para usar la clave por defecto del servidor.</p>
+                        <label>DeepSeek API Key</label>
+                        <input type="password" id="betDeepSeekKey" placeholder="sk-...">
+                        <p class="hint">Configurar en GitHub Secrets (DEEPSEEK_API_KEY) para el job diario. Aquí solo para sesión local.</p>
                     </div>
                 </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveGroqKey()">💾 Guardar API Key</button></div>
+                <div class="bar"><button class="btn btn-p" onclick="saveDeepSeekKey()">💾 Guardar API Key</button></div>
             </div>
         </div>
 

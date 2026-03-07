@@ -15,10 +15,8 @@ xgboost>=2.0.0
 numpy>=1.24.0
 pandas>=2.0.0
 
-# AI Integration
-groq>=0.4.0
+# AI Integration (solo DeepSeek)
 openai>=1.0.0
-tenacity>=8.2.0
 duckduckgo-search>=3.0.0
 
 # Config store (Supabase/PostgreSQL)

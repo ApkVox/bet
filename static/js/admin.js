@@ -363,13 +363,13 @@ function bootstrap() {
     }
 }
 
-async function saveGroqKey() {
-    const key = ($("betGroqKey")?.value || "").trim();
+async function saveDeepSeekKey() {
+    const key = ($("betDeepSeekKey")?.value || "").trim();
     if (!key) { toast("Ingresa una API key.", "err"); return; }
     try {
-        await api("/api/admin/groq-key", { method: "POST", body: { key } });
-        $("betGroqKey").value = "";
-        toast("API Key de Groq guardada.", "ok");
+        await api("/api/admin/deepseek-key", { method: "POST", body: { key } });
+        $("betDeepSeekKey").value = "";
+        toast("API Key de DeepSeek guardada.", "ok");
     } catch (err) { toast(err.message, "err"); }
 }
 
@@ -379,6 +379,6 @@ window.resetTheme = resetTheme;
 window.navTo = navTo;
 window.syncColorText = syncColorText;
 window.syncColorPicker = syncColorPicker;
-window.saveGroqKey = saveGroqKey;
+window.saveDeepSeekKey = saveDeepSeekKey;
 
 window.addEventListener("DOMContentLoaded", bootstrap);

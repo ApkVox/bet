@@ -242,7 +242,7 @@ async def update_past_results():
 # MAIN ENTRYPOINT (GITHUB ACTIONS)
 # ==========================================
 async def run_news_and_recommendations():
-    """Fetch Groq news for today's NBA matches and generate recommendations."""
+    """Fetch DeepSeek news for today's NBA matches and generate recommendations."""
     today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
     try:
         preds = history_db.get_predictions_by_date_light(today_str)
@@ -273,7 +273,7 @@ async def run_all():
     # 2. Ejecutar análisis Fútbol
     await generate_football_predictions()
 
-    # 3. Noticias NBA + Recomendaciones (Groq)
+    # 3. Noticias NBA + Recomendaciones (DeepSeek)
     await run_news_and_recommendations()
     
     log("=== LA FIJA: DAILY PREDICTION JOB FINISHED ===")

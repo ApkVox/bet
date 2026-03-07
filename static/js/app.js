@@ -626,6 +626,11 @@ function showDetails(index) {
 
     const matchId = pred.match_id || '';
     const newsPlaceholderId = `news-${index}`;
+    const isNBA = currentSport === 'nba';
+
+    const newsSectionHtml = isNBA
+        ? `<div id="${newsPlaceholderId}" class="news-section"><div class="news-loading">Cargando noticias...</div></div>`
+        : `<div class="news-section" style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:13px;">Noticias disponibles solo para partidos NBA.</div>`;
 
     document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
     document.getElementById('modalBody').innerHTML = `
@@ -634,16 +639,12 @@ function showDetails(index) {
             ${oddsHtml}
         </div>
         <p class="analysis-text">${pred.ai_analysis || ''}</p>
-        <div id="${newsPlaceholderId}" class="news-section">
-            <div class="news-loading">Cargando noticias...</div>
-        </div>
+        ${newsSectionHtml}
     `;
     document.getElementById('modal').classList.add('active');
 
-    if (matchId) {
+    if (isNBA && matchId) {
         loadMatchNews(matchId, newsPlaceholderId);
-    } else {
-        document.getElementById(newsPlaceholderId).innerHTML = '';
     }
 }
 

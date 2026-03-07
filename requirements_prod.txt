@@ -20,8 +20,9 @@ xgboost>=2.0.0
 numpy>=1.24.0
 pandas>=2.0.0
 
-# AI Integration (Groq)
-groq>=0.4.0
+# AI Integration (DeepSeek)
+openai>=1.0.0
+duckduckgo-search>=3.0.0
 
 # Utilities
 toml>=0.10.0

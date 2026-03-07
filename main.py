@@ -633,25 +633,25 @@ async def get_football_history_endpoint(days: int = 30):
 
 
 # -------------------------------------------
-# Groq API Key management
+# DeepSeek API Key management
 # -------------------------------------------
 
-@app.post("/api/admin/groq-key")
-async def save_groq_key(request: Request, _: None = Depends(require_admin)):
-    """Saves the Groq API key as an environment variable (runtime only)."""
+@app.post("/api/admin/deepseek-key")
+async def save_deepseek_key(request: Request, _: None = Depends(require_admin)):
+    """Guarda la API key de DeepSeek (solo para esta sesión del servidor)."""
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(status_code=400, detail="Body inválido")
     key = (body.get("key") or "").strip()
-    if not key or not key.startswith("gsk_"):
-        raise HTTPException(status_code=400, detail="API key inválida (debe empezar con gsk_)")
-    os.environ["GROQ_API_KEY"] = key
-    return {"status": "ok", "message": "API Key actualizada para esta sesión del servidor."}
+    if not key or not key.startswith("sk-"):
+        raise HTTPException(status_code=400, detail="API key inválida (debe empezar con sk-)")
+    os.environ["DEEPSEEK_API_KEY"] = key
+    return {"status": "ok", "message": "API Key actualizada para esta sesión."}
 
 
 # -------------------------------------------
-# News API (Groq agent cache)
+# News API (DeepSeek agent cache)
 # -------------------------------------------
 
 @app.get("/api/news/today")
@@ -663,7 +663,7 @@ async def get_today_news():
 
 @app.post("/api/news/refresh")
 async def refresh_news(background_tasks: BackgroundTasks):
-    """Busca noticias para los partidos NBA de hoy (local/dev). Requiere GROQ_API_KEY o DEEPSEEK_API_KEY."""
+    """Busca noticias para los partidos NBA de hoy (local/dev). Requiere DEEPSEEK_API_KEY."""
     date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
     preds = history_db.get_predictions_by_date_light(date_str)
     if not preds:
@@ -680,7 +680,7 @@ async def refresh_news(background_tasks: BackgroundTasks):
 
 @app.get("/api/news/{match_id:path}")
 async def get_match_news(match_id: str):
-    """Returns cached news for a specific match."""
+    """Returns cached news for a specific NBA match (fútbol no tiene noticias)."""
     data = history_db.get_match_news(match_id)
     if not data:
         return {"found": False, "news": None}

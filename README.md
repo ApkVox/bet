@@ -66,11 +66,8 @@ bet/
 3. Habilitar GitHub Actions (Settings > Actions > Workflow permissions > Read and write)
 4. Configurar cron-job.org para ping cada 5 min a `/api/health`
 
-**Noticias NBA (agente Groq o DeepSeek):** Para que las noticias por partido funcionen, añade en **GitHub** → Settings → Secrets and variables → Actions:
-- `GROQ_API_KEY`
-- `DEEPSEEK_API_KEY` (recomendado: [platform.deepseek.com](https://platform.deepseek.com/api_keys) — evita errores 413 de Groq)
-Con ambos configurados se usa DeepSeek para todos los partidos. Solo Groq: usa compound-mini (más ligero).
-Opcional: `NEWS_PROVIDER=groq|deepseek|auto`.
+**Noticias NBA y recomendaciones:** Solo para NBA (fútbol no implementado). Usa **DeepSeek**. Añade en **GitHub** → Settings → Secrets and variables → Actions:
+- `DEEPSEEK_API_KEY` — [platform.deepseek.com](https://platform.deepseek.com/api_keys)
 
 **Configuración persistente (admin, tema, promo):** En Render free el filesystem es efímero. Para que la contraseña del admin, el tema y la config del editor de promo no se pierdan:
 1. Crea un proyecto en [Supabase](https://supabase.com) (plan Free).
@@ -81,12 +78,11 @@ Opcional: `NEWS_PROVIDER=groq|deepseek|auto`.
 
 ## Desarrollo Local
 
-1. **API keys (noticias NBA):** Crea un archivo `.env` en la raíz del proyecto (o copia `.env.example`):
+1. **API key (noticias y recomendaciones):** Crea `.env` en la raíz (o copia `.env.example`):
    ```
-   GROQ_API_KEY=tu_groq_key
-   DEEPSEEK_API_KEY=tu_deepseek_key
+   DEEPSEEK_API_KEY=sk-...
    ```
-   El archivo `.env` está en `.gitignore` y no se sube a Git.
+   El archivo `.env` está en `.gitignore`.
 
 2. **Iniciar servidor:**
    ```bash
