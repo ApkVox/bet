@@ -251,7 +251,7 @@ function gatherSettings() {
         theme,
         branding: { title: $("brandTitle").value, emoji: $("brandEmoji").value, subtitle: $("brandSubtitle").value },
         features: { football: $("featFootball").checked, promo_download: $("featPromo").checked, dark_default: $("featDark").checked, ai_analysis: $("featAI").checked },
-        announcement: { enabled: $("annEnabled").checked, text: $("annText").value, color: $("annColorHex").value },
+        announcement: { enabled: $("annEnabled").checked, text: ($("annText").value || "").slice(0, 500), color: $("annColorHex").value },
         ads: { enabled: $("adsEnabled").checked, left_key: $("adsLeft").value, right_key: $("adsRight").value },
         betting: {
             currency: $("betCurrency")?.value || "COP",

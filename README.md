@@ -81,12 +81,22 @@ Opcional: `NEWS_PROVIDER=groq|deepseek|auto`.
 
 ## Desarrollo Local
 
-```bash
-pip install -r requirements.txt
-python production_server.py
-# Acceder en http://localhost:8080
-# Panel admin: http://localhost:8080/admin
-```
+1. **API keys (noticias NBA):** Crea un archivo `.env` en la raíz del proyecto (o copia `.env.example`):
+   ```
+   GROQ_API_KEY=tu_groq_key
+   DEEPSEEK_API_KEY=tu_deepseek_key
+   ```
+   El archivo `.env` está en `.gitignore` y no se sube a Git.
+
+2. **Iniciar servidor:**
+   ```bash
+   pip install -r requirements.txt
+   python production_server.py
+   # Acceder en http://localhost:8080
+   # Panel admin: http://localhost:8080/admin
+   ```
+
+3. **Refrescar noticias:** `POST http://localhost:8080/api/news/refresh`
 
 **Panel de administración:** La primera vez que entras a `/admin` verás **«Primera vez: crea tu contraseña de administrador»**. Crea la contraseña y ya podrás entrar. Si en Render la contraseña no funciona (archivo antiguo), en Environment añade **`FORCE_INITIAL_PASSWORD=1`**, redeploya, entra a `/admin`, crea tu contraseña y luego quita la variable. Alternativa: **`RESET_ADMIN_PASSWORD=TuContraseña`** (mín. 6 caracteres) para fijar la contraseña directamente.
 En local: `python admin_config.py set-password`.

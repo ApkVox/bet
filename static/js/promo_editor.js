@@ -89,10 +89,37 @@ function getParams() {
     };
 }
 
-function updatePreview() {
+let _previewAbort = null;
+let _previewDebounce = null;
+
+async function updatePreview() {
     const params = getParams();
-    const qs = new URLSearchParams(params).toString();
-    $("preview-img").src = `/api/promo-editor-preview?${qs}&_t=${Date.now()}`;
+    if (_previewDebounce) clearTimeout(_previewDebounce);
+    _previewDebounce = setTimeout(() => _doPreview(params), 150);
+}
+
+async function _doPreview(params) {
+    if (_previewAbort) _previewAbort.abort();
+    _previewAbort = new AbortController();
+    const body = { ...params };
+    try {
+        const res = await fetch("/api/promo-editor-preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+            body: JSON.stringify(body),
+            signal: _previewAbort.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const img = $("preview-img");
+        if (img._prevUrl) URL.revokeObjectURL(img._prevUrl);
+        img._prevUrl = url;
+        img.src = url;
+    } catch (e) {
+        if (e.name === "AbortError") return;
+        console.warn("Preview error:", e);
+    }
 }
 
 async function saveConfig() {

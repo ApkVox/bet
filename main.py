@@ -284,11 +284,17 @@ async def admin_get_settings(_: None = Depends(require_admin)):
     return site_settings.load_settings()
 
 
+# Límites para evitar 413 en Render (payload demasiado grande)
+_MAX_ANNOUNCEMENT_LEN = 500
+_MAX_BRANDING_SUBTITLE_LEN = 200
+
+
 @app.post("/api/admin/settings")
 async def admin_save_settings(request: Request, _: None = Depends(require_admin)):
     """
     Guarda la configuración del sitio.
     Solo se actualizan las claves de alto nivel conocidas.
+    Campos largos se truncan para evitar 413.
     """
     try:
         body = await request.json()
@@ -297,6 +303,16 @@ async def admin_save_settings(request: Request, _: None = Depends(require_admin)
 
     if not isinstance(body, dict) or not body:
         raise HTTPException(status_code=400, detail="Body vacío o inválido")
+
+    # Truncar campos que pueden crecer y causar 413
+    if "announcement" in body and isinstance(body["announcement"], dict):
+        t = body["announcement"].get("text", "")
+        if isinstance(t, str) and len(t) > _MAX_ANNOUNCEMENT_LEN:
+            body["announcement"] = {**body["announcement"], "text": t[:_MAX_ANNOUNCEMENT_LEN]}
+    if "branding" in body and isinstance(body["branding"], dict):
+        s = body["branding"].get("subtitle", "")
+        if isinstance(s, str) and len(s) > _MAX_BRANDING_SUBTITLE_LEN:
+            body["branding"] = {**body["branding"], "subtitle": s[:_MAX_BRANDING_SUBTITLE_LEN]}
 
     cfg = site_settings.load_settings()
     for key in ("theme", "branding", "features", "announcement", "ads", "betting"):
@@ -357,8 +373,8 @@ def _parse_promo_query(request: Request) -> tuple:
 
 
 @app.get("/api/promo-editor-preview")
-async def promo_editor_preview(request: Request):
-    """Genera imagen de preview para el editor de promo (query params: home_team, away_team, winner, probability + layout)."""
+async def promo_editor_preview_get(request: Request):
+    """Preview por GET (query params). Para URLs largas usar POST."""
     try:
         from promo_generator import generate_promo_image
         home_team, away_team, winner, probability, config_override = _parse_promo_query(request)
@@ -366,6 +382,28 @@ async def promo_editor_preview(request: Request):
         return Response(content=data, media_type="image/png")
     except Exception as e:
         print(f"[main] promo-editor-preview error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/promo-editor-preview")
+async def promo_editor_preview_post(request: Request):
+    """Preview por POST (body JSON). Evita 413 por URL demasiado larga en Render."""
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(400, "Body debe ser JSON object")
+        home_team = str(body.get("home_team", "Charlotte Hornets"))[:80]
+        away_team = str(body.get("away_team", "Dallas Mavericks"))[:80]
+        winner = str(body.get("winner", home_team))[:80]
+        probability = float(body.get("probability", 58.1))
+        config_override = {k: v for k, v in body.items() if k not in ("home_team", "away_team", "winner", "probability")}
+        from promo_generator import generate_promo_image
+        data = generate_promo_image(home_team, away_team, winner, probability, status=None, config_override=config_override or None)
+        return Response(content=data, media_type="image/png")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[main] promo-editor-preview POST error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -410,14 +448,31 @@ async def get_promo_config(_: None = Depends(require_admin)):
         return {}
 
 
+_PROMO_CONFIG_KEYS = frozenset((
+    "logo_cy", "logo_left_cx", "logo_right_offset", "logo_max",
+    "names_y", "names_font_size", "names_max_w", "names_color",
+    "box_y0", "box_y1", "box_pad_x", "box_radius", "box_border_w", "box_border_color",
+    "label_offset_y", "label_font_size", "label_color",
+    "winner_offset_y", "winner_font_size", "winner_color",
+    "prob_offset_y", "prob_font_size", "prob_color",
+    "footer_y", "footer_font_size", "footer_color",
+    "show_logos", "show_names", "show_box_border", "show_label", "show_winner", "show_prob", "show_footer",
+))
+
+
 @app.post("/api/promo-config")
 async def save_promo_config(request: Request, _: None = Depends(require_admin)):
-    """Guarda la configuración del editor de promo."""
+    """Guarda la configuración del editor de promo. Solo claves conocidas (evita 413)."""
     try:
         body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(400, "Body debe ser JSON object")
+        cfg = {k: v for k, v in body.items() if k in _PROMO_CONFIG_KEYS}
         from promo_generator import save_config
-        save_config(body)
+        save_config(cfg)
         return {"status": "ok"}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[main] save promo-config error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

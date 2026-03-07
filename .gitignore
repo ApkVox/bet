@@ -6,6 +6,7 @@
 .env
 .env.*
 *.env
+!.env.example
 
 # Archivos de desarrollo local
 # (Anteriormente ignorados, ahora incluidos para contexto)

@@ -6,6 +6,13 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 import json
 
+# Cargar .env para uso local
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 TZ_COLOMBIA = timezone(timedelta(hours=-5))
 
 # Forzamos entorno para los imports relativos locales
