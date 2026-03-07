@@ -69,8 +69,9 @@ bet/
 **Configuración persistente (admin, tema, promo):** En Render free el filesystem es efímero. Para que la contraseña del admin, el tema y la config del editor de promo no se pierdan:
 1. Crea un proyecto en [Supabase](https://supabase.com) (plan Free).
 2. En SQL Editor, ejecuta el contenido de `scripts/init_app_config.sql`.
-3. En Supabase → Project Settings → Database, copia el connection string (URI).
-4. En Render → tu servicio → Environment, añade `DATABASE_URL` con esa URI (reemplaza `[YOUR-PASSWORD]` por tu contraseña de postgres).
+3. En Supabase → Project Settings → Database → **Connect** → Connection string.
+4. **Importante:** Render usa IPv4. Si la conexión Direct falla, usa **Connection pooling** → **Session mode** (soporta IPv4).
+5. En Render → tu servicio → Environment, añade `DATABASE_URL` con esa URI (reemplaza `[YOUR-PASSWORD]` por tu contraseña de postgres). Si la contraseña tiene caracteres especiales (`@`, `:`, `[`, `]`), codifícala en URL (ej. `[` → `%5B`).
 
 ## Desarrollo Local
 

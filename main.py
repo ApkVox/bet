@@ -216,6 +216,12 @@ async def admin_create_initial(request: Request):
         admin_auth.create_initial_admin(password)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"[main] create-initial error: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error al guardar. Revisa que DATABASE_URL sea correcta y usa Connection pooler (Session) si Direct falla."
+        )
 
     return {"status": "ok", "message": "Cuenta de administrador creada correctamente"}
 

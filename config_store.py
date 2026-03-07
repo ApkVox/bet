@@ -24,9 +24,17 @@ _KEY_TO_FILE = {
 
 
 def _get_db_url() -> str | None:
-    """Obtiene DATABASE_URL si está definida y no vacía."""
+    """Obtiene DATABASE_URL si está definida y no vacía.
+    Añade sslmode=require para Supabase si no está presente.
+    """
     url = (os.environ.get("DATABASE_URL") or "").strip()
-    return url if url else None
+    if not url:
+        return None
+    # Supabase requiere SSL; añadir si no está
+    if "supabase.co" in url and "sslmode=" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}sslmode=require"
+    return url
 
 
 def is_db_available() -> bool:
