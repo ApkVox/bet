@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
-from typing import Any, Dict
+from urllib.parse import quote, unquote
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -23,13 +24,33 @@ _KEY_TO_FILE = {
 }
 
 
+def _fix_password_encoding(url: str) -> str:
+    """
+    Codifica la contraseña en la URL si contiene caracteres reservados ([, ], @, :, etc).
+    Los corchetes en la contraseña rompen el parsing de la URI.
+    """
+    # Formato: postgresql://user:password@host:port/db o postgres://user:password@host:port/db
+    match = re.match(r"^(postgresql|postgres)://([^:@]+):([^@]+)@(.+)$", url)
+    if not match:
+        return url
+    protocol, user, password, rest = match.groups()
+    # Si la contraseña ya está codificada o no tiene caracteres problemáticos, no tocar
+    if "%" in password or any(c in password for c in "[]@:"):
+        raw = unquote(password) if "%" in password else password
+        encoded = quote(raw, safe="")
+        return f"{protocol}://{user}:{encoded}@{rest}"
+    return url
+
+
 def _get_db_url() -> str | None:
     """Obtiene DATABASE_URL si está definida y no vacía.
+    Codifica la contraseña si tiene caracteres reservados.
     Añade sslmode=require para Supabase si no está presente.
     """
     url = (os.environ.get("DATABASE_URL") or "").strip()
     if not url:
         return None
+    url = _fix_password_encoding(url)
     # Supabase requiere SSL; añadir si no está
     if "supabase.co" in url and "sslmode=" not in url:
         sep = "&" if "?" in url else "?"
