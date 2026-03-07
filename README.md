@@ -66,10 +66,11 @@ bet/
 3. Habilitar GitHub Actions (Settings > Actions > Workflow permissions > Read and write)
 4. Configurar cron-job.org para ping cada 5 min a `/api/health`
 
-**Noticias NBA (agente Groq o DeepSeek):** Para que las noticias por partido funcionen, añade al menos uno en **GitHub** → Settings → Secrets and variables → Actions:
+**Noticias NBA (agente Groq o DeepSeek):** Para que las noticias por partido funcionen, añade en **GitHub** → Settings → Secrets and variables → Actions:
 - `GROQ_API_KEY`
-- `DEEPSEEK_API_KEY` (alternativa: [platform.deepseek.com](https://platform.deepseek.com/api_keys) — usa duckduckgo para búsqueda web)
-Opcional: `NEWS_PROVIDER=groq|deepseek|auto` (default: auto = round-robin Groq+DeepSeek si ambos tienen key; evita 429).
+- `DEEPSEEK_API_KEY` (recomendado: [platform.deepseek.com](https://platform.deepseek.com/api_keys) — evita errores 413 de Groq)
+Con ambos configurados se usa DeepSeek para todos los partidos. Solo Groq: usa compound-mini (más ligero).
+Opcional: `NEWS_PROVIDER=groq|deepseek|auto`.
 
 **Configuración persistente (admin, tema, promo):** En Render free el filesystem es efímero. Para que la contraseña del admin, el tema y la config del editor de promo no se pierdan:
 1. Crea un proyecto en [Supabase](https://supabase.com) (plan Free).

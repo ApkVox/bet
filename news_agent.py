@@ -19,7 +19,7 @@ GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
 DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
 # auto=round-robin si ambos; groq|deepseek=forzar uno
 NEWS_PROVIDER = (os.getenv("NEWS_PROVIDER") or "auto").strip().lower()
-GROQ_MODEL = "groq/compound"
+GROQ_MODEL = "groq/compound-mini"
 DEEPSEEK_MODEL = "deepseek-chat"
 THROTTLE_SECONDS = 6.0
 THROTTLE_AFTER_GROQ = 12.0
@@ -28,7 +28,7 @@ DEEPSEEK_SEARCH_RESULTS = 8
 
 
 def _search_web_duckduckgo(home_team: str, away_team: str) -> str:
-    """Busca noticias NBA con duckduckgo y devuelve contexto para el LLM."""
+    """Busca noticias NBA con duckduckgo. Snippets cortos para contexto optimizado."""
     try:
         from duckduckgo_search import DDGS
         query = f"NBA {home_team} vs {away_team} news injuries 2025"
@@ -38,29 +38,31 @@ def _search_web_duckduckgo(home_team: str, away_team: str) -> str:
                 title = r.get("title", "")
                 body = r.get("body", "")
                 if title or body:
-                    snippets.append(f"- {title}: {body[:200]}" if body else f"- {title}")
-        return "\n".join(snippets[:6]) if snippets else "No se encontraron resultados de búsqueda."
+                    s = f"{title}: {body[:150]}" if body else title
+                    snippets.append(s)
+        return "\n".join(snippets[:6]) if snippets else "Sin resultados."
     except Exception as e:
-        return f"Error en búsqueda: {e}"
+        return f"Error: {e}"
 
 
 def _build_prompt_groq(home_team: str, away_team: str, date_str: str) -> str:
-    """Prompt corto para evitar 413 (Request Entity Too Large)."""
-    return f"""Analista NBA. Busca noticias para {home_team} vs {away_team} ({date_str}): lesiones, rachas, load management.
-Responde SOLO JSON válido: {{"headline":"...","key_points":["...","...","..."],"injuries":[{{"player":"","team":"","status":"out/questionable/probable"}}],"impact_assessment":"...","confidence_modifier":"higher|neutral|lower"}}
-Español. Sin noticias: key_points ["Sin noticias relevantes"], injuries []."""
+    """Prompt ultra corto para evitar 413. Noticias concretas: lesiones, rachas, impacto."""
+    return f"""NBA {home_team} vs {away_team} {date_str}. Busca: lesiones clave, rachas recientes.
+JSON: {{"headline":"...","key_points":["p1","p2","p3"],"injuries":[{{"player":"","team":"","status":"out/questionable/probable"}}],"impact_assessment":"...","confidence_modifier":"higher|neutral|lower"}}
+Español. Concreto. Sin datos: key_points ["Sin noticias"], injuries []."""
 
 
 def _build_prompt_deepseek(home_team: str, away_team: str, date_str: str, web_context: str) -> str:
-    return f"""Eres un analista experto de la NBA. Con la información de búsqueda web siguiente, resume las noticias relevantes para el partido **{home_team} vs {away_team}** ({date_str}).
+    """Prompt optimizado para noticias concretas: lesiones, rachas, impacto en pronóstico."""
+    return f"""Partido NBA: {home_team} vs {away_team} ({date_str}).
 
-CONTEXTO DE BÚSQUEDA WEB:
+BÚSQUEDA:
 {web_context}
 
-Responde EXCLUSIVAMENTE con un JSON válido (sin markdown, sin texto fuera del JSON):
-{{"headline":"título breve del contexto clave","key_points":["punto 1","punto 2","punto 3"],"injuries":[{{"player":"nombre","team":"equipo","status":"out/questionable/probable"}}],"impact_assessment":"párrafo breve sobre cómo afectan al pronóstico","confidence_modifier":"higher|neutral|lower"}}
+Extrae lo MÁS RELEVANTE para el pronóstico. Responde SOLO JSON:
+{{"headline":"{home_team} vs {away_team}: [resumen]","key_points":["hecho 1 concreto","hecho 2","hecho 3"],"injuries":[{{"player":"nombre","team":"equipo","status":"out/questionable/probable"}}],"impact_assessment":"1-2 frases sobre impacto","confidence_modifier":"higher|neutral|lower"}}
 
-Reglas: Responde en español. Si no hay noticias relevantes: key_points ["Sin noticias relevantes encontradas"], injuries []. confidence_modifier: higher|neutral|lower según impacto en el favorito."""
+Reglas: Español. Máx 3 key_points concretos (lesiones, rachas, load management). Sin datos: key_points ["Sin noticias"], injuries []."""
 
 
 def _parse_response(content: str) -> dict:
@@ -115,10 +117,10 @@ def _use_deepseek() -> bool:
 
 
 def _use_groq_for_match(match_index: int) -> bool:
-    """Round-robin: Groq para índices pares, DeepSeek para impares cuando ambos están configurados."""
+    """Con ambos configurados: DeepSeek para todos (evita 413). Solo Groq si no hay DeepSeek."""
     if NEWS_PROVIDER != "auto" or not (GROQ_API_KEY and DEEPSEEK_API_KEY):
         return _use_groq()
-    return match_index % 2 == 0
+    return False
 
 
 @retry(
@@ -135,7 +137,7 @@ def _fetch_with_groq(home_team: str, away_team: str, date_str: str) -> dict:
         model=GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=2048,
+        max_tokens=1024,
     )
     return _parse_response(response.choices[0].message.content)
 
@@ -156,7 +158,7 @@ def _fetch_with_deepseek(home_team: str, away_team: str, date_str: str) -> dict:
         model=DEEPSEEK_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=2048,
+        max_tokens=1024,
     )
     return _parse_response(response.choices[0].message.content)
 

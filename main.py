@@ -606,6 +606,23 @@ async def get_today_news():
     return {"date": date_str, "news": history_db.get_news_for_date(date_str)}
 
 
+@app.post("/api/news/refresh")
+async def refresh_news(background_tasks: BackgroundTasks):
+    """Busca noticias para los partidos NBA de hoy (local/dev). Requiere GROQ_API_KEY o DEEPSEEK_API_KEY."""
+    date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
+    preds = history_db.get_predictions_by_date_light(date_str)
+    if not preds:
+        return {"date": date_str, "status": "skip", "message": "No hay predicciones NBA para hoy."}
+    try:
+        from news_agent import fetch_news_for_matches
+        results = await fetch_news_for_matches(date_str, preds)
+        return {"date": date_str, "status": "ok", "fetched": len(results), "news": results}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @app.get("/api/news/{match_id:path}")
 async def get_match_news(match_id: str):
     """Returns cached news for a specific match."""
