@@ -198,6 +198,10 @@ class FootballAPI:
         
         predictions = []
         
+        # Assign match_id early so news agent can save to db without null constraint
+        for fixture in fixtures:
+            fixture['match_id'] = f"{fixture.get('date', datetime.now().date())}_{fixture['home_team']}_{fixture['away_team']}".replace(" ", "_")
+
         # Primero obtenemos noticias para todos los fixtures (opcional pero recomendado para EPL)
         # Esto nos permite ajustar las probabilidades de Poisson con IA
         from football_news_agent import fetch_football_news
@@ -209,8 +213,7 @@ class FootballAPI:
             logger.warning(f"Could not fetch football news: {e}")
 
         for fixture in fixtures:
-            match_id = f"{fixture.get('date', datetime.now().date())}_{fixture['home_team']}_{fixture['away_team']}".replace(" ", "_")
-            fixture['match_id'] = match_id
+            match_id = fixture['match_id']
             
             # Pasar noticias al predictor
             news_data = news_map.get(match_id)
