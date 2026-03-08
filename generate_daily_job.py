@@ -179,7 +179,7 @@ async def generate_football_predictions():
     log("Iniciando modelo Poisson para Fútbol (European Leagues)...")
     try:
         football_api.ensure_initialized()
-        preds = football_api.get_all_predictions()
+        preds = await football_api.get_all_predictions()
         
         if not preds:
             log("No se encontraron fixtures de fútbol próximos (3 días).")
