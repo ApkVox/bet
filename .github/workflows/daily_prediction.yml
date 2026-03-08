@@ -23,6 +23,8 @@ jobs:
       # ─────────────────────────────────────────────
       - name: Checkout main
         uses: actions/checkout@v4
+        env:
+          GIT_LFS_SKIP_SMUDGE: "1"
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: false
