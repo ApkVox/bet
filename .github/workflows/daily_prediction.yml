@@ -21,16 +21,11 @@ jobs:
       # ─────────────────────────────────────────────
       # 1. Checkout siempre con el estado más reciente
       # ─────────────────────────────────────────────
-      - name: Checkout main
-        uses: actions/checkout@v4
-        env:
-          GIT_LFS_SKIP_SMUDGE: "1"
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          submodules: false
-          lfs: false
-          fetch-depth: 0
-          ref: main
+      - name: Checkout main (Manual LFS Bypass)
+        run: |
+          git config --global filter.lfs.smudge "git-lfs smudge --skip -- %f"
+          git config --global filter.lfs.process "git-lfs filter-process --skip"
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
 
       # ─────────────────────────────────────────────
       # 2. Python + dependencias
