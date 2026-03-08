@@ -111,12 +111,12 @@ class FootballAPI:
         # In a full valid implementation, we would filter by date.
         return get_upcoming_fixtures()
 
-    def predict_match(self, home_team: str, away_team: str, league: str) -> Dict:
+    def predict_match(self, home_team: str, away_team: str, league: str, news_data: Optional[Dict] = None) -> Dict:
         """
         Predict the outcome of a football match using Poisson distribution.
-        Returns probabilities for Home Win, Draw, Away Win.
+        Integrates optional news_data to adjust confidence.
         """
-        self.ensure_initialized()  # Ensure models are loaded
+        self.ensure_initialized()
         
         result = {
             "home_team": home_team,
@@ -126,31 +126,44 @@ class FootballAPI:
             "probs": {"home": 33.3, "draw": 33.4, "away": 33.3},
             "expected_goals": {"home": 0.0, "away": 0.0},
             "top_scorelines": [],
-            "status": "PENDING"
+            "status": "PENDING",
+            "confidence_modifier": "neutral"
         }
         
         # Use Poisson predictor if available
         if self.predictor:
             try:
-                # Get betting insights (includes probabilities)
                 insights = self.predictor.get_betting_insights(home_team, away_team)
-                
                 if insights:
-                    # Extract outcome probabilities
                     outcome_probs = insights.get('outcome_probs', {})
                     home_prob = outcome_probs.get('home_win', 0) * 100
                     draw_prob = outcome_probs.get('draw', 0) * 100
                     away_prob = outcome_probs.get('away_win', 0) * 100
                     
-                    # Determine prediction
+                    # Ajustar según noticias (Confidence Modifier)
+                    if news_data:
+                        mod = news_data.get("confidence_modifier", "neutral")
+                        result["confidence_modifier"] = mod
+                        if mod == "higher":
+                            # Reforzar el favorito
+                            if home_prob > away_prob: home_prob += 5
+                            else: away_prob += 5
+                        elif mod == "lower":
+                            # Debilitar al favorito
+                            if home_prob > away_prob: home_prob -= 8
+                            else: away_prob -= 8
+
+                    # Normalizar tras ajuste
+                    total = home_prob + draw_prob + away_prob
+                    home_prob = (home_prob / total) * 100
+                    draw_prob = (draw_prob / total) * 100
+                    away_prob = (away_prob / total) * 100
+
+                    # Determine prediction (1, X, 2)
                     max_prob = max(home_prob, draw_prob, away_prob)
-                    prediction = "Draw"
-                    if max_prob == home_prob:
-                        prediction = home_team
-                    elif max_prob == draw_prob:
-                        prediction = "Draw"
-                    else:
-                        prediction = away_team
+                    if max_prob == home_prob: prediction = '1'
+                    elif max_prob == draw_prob: prediction = 'X'
+                    else: prediction = '2'
                     
                     result.update({
                         "prediction": prediction,
@@ -160,20 +173,19 @@ class FootballAPI:
                             "away": round(away_prob, 1)
                         },
                         "expected_goals": insights.get('expected_goals', {}),
-                        "top_scorelines": insights.get('top_scorelines', [])[:3],
-                        "over_under": insights.get('goal_market_probs', {})
+                        "top_scorelines": insights.get('top_scorelines', [])[:3]
                     })
-                    
-                    logger.info(f"Predicted {home_team} vs {away_team}: {prediction} ({max_prob:.1f}%)")
-                    
             except Exception as e:
                 logger.warning(f"Poisson prediction failed for {home_team} vs {away_team}: {e}")
-                # Falls back to default values already in result
+        
+        return result
         
         return result
 
-    def get_all_predictions(self, league: Optional[str] = None) -> List[Dict]:
-        """Get predictions for all upcoming fixtures."""
+    async def get_all_predictions(self, league: str = "Premier League") -> List[Dict]:
+        """
+        Fetch fixtures and generate predictions for all matches.
+        """
         # get_fixtures does NOT need initialization (it hits OneFootball API)
         fixtures = self.get_fixtures()
         
@@ -185,10 +197,24 @@ class FootballAPI:
             fixtures = [f for f in fixtures if league.lower() in f['league'].lower()]
         
         predictions = []
+        
+        # Primero obtenemos noticias para todos los fixtures (opcional pero recomendado para EPL)
+        # Esto nos permite ajustar las probabilidades de Poisson con IA
+        from football_news_agent import fetch_football_news
+        news_map = {}
+        try:
+            future_news = await fetch_football_news(datetime.now().strftime("%Y-%m-%d"), fixtures)
+            news_map = {n['match_id']: n for n in future_news}
+        except Exception as e:
+            logger.warning(f"Could not fetch football news: {e}")
+
         for fixture in fixtures:
-            # We predict using the NORMALIZED names (home_team, away_team)
-            # But we might want to preserve raw names for display if needed
-            pred = self.predict_match(fixture['home_team'], fixture['away_team'], fixture['league'])
+            match_id = f"{fixture.get('date', datetime.now().date())}_{fixture['home_team']}_{fixture['away_team']}".replace(" ", "_")
+            fixture['match_id'] = match_id
+            
+            # Pasar noticias al predictor
+            news_data = news_map.get(match_id)
+            pred = self.predict_match(fixture['home_team'], fixture['away_team'], fixture['league'], news_data=news_data)
             
             # Enrich with time and raw names
             pred['time'] = fixture.get('time', 'Coming Soon')
@@ -198,14 +224,10 @@ class FootballAPI:
             # Save to history DB (Best effort)
             fixture_date = fixture.get('date', str(datetime.now().date()))
             pred['date'] = fixture_date
+            pred['match_id'] = match_id
+            
             try:
                 import history_db
-                # We need a unique match_id. hash date+teams
-                match_id = f"{fixture_date}_{fixture['home_team']}_{fixture['away_team']}"
-                pred['match_id'] = match_id
-                
-                # We need to adapt the save function or create a new one for football
-                # For now, let's assume we will implement save_football_prediction in history_db
                 history_db.save_football_prediction(pred, match_id, fixture_date)
             except Exception as e:
                 logger.debug(f"Could not save prediction history: {e}")

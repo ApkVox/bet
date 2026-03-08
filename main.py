@@ -129,8 +129,19 @@ async def startup_event():
     print("La Fija API arrancando...")
     print("===========================================")
     history_db.init_history_db()
-    # Actualizar marcadores de partidos pasados (PENDING -> WIN/LOSS) en segundo plano
+    
+    # 1. Actualizar marcadores en background
     threading.Thread(target=_run_history_update, daemon=True).start()
+    
+    # 2. Disparar noticias y combinada del día si faltan
+    async def _auto_news_job():
+        try:
+            from generate_daily_job import run_news_and_recommendations
+            await run_news_and_recommendations()
+        except Exception as e:
+            print(f"[startup] Error en job automático: {e}")
+            
+    asyncio.create_task(_auto_news_job())
 
 
 # ===========================================
@@ -680,7 +691,7 @@ async def refresh_news(background_tasks: BackgroundTasks):
 
 @app.get("/api/news/{match_id:path}")
 async def get_match_news(match_id: str):
-    """Returns cached news for a specific NBA match (fútbol no tiene noticias)."""
+    """Returns cached news for a specific match (NBA or Football)."""
     data = history_db.get_match_news(match_id)
     if not data:
         return {"found": False, "news": None}

@@ -1,222 +1,133 @@
+import os
 import json
-import sqlite3
-from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
+from dotenv import load_dotenv
+
+# Fake DB_PATH for compatibility with existing code that prints it
+DB_PATH = "Supabase (Cloud)"
+
+# Load environment variables
+load_dotenv()
+
+# We only initialize supabase if the keys are present
+_supabase_client = None
+
+def _get_supabase():
+    global _supabase_client
+    if _supabase_client is not None:
+        return _supabase_client
+        
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
+    if not url or not key:
+        print("[WARNING] SUPABASE_URL or SUPABASE_KEY not set. Data persistence will fail.")
+        return None
+        
+    try:
+        from supabase import create_client, Client
+        _supabase_client = create_client(url, key)
+        return _supabase_client
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Supabase client: {e}")
+        return None
 
 
-BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "Data" / "history.db"
-
-def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
-    """Return existing column names for a table."""
-    cursor = conn.execute(f"PRAGMA table_info({table_name})")
-    return {row[1] for row in cursor.fetchall()}
-
-def _ensure_football_schema(conn: sqlite3.Connection) -> None:
-    """
-    Ensure football_predictions has all expected columns.
-    This keeps old production DBs compatible without destructive migrations.
-    """
-    required_columns = {
-        "date": "TEXT",
-        "league": "TEXT DEFAULT 'ENG-Premier League'",
-        "match_id": "TEXT",
-        "home_team": "TEXT",
-        "away_team": "TEXT",
-        "prediction": "TEXT",
-        "prob_home": "REAL",
-        "prob_draw": "REAL",
-        "prob_away": "REAL",
-        "odd_home": "REAL",
-        "odd_draw": "REAL",
-        "odd_away": "REAL",
-        "status": "TEXT DEFAULT 'PENDING'",
-        "result": "TEXT",
-        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-    }
-    existing_columns = _get_table_columns(conn, "football_predictions")
-    for col, col_type in required_columns.items():
-        if col not in existing_columns:
-            conn.execute(f"ALTER TABLE football_predictions ADD COLUMN {col} {col_type}")
-
-def _ensure_predictions_schema(conn: sqlite3.Connection) -> None:
-    """Add odds_home / odds_away columns to predictions if missing."""
-    existing = _get_table_columns(conn, "predictions")
-    if "odds_home" not in existing:
-        conn.execute("ALTER TABLE predictions ADD COLUMN odds_home REAL")
-    if "odds_away" not in existing:
-        conn.execute("ALTER TABLE predictions ADD COLUMN odds_away REAL")
-
-
-def _ensure_recommendations_schema(conn: sqlite3.Connection) -> None:
-    existing = _get_table_columns(conn, "daily_recommendations")
-    if "result" not in existing:
-        conn.execute("ALTER TABLE daily_recommendations ADD COLUMN result TEXT DEFAULT 'pending'")
-    if "reasoning" not in existing:
-        conn.execute("ALTER TABLE daily_recommendations ADD COLUMN reasoning TEXT")
+def _truncate_data(data: dict, max_len: int = 5000) -> dict:
+    """Evita errores 413 truncando campos de texto largos."""
+    if not isinstance(data, dict): return data
+    new_data = data.copy()
+    for k, v in new_data.items():
+        if isinstance(v, str) and len(v) > max_len:
+            new_data[k] = v[:max_len] + "..."
+        elif isinstance(v, list):
+            new_data[k] = [x[:1000] + "..." if isinstance(x, str) and len(x) > 1000 else x for x in v]
+    return new_data
 
 
 def init_history_db():
-    """Crea la tabla de historial si no existe"""
-    DB_PATH.parent.mkdir(exist_ok=True)
-    
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS predictions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                match_id TEXT UNIQUE NOT NULL,
-                home_team TEXT,
-                away_team TEXT,
-                predicted_winner TEXT,
-                prob_model REAL,
-                prob_final REAL,
-                odds INTEGER,
-                ev_value REAL,
-                kelly_stake REAL,
-                warning_level TEXT,
-                result TEXT DEFAULT 'PENDING',  -- 'WIN', 'LOSS', 'PENDING'
-                profit REAL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # New table for Football
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS football_predictions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                league TEXT NOT NULL,
-                match_id TEXT UNIQUE NOT NULL,
-                home_team TEXT,
-                away_team TEXT,
-                prediction TEXT, -- '1', 'X', '2'
-                prob_home REAL,
-                prob_draw REAL,
-                prob_away REAL,
-                odd_home REAL,
-                odd_draw REAL,
-                odd_away REAL,
-                status TEXT DEFAULT 'PENDING',
-                result TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        _ensure_football_schema(conn)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS match_news (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                match_id TEXT NOT NULL,
-                sport TEXT DEFAULT 'nba',
-                headline TEXT,
-                key_points TEXT,
-                injuries TEXT,
-                impact_assessment TEXT,
-                confidence_modifier TEXT DEFAULT 'neutral',
-                raw_response TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(date, match_id)
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS daily_recommendations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT UNIQUE NOT NULL,
-                sport TEXT DEFAULT 'nba',
-                recommendations TEXT,
-                parlay_analysis TEXT,
-                parlay_odds REAL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        _ensure_predictions_schema(conn)
-        _ensure_recommendations_schema(conn)
-        conn.commit()
-    print("[OK] history.db inicializada (NBA + Football + News + Recommendations)")
+    """No-op for Supabase. Tables are managed via Supabase SQL Editor."""
+    client = _get_supabase()
+    if client:
+        print("[OK] Supabase client initialized")
+    else:
+        print("[ERROR] Could not initialize Supabase connection.")
 
 
 def save_prediction(prediction_data: dict):
-    """Guarda una predicción NBA con cuotas separadas por equipo."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO predictions 
-            (date, match_id, home_team, away_team, predicted_winner, 
-             prob_model, prob_final, odds, ev_value, kelly_stake, warning_level,
-             odds_home, odds_away, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
-        """, (
-            prediction_data['date'],
-            prediction_data['match_id'],
-            prediction_data['home_team'],
-            prediction_data['away_team'],
-            prediction_data['winner'],
-            prediction_data['win_probability'],
-            prediction_data['win_probability'],
-            prediction_data['market_odds'],
-            prediction_data['ev_value'],
-            prediction_data['kelly_stake_pct'],
-            prediction_data['warning_level'],
-            prediction_data.get('home_odds'),
-            prediction_data.get('away_odds'),
-        ))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    
+    data = {
+        'date': prediction_data['date'],
+        'match_id': prediction_data['match_id'],
+        'home_team': prediction_data['home_team'],
+        'away_team': prediction_data['away_team'],
+        'predicted_winner': prediction_data['winner'],
+        'prob_model': prediction_data['win_probability'],
+        'prob_final': prediction_data['win_probability'],
+        'odds': prediction_data['market_odds'],
+        'ev_value': prediction_data['ev_value'],
+        'kelly_stake': prediction_data['kelly_stake_pct'],
+        'warning_level': prediction_data['warning_level'],
+        'odds_home': prediction_data.get('home_odds'),
+        'odds_away': prediction_data.get('away_odds'),
+        'result': 'PENDING'
+    }
+    try:
+        client.table('predictions').upsert(data, on_conflict='match_id').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_prediction: {e}")
 
 
 def save_historical_prediction(prediction_data: dict):
-    """Guarda una predicción histórica con resultado ya conocido"""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO predictions 
-            (date, match_id, home_team, away_team, predicted_winner, 
-             prob_model, prob_final, odds, ev_value, kelly_stake, warning_level, result, profit)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            prediction_data['date'],
-            prediction_data['match_id'],
-            prediction_data['home_team'],
-            prediction_data['away_team'],
-            prediction_data['winner'],
-            prediction_data['win_probability'],
-            prediction_data['win_probability'],
-            prediction_data['market_odds'],
-            prediction_data['ev_value'],
-            prediction_data['kelly_stake_pct'],
-            prediction_data['warning_level'],
-            prediction_data.get('result', 'PENDING'),
-            prediction_data.get('profit', 0.0)
-        ))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    
+    data = {
+        'date': prediction_data['date'],
+        'match_id': prediction_data['match_id'],
+        'home_team': prediction_data['home_team'],
+        'away_team': prediction_data['away_team'],
+        'predicted_winner': prediction_data['winner'],
+        'prob_model': prediction_data['win_probability'],
+        'prob_final': prediction_data['win_probability'],
+        'odds': prediction_data['market_odds'],
+        'ev_value': prediction_data['ev_value'],
+        'kelly_stake': prediction_data['kelly_stake_pct'],
+        'warning_level': prediction_data['warning_level'],
+        'result': prediction_data.get('result', 'PENDING'),
+        'profit': prediction_data.get('profit', 0.0)
+    }
+    try:
+        client.table('predictions').upsert(data, on_conflict='match_id').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_historical_prediction: {e}")
 
 
 def update_results(date: str, results: dict):
+    """Actualiza resultados reales y calcula profit."""
+    client = _get_supabase()
+    if not client: return
 
-    """
-    Actualiza resultados reales y calcula profit.
-    
-    Args:
-        date: Fecha de los partidos
-        results: {'Lakers vs Celtics': 'Lakers', ...}
-    """
-    with sqlite3.connect(DB_PATH) as conn:
-        for match_id, actual_winner in results.items():
-            cursor = conn.execute("""
-                SELECT kelly_stake, odds, predicted_winner, odds_home, odds_away, home_team
-                FROM predictions
-                WHERE date = ? AND match_id = ?
-            """, (date, match_id))
+    for match_id, actual_winner in results.items():
+        try:
+            res = client.table('predictions').select('kelly_stake, odds, predicted_winner, odds_home, odds_away, home_team').eq('date', date).eq('match_id', match_id).execute()
             
-            row = cursor.fetchone()
-            if not row:
+            if not res.data:
                 continue
             
-            kelly_stake, odds_american, predicted_winner, odds_home, odds_away, home_team = row
+            row = res.data[0]
+            kelly_stake = row.get('kelly_stake') or 0
+            odds_american = row.get('odds')
+            predicted_winner = row.get('predicted_winner')
+            odds_home = row.get('odds_home')
+            odds_away = row.get('odds_away')
+            home_team = row.get('home_team')
+            
             is_win = (predicted_winner == actual_winner)
             
+            profit = 0
             if is_win:
                 decimal_odds = odds_home if predicted_winner == home_team else odds_away
                 if decimal_odds and decimal_odds > 1:
@@ -224,128 +135,131 @@ def update_results(date: str, results: dict):
                 elif odds_american:
                     am = float(odds_american)
                     profit = kelly_stake * (am / 100) if am > 0 else kelly_stake * (100 / abs(am))
-                else:
-                    profit = 0
             else:
                 profit = -kelly_stake
-            
-            # Actualizar
-            conn.execute("""
-                UPDATE predictions
-                SET result = ?,
-                    profit = ?
-                WHERE date = ? AND match_id = ?
-            """, ('WIN' if is_win else 'LOSS', profit, date, match_id))
-        
-        conn.commit()
+                
+            _update_prediction_result(date, match_id, is_win, profit)
+        except Exception as e:
+            print(f"[DB ERROR] update_results on match {match_id}: {e}")
+
+
+def delete_football_history():
+    """Borra todo el historial de predicciones de fútbol."""
+    client = _get_supabase()
+    if not client: return
+    try:
+        # Borrar todo
+        client.table('football_predictions').delete().neq('match_id', 'FORCE_DELETE_ALL').execute()
+        print("✅ Historial de fútbol eliminado correctamente.")
+    except Exception as e:
+        print(f"[DB ERROR] delete_football_history: {e}")
 
 
 def save_football_prediction(prediction_data: dict, match_id: str, date: str):
-    """Guarda una predicción de fútbol"""
-    with sqlite3.connect(DB_PATH) as conn:
-        # prediction_data comes from football_api.predict_match
-        # keys: prediction, probs{home, draw, away}, etc.
-        
-        # safely get probs
-        probs = prediction_data.get('probs', {})
-        
-        conn.execute("""
-            INSERT OR REPLACE INTO football_predictions 
-            (date, league, match_id, home_team, away_team, prediction, 
-             prob_home, prob_draw, prob_away, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
-        """, (
-            date,
-            prediction_data.get('league', 'ENG-Premier League'),
-            match_id,
-            prediction_data['home_team'],
-            prediction_data['away_team'],
-            prediction_data['prediction'],
-            probs.get('home', 0),
-            probs.get('draw', 0),
-            probs.get('away', 0)
-        ))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    
+    probs = prediction_data.get('probs', {})
+    data = {
+        'date': date,
+        'league': prediction_data.get('league', 'ENG-Premier League'),
+        'match_id': match_id,
+        'home_team': prediction_data['home_team'],
+        'away_team': prediction_data['away_team'],
+        'prediction': prediction_data['prediction'],
+        'prob_home': probs.get('home', 0),
+        'prob_draw': probs.get('draw', 0),
+        'prob_away': probs.get('away', 0),
+        'result': 'PENDING'
+    }
+    try:
+        client.table('football_predictions').upsert(data, on_conflict='match_id').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_football_prediction: {e}")
 
 
 def get_football_history(days: int = 30) -> list[dict]:
-    """Obtiene historial de predicciones de fútbol"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, league, match_id, home_team, away_team, prediction,
-                   prob_home, prob_draw, prob_away, result, created_at
-            FROM football_predictions
-            WHERE date >= date('now', '-' || ? || ' days')
-            ORDER BY date DESC, created_at DESC
-        """, (days,))
-        
-        rows = cursor.fetchall()
+    client = _get_supabase()
+    if not client: return []
+    
+    date_threshold = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    try:
+        res = client.table('football_predictions')\
+            .select('*')\
+            .gte('date', date_threshold)\
+            .order('date', desc=True)\
+            .order('created_at', desc=True)\
+            .execute()
         
         return [
             {
-                "date": row[0],
-                "league": row[1],
-                "match_id": row[2],
-                "home_team": row[3],
-                "away_team": row[4],
-                "prediction": row[5],
+                "date": row['date'],
+                "league": row.get('league'),
+                "match_id": row['match_id'],
+                "home_team": row['home_team'],
+                "away_team": row['away_team'],
+                "prediction": row['prediction'],
                 "probs": {
-                    "home": row[6],
-                    "draw": row[7],
-                    "away": row[8]
+                    "home": row.get('prob_home', 0),
+                    "draw": row.get('prob_draw', 0),
+                    "away": row.get('prob_away', 0)
                 },
-                "result": row[9],
-                "created_at": row[10]
+                "result": row.get('result'),
+                "created_at": row.get('created_at')
             }
-            for row in rows
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_football_history: {e}")
+        return []
 
 
 def get_history(days: int = 7) -> list[dict]:
-    """Obtiene historial de predicciones"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, match_id, home_team, away_team, predicted_winner, prob_final, odds, 
-                   ev_value, kelly_stake, result, profit
-            FROM predictions
-            WHERE date >= date('now', '-' || ? || ' days')
-            ORDER BY date DESC, created_at DESC
-        """, (days,))
-        
-        rows = cursor.fetchall()
-        
+    client = _get_supabase()
+    if not client: return []
+    
+    date_threshold = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    try:
+        res = client.table('predictions')\
+            .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit')\
+            .gte('date', date_threshold)\
+            .order('date', desc=True)\
+            .execute()
+            
         return [
             {
-                "date": row[0],
-                "match": row[1],
-                "home_team": row[2],
-                "away_team": row[3],
-                "predicted_winner": row[4],
-                "probability": row[5],
-                "odds": row[6],
-                "ev": row[7],
-                "kelly_stake": row[8],
-                "result": row[9],
-                "profit": row[10]
+                "date": row['date'],
+                "match": row['match_id'],
+                "home_team": row['home_team'],
+                "away_team": row['away_team'],
+                "predicted_winner": row['predicted_winner'],
+                "probability": row['prob_final'],
+                "odds": row['odds'],
+                "ev": row['ev_value'],
+                "kelly_stake": row['kelly_stake'],
+                "result": row['result'],
+                "profit": row.get('profit', 0)
             }
-            for row in rows
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_history: {e}")
+        return []
 
 
 def get_team_prediction_accuracy(team_name: str) -> dict:
-    """Obtiene la precisión de predicción para un equipo específico"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins
-            FROM predictions
-            WHERE (home_team LIKE ? OR away_team LIKE ?)
-            AND result != 'PENDING'
-        """, (f"%{team_name}%", f"%{team_name}%"))
-        
-        row = cursor.fetchone()
-        total, wins = row[0] or 0, row[1] or 0
+    client = _get_supabase()
+    if not client: return {"team": team_name, "total_bets": 0, "wins": 0, "accuracy": 0}
+    
+    try:
+        res = client.table('predictions')\
+            .select('result')\
+            .neq('result', 'PENDING')\
+            .or_(f"home_team.ilike.%{team_name}%,away_team.ilike.%{team_name}%")\
+            .execute()
+            
+        total = len(res.data)
+        wins = sum(1 for row in res.data if row['result'] == 'WIN')
         
         return {
             "team": team_name,
@@ -353,39 +267,40 @@ def get_team_prediction_accuracy(team_name: str) -> dict:
             "wins": wins,
             "accuracy": round((wins / total * 100) if total > 0 else 0, 1)
         }
+    except Exception as e:
+        print(f"[DB ERROR] get_team_prediction_accuracy: {e}")
+        return {"team": team_name, "total_bets": 0, "wins": 0, "accuracy": 0}
+
 
 def get_predictions_by_date_light(date: str) -> list[dict]:
-    """Versión ligera que NO importa prediction_api (para uso en Render)."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, match_id, home_team, away_team, predicted_winner, 
-                   prob_final, odds, ev_value, kelly_stake, warning_level, result,
-                   odds_home, odds_away
-            FROM predictions
-            WHERE date = ?
-        """, (date,))
-        
-        rows = cursor.fetchall()
+    client = _get_supabase()
+    if not client: return []
+    
+    try:
+        res = client.table('predictions')\
+            .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, warning_level, result, odds_home, odds_away')\
+            .eq('date', date)\
+            .execute()
+            
         predictions = []
-        
-        for row in rows:
+        for row in res.data:
             p = {
-                "match_id": row[1],
-                "home_team": row[2],
-                "away_team": row[3],
-                "winner": row[4],
-                "win_probability": row[5] or 0,
+                "match_id": row['match_id'],
+                "home_team": row['home_team'],
+                "away_team": row['away_team'],
+                "winner": row['predicted_winner'],
+                "win_probability": row['prob_final'] or 0,
                 "under_over": "N/A",
                 "ou_line": 0,
                 "ou_probability": 0,
                 "ai_analysis": None,
                 "is_mock": False,
-                "odds_home": row[11],
-                "odds_away": row[12],
-                "ev_score": row[7],
-                "kelly_stake": row[8],
-                "warning_level": row[9],
-                "game_status": row[10],
+                "odds_home": row.get('odds_home'),
+                "odds_away": row.get('odds_away'),
+                "ev_score": row['ev_value'],
+                "kelly_stake": row['kelly_stake'],
+                "warning_level": row.get('warning_level'),
+                "game_status": row.get('result'),
                 "home_score": None,
                 "away_score": None,
                 "implied_prob": None,
@@ -396,223 +311,247 @@ def get_predictions_by_date_light(date: str) -> list[dict]:
                 "risk_analysis": None
             }
             predictions.append(p)
-            
         return predictions
+    except Exception as e:
+        print(f"[DB ERROR] get_predictions_by_date_light: {e}")
+        return []
 
 
 def get_predictions_by_date(date: str) -> list[dict]:
-    """Obtiene predicciones guardadas para una fecha específica"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, match_id, home_team, away_team, predicted_winner, 
-                   prob_final, odds, ev_value, kelly_stake, warning_level, result
-            FROM predictions
-            WHERE date = ?
-        """, (date,))
-        
-        rows = cursor.fetchall()
-        
+    client = _get_supabase()
+    if not client: return []
+    
+    try:
+        res = client.table('predictions')\
+            .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, warning_level, result')\
+            .eq('date', date)\
+            .execute()
+            
         predictions = []
-        import prediction_api # to use MatchPrediction class if needed or just dict
-        
-        for row in rows:
-            # We need to reconstruct MatchPrediction objects or equivalent dicts
-            # For read-through cache, we need to return objects compatible with the main API response
-            # predict_today expects MatchPrediction objects
-            
-            # (date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, warning_level, result)
-            
-            # Reconstruct dictionary first
+        for row in res.data:
             p = {
-                "date": row[0],
-                "match_id": row[1],
-                "home_team": row[2],
-                "away_team": row[3],
-                "winner": row[4],
-                "win_probability": row[5],
-                "market_odds_home": row[6] if row[4] == row[2] else 0, # Approximation if we only stored 'odds'
-                "market_odds_away": row[6] if row[4] == row[3] else 0,
-                "ev_value": row[7],
-                "kelly_stake_pct": row[8],
-                "warning_level": row[9],
-                "result": row[10]  # Include result for cache status
+                "date": row['date'],
+                "match_id": row['match_id'],
+                "home_team": row['home_team'],
+                "away_team": row['away_team'],
+                "winner": row['predicted_winner'],
+                "win_probability": row['prob_final'],
+                "market_odds_home": row['odds'] if row['predicted_winner'] == row['home_team'] else 0,
+                "market_odds_away": row['odds'] if row['predicted_winner'] == row['away_team'] else 0,
+                "ev_value": row['ev_value'],
+                "kelly_stake_pct": row['kelly_stake'],
+                "warning_level": row.get('warning_level'),
+                "result": row.get('result')
             }
             predictions.append(p)
-            
         return predictions
-
+    except Exception as e:
+        print(f"[DB ERROR] get_predictions_by_date: {e}")
+        return []
 
 
 def delete_predictions_for_date(date: str) -> int:
-    """Elimina todas las predicciones de una fecha específica (para invalidar cache stale)"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("DELETE FROM predictions WHERE date = ? AND result = 'PENDING'", (date,))
-        deleted = cursor.rowcount
-        conn.commit()
-    print(f"[DB] Deleted {deleted} stale predictions for {date}")
-    return deleted
+    client = _get_supabase()
+    if not client: return 0
+    try:
+        res = client.table('predictions').delete().eq('date', date).eq('result', 'PENDING').execute()
+        deleted = len(res.data) if res.data else 0
+        print(f"[DB] Deleted {deleted} stale predictions for {date}")
+        return deleted
+    except Exception as e:
+        print(f"[DB ERROR] delete_predictions_for_date: {e}")
+        return 0
 
 
 def get_team_recent_results(team_name: str, limit: int = 5) -> list:
-    """Obtiene los últimos N resultados de un equipo"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, match_id, predicted_winner, result
-            FROM predictions
-            WHERE (home_team LIKE ? OR away_team LIKE ?)
-            AND result != 'PENDING'
-            ORDER BY date DESC
-            LIMIT ?
-        """, (f"%{team_name}%", f"%{team_name}%", limit))
-        
+    client = _get_supabase()
+    if not client: return []
+    try:
+        res = client.table('predictions')\
+            .select('date, match_id, predicted_winner, result')\
+            .neq('result', 'PENDING')\
+            .or_(f"home_team.ilike.%{team_name}%,away_team.ilike.%{team_name}%")\
+            .order('date', desc=True)\
+            .limit(limit)\
+            .execute()
+            
         return [
             {
-                "date": row[0],
-                "match": row[1],
-                "predicted_winner": row[2],
-                "result": row[3]
+                "date": row['date'],
+                "match": row['match_id'],
+                "predicted_winner": row['predicted_winner'],
+                "result": row['result']
             }
-            for row in cursor.fetchall()
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_team_recent_results: {e}")
+        return []
 
 
 def get_upcoming_football_predictions() -> list[dict]:
-    """Obtiene predicciones de fútbol pendientes para la próxima jornada (fecha >= actual)."""
-    with sqlite3.connect(DB_PATH) as conn:
-        # Retrieve matches that are from today onwards and pending
-        cursor = conn.execute("""
-            SELECT date, league, match_id, home_team, away_team, prediction,
-                   prob_home, prob_draw, prob_away, result, created_at
-            FROM football_predictions
-            WHERE date >= date('now', 'localtime') AND result = 'PENDING'
-            ORDER BY date ASC, created_at DESC
-        """)
-        
-        rows = cursor.fetchall()
-        
+    client = _get_supabase()
+    if not client: return []
+    date_now = datetime.now().strftime('%Y-%m-%d')
+    try:
+        res = client.table('football_predictions')\
+            .select('date, league, match_id, home_team, away_team, prediction, prob_home, prob_draw, prob_away, result, created_at')\
+            .gte('date', date_now)\
+            .eq('result', 'PENDING')\
+            .order('date', desc=False)\
+            .order('created_at', desc=True)\
+            .execute()
+            
         return [
             {
-                "date": row[0],
-                "league": row[1],
-                "match_id": row[2],
-                "home_team": row[3],
-                "away_team": row[4],
-                "prediction": row[5],
+                "date": row['date'],
+                "league": row.get('league'),
+                "match_id": row['match_id'],
+                "home_team": row['home_team'],
+                "away_team": row['away_team'],
+                "prediction": row['prediction'],
                 "probs": {
-                    "home": row[6],
-                    "draw": row[7],
-                    "away": row[8]
+                    "home": row.get('prob_home', 0),
+                    "draw": row.get('prob_draw', 0),
+                    "away": row.get('prob_away', 0)
                 },
-                "result": row[9],
-                "created_at": row[10]
+                "confidence_modifier": row.get('confidence_modifier', 'neutral'),
+                "result": row['result'],
+                "created_at": row.get('created_at')
             }
-            for row in rows
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_upcoming_football_predictions: {e}")
+        return []
 
 
 def update_prediction_odds(match_id: str, odds_home: float, odds_away: float) -> None:
-    """Update odds for an existing prediction (used when odds were missing on initial save)."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            UPDATE predictions SET odds_home = ?, odds_away = ?
-            WHERE match_id = ? AND (odds_home IS NULL OR odds_away IS NULL)
-        """, (odds_home, odds_away, match_id))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    try:
+        # Supabase update syntax: we only want to update if they are null.
+        # We can fetch first or just do an update (which might overwrite if not careful).
+        # Let's fetch first to check if they are null.
+        res = client.table('predictions').select('odds_home, odds_away').eq('match_id', match_id).execute()
+        if res.data:
+            row = res.data[0]
+            if row.get('odds_home') is None or row.get('odds_away') is None:
+                client.table('predictions').update({'odds_home': odds_home, 'odds_away': odds_away}).eq('match_id', match_id).execute()
+    except Exception as e:
+        print(f"[DB ERROR] update_prediction_odds: {e}")
 
 
 def get_all_prediction_dates() -> dict:
-    """Returns {date_str: count} for all dates with predictions"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, COUNT(*) FROM predictions
-            GROUP BY date ORDER BY date
-        """)
-        return {row[0]: row[1] for row in cursor.fetchall()}
+    client = _get_supabase()
+    if not client: return {}
+    try:
+        # Supabase currently lacks simple GROUP BY in restful API without creating a view/rpc.
+        # So we fetch all dates and count them.
+        res = client.table('predictions').select('date').execute()
+        counts = {}
+        for row in res.data:
+            d = row['date']
+            counts[d] = counts.get(d, 0) + 1
+        return counts
+    except Exception as e:
+        print(f"[DB ERROR] get_all_prediction_dates: {e}")
+        return {}
 
 
 def get_match_ids_for_date(date: str) -> set:
-    """Returns set of match_id strings for a given date"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute(
-            "SELECT match_id FROM predictions WHERE date = ?", (date,)
-        )
-        return {row[0] for row in cursor.fetchall()}
+    client = _get_supabase()
+    if not client: return set()
+    try:
+        res = client.table('predictions').select('match_id').eq('date', date).execute()
+        return {row['match_id'] for row in res.data}
+    except Exception as e:
+        print(f"[DB ERROR] get_match_ids_for_date: {e}")
+        return set()
 
 
 # =============================================
-# MATCH NEWS (Groq Agent cache)
+# MATCH NEWS
 # =============================================
 
 def save_match_news(date: str, match_id: str, news_data: dict) -> None:
-    """Persists Groq agent news for a single match."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO match_news
-            (date, match_id, sport, headline, key_points, injuries,
-             impact_assessment, confidence_modifier, raw_response)
-            VALUES (?, ?, 'nba', ?, ?, ?, ?, ?, ?)
-        """, (
-            date,
-            match_id,
-            news_data.get("headline", ""),
-            json.dumps(news_data.get("key_points", []), ensure_ascii=False),
-            json.dumps(news_data.get("injuries", []), ensure_ascii=False),
-            news_data.get("impact_assessment", ""),
-            news_data.get("confidence_modifier", "neutral"),
-            json.dumps(news_data, ensure_ascii=False),
-        ))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    
+    # Extraer el deporte de news_data o por defecto nba
+    sport = news_data.get('sport', 'nba')
+    
+    data = {
+        'date': date,
+        'match_id': match_id,
+        'sport': sport,
+        'headline': news_data.get('headline', ''),
+        'key_points': news_data.get('key_points', []),
+        'injuries': news_data.get('injuries', []),
+        'impact_assessment': news_data.get('impact_assessment', ''),
+        'confidence_modifier': news_data.get('confidence_modifier', 'neutral'),
+        'raw_response': news_data
+    }
+    data = _truncate_data(data)
+    try:
+        client.table('match_news').upsert(data, on_conflict='match_id').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_match_news: {e}")
 
 
 def get_match_news(match_id: str) -> Optional[dict]:
-    """Returns cached news for a single match or None."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT headline, key_points, injuries, impact_assessment,
-                   confidence_modifier, created_at
-            FROM match_news WHERE match_id = ?
-        """, (match_id,))
-        row = cursor.fetchone()
-        if not row:
-            return None
+    client = _get_supabase()
+    if not client: return None
+    try:
+        res = client.table('match_news').select('*').eq('match_id', match_id).execute()
+        if not res.data: return None
+        row = res.data[0]
         return {
-            "headline": row[0],
-            "key_points": json.loads(row[1]) if row[1] else [],
-            "injuries": json.loads(row[2]) if row[2] else [],
-            "impact_assessment": row[3],
-            "confidence_modifier": row[4],
-            "created_at": row[5],
+            "headline": row.get('headline'),
+            "key_points": row.get('key_points', []),
+            "injuries": row.get('injuries', []),
+            "impact_assessment": row.get('impact_assessment'),
+            "confidence_modifier": row.get('confidence_modifier'),
+            "updated_at": (row.get('created_at') or "").replace('T', ' ')[:19],
+            "created_at": row.get('created_at')
         }
+    except Exception as e:
+        print(f"[DB ERROR] get_match_news: {e}")
+        return None
 
 
 def get_news_for_date(date: str) -> list[dict]:
-    """Returns all cached news for a given date."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT match_id, headline, key_points, injuries,
-                   impact_assessment, confidence_modifier, created_at
-            FROM match_news WHERE date = ?
-        """, (date,))
+    client = _get_supabase()
+    if not client: return []
+    try:
+        res = client.table('match_news').select('*').eq('date', date).execute()
         return [
             {
-                "match_id": r[0],
-                "headline": r[1],
-                "key_points": json.loads(r[2]) if r[2] else [],
-                "injuries": json.loads(r[3]) if r[3] else [],
-                "impact_assessment": r[4],
-                "confidence_modifier": r[5],
-                "created_at": r[6],
+                "match_id": row['match_id'],
+                "headline": row.get('headline'),
+                "key_points": row.get('key_points', []),
+                "injuries": row.get('injuries', []),
+                "impact_assessment": row.get('impact_assessment'),
+                "confidence_modifier": row.get('confidence_modifier'),
+                "updated_at": (row.get('created_at') or "").replace('T', ' ')[:19],
+                "created_at": row.get('created_at')
             }
-            for r in cursor.fetchall()
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_news_for_date: {e}")
+        return []
 
 
 def news_exist_for_date(date: str) -> bool:
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute(
-            "SELECT COUNT(*) FROM match_news WHERE date = ?", (date,)
-        )
-        return cursor.fetchone()[0] > 0
+    client = _get_supabase()
+    if not client: return False
+    try:
+        res = client.table('match_news').select('id', count='exact').eq('date', date).limit(1).execute()
+        return res.count > 0
+    except Exception as e:
+        print(f"[DB ERROR] news_exist_for_date: {e}")
+        return False
 
 
 # =============================================
@@ -620,74 +559,78 @@ def news_exist_for_date(date: str) -> bool:
 # =============================================
 
 def save_daily_recommendations(date: str, reco_data: dict) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO daily_recommendations
-            (date, sport, recommendations, parlay_analysis, parlay_odds, reasoning, result)
-            VALUES (?, 'nba', ?, ?, ?, ?, 'pending')
-        """, (
-            date,
-            json.dumps(reco_data.get("recommendations", []), ensure_ascii=False),
-            reco_data.get("parlay_analysis", ""),
-            reco_data.get("parlay_odds", 0.0),
-            reco_data.get("reasoning", ""),
-        ))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    data = {
+        'date': date,
+        'sport': 'nba',
+        'recommendations': reco_data.get('recommendations', []),
+        'parlay_analysis': reco_data.get('parlay_analysis', ''),
+        'parlay_odds': reco_data.get('parlay_odds', 0.0),
+        'reasoning': reco_data.get('reasoning', ''),
+        'result': 'pending'
+    }
+    data = _truncate_data(data)
+    try:
+        client.table('daily_recommendations').upsert(data, on_conflict='date').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_daily_recommendations: {e}")
 
 
 def get_daily_recommendations(date: str) -> Optional[dict]:
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT recommendations, parlay_analysis, parlay_odds, created_at,
-                   reasoning, result
-            FROM daily_recommendations WHERE date = ?
-        """, (date,))
-        row = cursor.fetchone()
-        if not row:
-            return None
+    client = _get_supabase()
+    if not client: return None
+    try:
+        res = client.table('daily_recommendations').select('*').eq('date', date).execute()
+        if not res.data: return None
+        row = res.data[0]
         return {
-            "recommendations": json.loads(row[0]) if row[0] else [],
-            "parlay_analysis": row[1],
-            "parlay_odds": row[2],
-            "created_at": row[3],
-            "reasoning": row[4] or "",
-            "result": row[5] or "pending",
+            "recommendations": row.get('recommendations', []),
+            "parlay_analysis": row.get('parlay_analysis'),
+            "parlay_odds": row.get('parlay_odds'),
+            "created_at": row.get('created_at'),
+            "reasoning": row.get('reasoning', ''),
+            "result": row.get('result', 'pending')
         }
+    except Exception as e:
+        print(f"[DB ERROR] get_daily_recommendations: {e}")
+        return None
 
 
 def get_recommendations_history(limit: int = 14) -> list[dict]:
-    """Returns past daily recommendations with their results."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT date, recommendations, parlay_analysis, parlay_odds,
-                   created_at, result
-            FROM daily_recommendations
-            ORDER BY date DESC LIMIT ?
-        """, (limit,))
+    client = _get_supabase()
+    if not client: return []
+    try:
+        res = client.table('daily_recommendations').select('*').order('date', desc=True).limit(limit).execute()
         return [
             {
-                "date": r[0],
-                "recommendations": json.loads(r[1]) if r[1] else [],
-                "parlay_analysis": r[2],
-                "parlay_odds": r[3],
-                "created_at": r[4],
-                "result": r[5] or "pending",
+                "date": row['date'],
+                "recommendations": row.get('recommendations', []),
+                "parlay_analysis": row.get('parlay_analysis'),
+                "parlay_odds": row.get('parlay_odds'),
+                "created_at": row.get('created_at'),
+                "result": row.get('result', 'pending')
             }
-            for r in cursor.fetchall()
+            for row in res.data
         ]
+    except Exception as e:
+        print(f"[DB ERROR] get_recommendations_history: {e}")
+        return []
 
 
 def delete_daily_recommendations(date: str) -> None:
-    """Remove stale recommendations for a date so they can be regenerated."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM daily_recommendations WHERE date = ?", (date,))
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    try:
+        client.table('daily_recommendations').delete().eq('date', date).execute()
+    except Exception as e:
+        print(f"[DB ERROR] delete_daily_recommendations: {e}")
 
 
 def update_recommendation_result(date: str, result: str) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            "UPDATE daily_recommendations SET result = ? WHERE date = ?",
-            (result, date)
-        )
-        conn.commit()
+    client = _get_supabase()
+    if not client: return
+    try:
+        client.table('daily_recommendations').update({'result': result}).eq('date', date).execute()
+    except Exception as e:
+        print(f"[DB ERROR] update_recommendation_result: {e}")

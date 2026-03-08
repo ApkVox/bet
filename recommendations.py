@@ -41,18 +41,17 @@ def calculate_parlay(odds_list: list[float], amount: float) -> dict:
 
 
 def _build_prompt(candidates: list[dict], news_by_match: dict) -> str:
-    """Prompt compacto para evitar 413."""
+    """Prompt ultra-compacto."""
     lines = []
     for i, c in enumerate(candidates[:5], 1):
         mid = c.get("match_id", "")
-        news = news_by_match.get(mid, {}).get("headline", "Sin noticias")[:80]
-        lines.append(f"{i}. {c.get('home_team')} vs {c.get('away_team')} -> {c.get('winner')} ({c.get('win_probability',0)}%). Cuota: {c.get('odds_home') or c.get('odds_away')}. EV:{c.get('ev_score') or 0}. Noticias: {news}")
-    matches_text = "\n".join(lines)
-    return f"""Analista NBA. Partidos candidatos:
-{matches_text}
-
-Selecciona los 3 MEJORES para parlay. Responde SOLO JSON:
-{{"selected_indices":[1,2,3],"reasoning":"...","individual_analyses":[{{"match":"...","pick":"...","confidence":"alta|media","reason":"..."}}],"risk_level":"bajo|medio|alto","parlay_assessment":"..."}}
+        news = news_by_match.get(mid, {}).get("headline", "Sin noticias")[:120]
+        lines.append(f"{i}. {c.get('home_team')} vs {c.get('away_team')} -> {c.get('winner')} ({c.get('win_probability',0)}%). Cuota: {c.get('odds_home') or c.get('odds_away')}. Noticia: {news}")
+    ctx = "\n".join(lines)
+    return f"""Analista NBA. Candidatos:
+{ctx}
+Pick 3 mejores parlay. Responde SOLO JSON minificado:
+{{"selected_indices":[1,2,3],"reasoning":"(breve)","individual_analyses":[{{"match":"...","pick":"...","confidence":"alta|media","reason":"(1 frase)"}}],"risk_level":"bajo|medio|alto","parlay_assessment":"(breve)"}}
 Español."""
 
 

@@ -337,70 +337,118 @@ function getLogoUrl(sport, team, backendLogo) {
 
 function renderPredictions(predictions) {
     const grid = document.getElementById('predictionsGrid');
+    const titleEl = document.getElementById('todayTitle');
+    
+    if (titleEl) {
+        const todayObj = new Date();
+        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        let formattedDate = todayObj.toLocaleDateString('es-ES', opts);
+        titleEl.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    }
+
     if (!predictions.length) {
         const icon = currentSport === 'football' ? '\u26BD' : '\uD83C\uDFC0';
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">${icon}</div><p>No hay partidos de ${currentSport === 'football' ? 'futbol' : 'NBA'} hoy</p></div>`;
         return;
     }
 
-    grid.innerHTML = predictions.map((pred, idx) => {
-        const delay = (idx * 0.06).toFixed(2);
+    if (currentSport === 'football') {
+        const grouped = {};
+        predictions.forEach((p, idx) => {
+            const d = p.date || 'Desconocida';
+            if (!grouped[d]) grouped[d] = [];
+            grouped[d].push({ pred: p, originalIdx: idx });
+        });
 
-        if (currentSport === 'football') {
-            const homeLogo = getLogoUrl('football', pred.home_team, pred.home_logo);
-            const awayLogo = getLogoUrl('football', pred.away_team, pred.away_logo);
-            const isHomeFavored = pred.prediction === pred.home_team || pred.prediction === '1';
-            const isAwayFavored = pred.prediction === pred.away_team || pred.prediction === '2';
-            const isDraw = pred.prediction === 'Draw' || pred.prediction === 'X';
+        const sortedDates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+        let html = '';
+        let globalCardIdx = 0;
 
-            const homeProb = pred.probs?.home ? pred.probs.home : 0;
-            const drawProb = pred.probs?.draw ? pred.probs.draw : 0;
-            const awayProb = pred.probs?.away ? pred.probs.away : 0;
-            const maxProb = Math.max(homeProb, drawProb, awayProb);
+        sortedDates.forEach(dateStr => {
+            let dateFormatted = dateStr;
+            if (dateStr !== 'Desconocida') {
+                const dObj = new Date(dateStr + 'T14:00:00'); // Ensure it stays on the same day dynamically
+                const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+                dateFormatted = dObj.toLocaleDateString('es-ES', opts);
+                dateFormatted = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+            }
+            html += `<div class="date-group-header">${dateFormatted}</div>`;
 
-            const predLabel = isHomeFavored ? pred.home_team : isAwayFavored ? pred.away_team : 'Empate';
+            html += grouped[dateStr].map((item) => {
+                const pred = item.pred;
+                const idx = item.originalIdx;
+                const delay = (globalCardIdx++ * 0.06).toFixed(2);
 
-            return `
-            <div class="prediction-card animate-in" style="animation-delay:${delay}s" onclick="showDetails(${idx})">
-                <div class="card-league-badge">
-                    <img src="https://media.api-sports.io/football/leagues/39.png" alt="PL" onerror="this.style.display='none'">
-                    <span>Premier League</span>
-                </div>
-                <div class="match-header">
-                    <div class="team">
-                        ${homeLogo ? `<img class="team-logo" src="${homeLogo}" alt="${pred.home_team}" onerror="this.style.display='none'">` : ''}
-                        <span class="team-name ${isHomeFavored ? 'favored' : ''}">${pred.home_team}</span>
+                const homeLogo = getLogoUrl('football', pred.home_team, pred.home_logo);
+                const awayLogo = getLogoUrl('football', pred.away_team, pred.away_logo);
+                const isHomeFavored = pred.prediction === pred.home_team || pred.prediction === '1';
+                const isAwayFavored = pred.prediction === pred.away_team || pred.prediction === '2';
+                const isDraw = pred.prediction === 'Draw' || pred.prediction === 'X';
+
+                const homeProb = pred.probs?.home ? pred.probs.home : 0;
+                const drawProb = pred.probs?.draw ? pred.probs.draw : 0;
+                const awayProb = pred.probs?.away ? pred.probs.away : 0;
+                const maxProb = Math.max(homeProb, drawProb, awayProb);
+
+                const predLabel = isHomeFavored ? pred.home_team : isAwayFavored ? pred.away_team : 'Empate';
+
+                // IA Modifier Badge
+                let confidenceHtml = '';
+                if (pred.confidence_modifier === 'higher') {
+                    confidenceHtml = `<div class="confidence-badge confidence-higher"><i class="fas fa-arrow-up"></i> IA Booster</div>`;
+                } else if (pred.confidence_modifier === 'lower') {
+                    confidenceHtml = `<div class="confidence-badge confidence-lower"><i class="fas fa-arrow-down"></i> IA Caution</div>`;
+                }
+
+                return `
+                <div class="prediction-card animate-in" style="animation-delay:${delay}s" onclick="showDetails(${idx})">
+                    ${confidenceHtml}
+                    <div class="card-league-badge">
+                        <img src="https://media.api-sports.io/football/leagues/39.png" alt="PL" onerror="this.style.display='none'">
+                        <span>Premier League</span>
                     </div>
-                    <span class="vs-badge">VS</span>
-                    <div class="team">
-                        ${awayLogo ? `<img class="team-logo" src="${awayLogo}" alt="${pred.away_team}" onerror="this.style.display='none'">` : ''}
-                        <span class="team-name ${isAwayFavored ? 'favored' : ''}">${pred.away_team}</span>
+                    <div class="match-header">
+                        <div class="team">
+                            ${homeLogo ? `<img class="team-logo" src="${homeLogo}" alt="${pred.home_team}" onerror="this.style.display='none'">` : ''}
+                            <span class="team-name ${isHomeFavored ? 'favored' : ''}">${pred.home_team}</span>
+                        </div>
+                        <span class="vs-badge">VS</span>
+                        <div class="team">
+                            ${awayLogo ? `<img class="team-logo" src="${awayLogo}" alt="${pred.away_team}" onerror="this.style.display='none'">` : ''}
+                            <span class="team-name ${isAwayFavored ? 'favored' : ''}">${pred.away_team}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="prob-bar-container">
-                    <div class="prob-item ${isHomeFavored ? 'highlighted' : ''}">
-                        <div class="prob-label">Local</div>
-                        <div class="prob-value">${homeProb.toFixed(0)}%</div>
-                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${homeProb}%;animation-delay:${(idx * 0.06 + 0.3).toFixed(2)}s"></div></div>
+                    <div class="prob-bar-container">
+                        <div class="prob-item ${isHomeFavored ? 'highlighted' : ''}">
+                            <div class="prob-label">Local</div>
+                            <div class="prob-value">${homeProb.toFixed(0)}%</div>
+                            <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${homeProb}%;animation-delay:${(delay * 1 + 0.3).toFixed(2)}s"></div></div>
+                        </div>
+                        <div class="prob-item ${isDraw ? 'highlighted' : ''}">
+                            <div class="prob-label">Empate</div>
+                            <div class="prob-value">${drawProb.toFixed(0)}%</div>
+                            <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${drawProb}%;animation-delay:${(delay * 1 + 0.4).toFixed(2)}s"></div></div>
+                        </div>
+                        <div class="prob-item ${isAwayFavored ? 'highlighted' : ''}">
+                            <div class="prob-label">Visita</div>
+                            <div class="prob-value">${awayProb.toFixed(0)}%</div>
+                            <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${awayProb}%;animation-delay:${(delay * 1 + 0.5).toFixed(2)}s"></div></div>
+                        </div>
                     </div>
-                    <div class="prob-item ${isDraw ? 'highlighted' : ''}">
-                        <div class="prob-label">Empate</div>
-                        <div class="prob-value">${drawProb.toFixed(0)}%</div>
-                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${drawProb}%;animation-delay:${(idx * 0.06 + 0.4).toFixed(2)}s"></div></div>
+                    <div class="card-prediction-footer">
+                        <span class="footer-label">Prediccion del modelo</span>
+                        <span class="footer-value">${predLabel}</span>
                     </div>
-                    <div class="prob-item ${isAwayFavored ? 'highlighted' : ''}">
-                        <div class="prob-label">Visita</div>
-                        <div class="prob-value">${awayProb.toFixed(0)}%</div>
-                        <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${awayProb}%;animation-delay:${(idx * 0.06 + 0.5).toFixed(2)}s"></div></div>
-                    </div>
-                </div>
-                <div class="card-prediction-footer">
-                    <span class="footer-label">Prediccion del modelo</span>
-                    <span class="footer-value">${predLabel}</span>
-                </div>
-                <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, predLabel, maxProb)}" download="promo_${pred.home_team.replace(/\s/g,'_')}_vs_${pred.away_team.replace(/\s/g,'_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
-            </div>`;
-        } else {
+                    <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, predLabel, maxProb)}" download="promo_${pred.home_team.replace(/\s/g, '_')}_vs_${pred.away_team.replace(/\s/g, '_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
+                </div>`;
+            }).join('');
+        });
+        
+        grid.innerHTML = html;
+
+    } else {
+        grid.innerHTML = predictions.map((pred, idx) => {
+            const delay = (idx * 0.06).toFixed(2);
             return `
             <div class="prediction-card animate-in" style="animation-delay:${delay}s" onclick="showDetails(${idx})">
                 <div class="card-league-badge">
@@ -427,10 +475,10 @@ function renderPredictions(predictions) {
                     ${pred.ev_score > 0 ? `<span class="meta-tag positive">EV +${pred.ev_score?.toFixed(1)}%</span>` : ''}
                     ${pred.warning_level === 'HIGH' ? `<span class="meta-tag negative">\u26A0\uFE0F Riesgo</span>` : ''}
                 </div>
-                <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, pred.winner, pred.win_probability)}" download="promo_${pred.home_team.replace(/\s/g,'_')}_vs_${pred.away_team.replace(/\s/g,'_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
+                <a class="promo-download-btn promo-card-dl" style="display:none" href="${getPromoImageUrl(pred.home_team, pred.away_team, pred.winner, pred.win_probability)}" download="promo_${pred.home_team.replace(/\s/g, '_')}_vs_${pred.away_team.replace(/\s/g, '_')}.png" onclick="event.stopPropagation()" title="Descargar promo">&#8595; Promo</a>
             </div>`;
-        }
-    }).join('');
+        }).join('');
+    }
 
     if (promoCardEnabled) {
         grid.querySelectorAll('.promo-card-dl').forEach(el => el.style.display = 'inline-flex');
@@ -626,11 +674,9 @@ function showDetails(index) {
 
     const matchId = pred.match_id || '';
     const newsPlaceholderId = `news-${index}`;
-    const isNBA = currentSport === 'nba';
 
-    const newsSectionHtml = isNBA
-        ? `<div id="${newsPlaceholderId}" class="news-section"><div class="news-loading">Cargando noticias...</div></div>`
-        : `<div class="news-section" style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:13px;">Noticias disponibles solo para partidos NBA.</div>`;
+    // Ahora habilitamos noticias para ambos deportes si hay matchId
+    const newsSectionHtml = `<div id="${newsPlaceholderId}" class="news-section"><div class="news-loading">Cargando noticias y análisis de IA...</div></div>`;
 
     document.getElementById('modalTitle').textContent = `${pred.home_team} vs ${pred.away_team}`;
     document.getElementById('modalBody').innerHTML = `
@@ -643,7 +689,7 @@ function showDetails(index) {
     `;
     document.getElementById('modal').classList.add('active');
 
-    if (isNBA && matchId) {
+    if (matchId) {
         loadMatchNews(matchId, newsPlaceholderId);
     }
 }

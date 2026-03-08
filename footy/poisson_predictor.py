@@ -19,162 +19,79 @@ class PoissonScorelinePredictor:
         self.away_defense_strength = {}
         self.league_averages = {}
 
-    def calculate_team_strengths(self, df: pd.DataFrame) -> None:
-        """COMPLETELY SAFE team strength calculation - NO ERRORS."""
-        print("âš½ Calculating COMPLETELY SAFE Poisson team strengths...")
+    def calculate_team_strengths(self, df: pd.DataFrame, xi: float = 0.0018) -> None:
+        """
+        Calculate team strengths with Time Decay weighting.
+        xi: Decay factor (default 0.0018 balances recency and sample size).
+        """
+        print(f"⚽ Calculating Poisson team strengths with Time Decay (xi={xi})...")
 
-        # STEP 1: Get ONLY valid completed matches
         try:
-            # Multiple safety checks
-            valid_matches = df[
-                (df['FTR'].notna()) &
-                (df['FTHG'].notna()) &
-                (df['FTAG'].notna()) &
-                (pd.to_numeric(df['FTHG'], errors='coerce').notna()) &
-                (pd.to_numeric(df['FTAG'], errors='coerce').notna()) &
-                (pd.to_numeric(df['FTHG'], errors='coerce') >= 0) &
-                (pd.to_numeric(df['FTAG'], errors='coerce') >= 0) &
-                (pd.to_numeric(df['FTHG'], errors='coerce') < 15) &  # Sanity check
-                (pd.to_numeric(df['FTAG'], errors='coerce') < 15)  # Sanity check
-                ].copy()
-
-            # Convert to numeric SAFELY
+            # STEP 1: Filter and sanitize
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+            valid_matches = df.dropna(subset=['Date', 'HomeTeam', 'AwayTeam', 'FTR', 'FTHG', 'FTAG']).copy()
             valid_matches['FTHG'] = pd.to_numeric(valid_matches['FTHG'], errors='coerce')
             valid_matches['FTAG'] = pd.to_numeric(valid_matches['FTAG'], errors='coerce')
+            valid_matches = valid_matches.dropna(subset=['FTHG', 'FTAG'])
 
-            # Remove any rows that still have issues
-            valid_matches = valid_matches[(valid_matches['FTHG'].notna()) & (valid_matches['FTAG'].notna())]
-
-        except Exception as e:
-            print(f"   âŒ Error filtering matches: {e}")
-            valid_matches = pd.DataFrame()
-
-        if len(valid_matches) == 0:
-            print("   âŒ No valid completed matches found!")
-            # Set default values
-            self._set_default_values()
-            return
-
-        print(f"   ðŸ“Š Using {len(valid_matches):,} valid completed matches")
-
-        # STEP 2: Calculate SAFE league averages
-        try:
-            home_goals = valid_matches['FTHG'].mean()
-            away_goals = valid_matches['FTAG'].mean()
-
-            # SAFETY: Ensure reasonable averages
-            if pd.isna(home_goals) or home_goals <= 0 or home_goals > 5:
-                home_goals = 1.4  # Typical home average
-            if pd.isna(away_goals) or away_goals <= 0 or away_goals > 5:
-                away_goals = 1.1  # Typical away average
-
-            self.league_averages = {
-                'home_goals': float(home_goals),
-                'away_goals': float(away_goals),
-                'total_goals': float(home_goals + away_goals)
-            }
-
-            print(
-                f"   League averages: {self.league_averages['home_goals']:.2f} home, {self.league_averages['away_goals']:.2f} away")
-
-        except Exception as e:
-            print(f"   âŒ Error calculating averages: {e}")
-            self._set_default_values()
-            return
-
-        # STEP 3: Get unique teams SAFELY
-        try:
-            home_teams = set(valid_matches['HomeTeam'].dropna().unique())
-            away_teams = set(valid_matches['AwayTeam'].dropna().unique())
-            teams = sorted(home_teams | away_teams)
-
-            if len(teams) == 0:
-                print("   âŒ No teams found!")
+            if len(valid_matches) == 0:
                 self._set_default_values()
                 return
 
-        except Exception as e:
-            print(f"   âŒ Error getting teams: {e}")
-            self._set_default_values()
-            return
+            # Calculate weights based on date recency
+            max_date = valid_matches['Date'].max()
+            valid_matches['days_since'] = (max_date - valid_matches['Date']).dt.days
+            valid_matches['weight'] = np.exp(-xi * valid_matches['days_since'])
 
-        # STEP 4: Calculate team strengths VERY SAFELY
-        successful_teams = 0
+            # STEP 2: Weighted League Averages
+            total_weight = valid_matches['weight'].sum()
+            avg_home_goals = (valid_matches['FTHG'] * valid_matches['weight']).sum() / total_weight
+            avg_away_goals = (valid_matches['FTAG'] * valid_matches['weight']).sum() / total_weight
 
-        for team in teams:
-            try:
-                # Home matches for this team
-                home_matches = valid_matches[valid_matches['HomeTeam'] == team]
-                away_matches = valid_matches[valid_matches['AwayTeam'] == team]
+            self.league_averages = {
+                'home_goals': float(avg_home_goals),
+                'away_goals': float(avg_away_goals),
+                'total_goals': float(avg_home_goals + avg_away_goals)
+            }
+            
+            print(f"   Weighted Averages: {avg_home_goals:.2f} Home, {avg_away_goals:.2f} Away")
 
-                # Home strength calculation
-                if len(home_matches) > 0:
-                    home_goals_scored = home_matches['FTHG'].mean()
-                    home_goals_conceded = home_matches['FTAG'].mean()
+            # STEP 3: Teams
+            teams = sorted(set(valid_matches['HomeTeam']) | set(valid_matches['AwayTeam']))
+            
+            # STEP 4: Weighted Team Strengths
+            for team in teams:
+                home_games = valid_matches[valid_matches['HomeTeam'] == team]
+                away_games = valid_matches[valid_matches['AwayTeam'] == team]
 
-                    # SAFE division with multiple checks
-                    if (pd.notna(home_goals_scored) and pd.notna(home_goals_conceded) and
-                            self.league_averages['home_goals'] > 0 and self.league_averages['away_goals'] > 0):
-
-                        home_attack = home_goals_scored / self.league_averages['home_goals']
-                        home_defense = home_goals_conceded / self.league_averages['away_goals']
-
-                        # Bound the values to prevent extremes
-                        self.home_attack_strength[team] = max(0.1, min(3.0, float(home_attack)))
-                        self.home_defense_strength[team] = max(0.1, min(3.0, float(home_defense)))
-                    else:
-                        self.home_attack_strength[team] = 1.0
-                        self.home_defense_strength[team] = 1.0
+                # Home Strengths
+                if len(home_games) > 0:
+                    w_sum = home_games['weight'].sum()
+                    w_att = (home_games['FTHG'] * home_games['weight']).sum() / w_sum
+                    w_def = (home_games['FTAG'] * home_games['weight']).sum() / w_sum
+                    
+                    self.home_attack_strength[team] = max(0.1, min(3.0, w_att / avg_home_goals))
+                    self.home_defense_strength[team] = max(0.1, min(3.0, w_def / avg_away_goals))
                 else:
                     self.home_attack_strength[team] = 1.0
                     self.home_defense_strength[team] = 1.0
 
-                # Away strength calculation
-                if len(away_matches) > 0:
-                    away_goals_scored = away_matches['FTAG'].mean()
-                    away_goals_conceded = away_matches['FTHG'].mean()
-
-                    # SAFE division with multiple checks
-                    if (pd.notna(away_goals_scored) and pd.notna(away_goals_conceded) and
-                            self.league_averages['away_goals'] > 0 and self.league_averages['home_goals'] > 0):
-
-                        away_attack = away_goals_scored / self.league_averages['away_goals']
-                        away_defense = away_goals_conceded / self.league_averages['home_goals']
-
-                        # Bound the values to prevent extremes
-                        self.away_attack_strength[team] = max(0.1, min(3.0, float(away_attack)))
-                        self.away_defense_strength[team] = max(0.1, min(3.0, float(away_defense)))
-                    else:
-                        self.away_attack_strength[team] = 1.0
-                        self.away_defense_strength[team] = 1.0
+                # Away Strengths
+                if len(away_games) > 0:
+                    w_sum = away_games['weight'].sum()
+                    w_att = (away_games['FTAG'] * away_games['weight']).sum() / w_sum
+                    w_def = (away_games['FTHG'] * away_games['weight']).sum() / w_sum
+                    
+                    self.away_attack_strength[team] = max(0.1, min(3.0, w_att / avg_away_goals))
+                    self.away_defense_strength[team] = max(0.1, min(3.0, w_def / avg_home_goals))
                 else:
                     self.away_attack_strength[team] = 1.0
                     self.away_defense_strength[team] = 1.0
 
-                successful_teams += 1
+            print(f"✅ Successfully processed {len(teams)} teams with Time Decay.")
 
-            except Exception as e:
-                print(f"     âš ï¸ Error processing {team}: {e}")
-                # Set defaults for this team
-                self.home_attack_strength[team] = 1.0
-                self.home_defense_strength[team] = 1.0
-                self.away_attack_strength[team] = 1.0
-                self.away_defense_strength[team] = 1.0
-
-        print(f"âœ… Successfully processed {successful_teams} out of {len(teams)} teams")
-
-        # STEP 5: Validation and examples
-        if successful_teams > 0:
-            print("   Sample team strengths:")
-            sample_teams = list(teams)[:5]
-            for team in sample_teams:
-                home_att = self.home_attack_strength.get(team, 1.0)
-                away_att = self.away_attack_strength.get(team, 1.0)
-                print(f"     {team}: Home Attack {home_att:.2f}, Away Attack {away_att:.2f}")
-
-            print(f"   âœ… All team strengths are SAFE (0.1 - 3.0 range)!")
-        else:
-            print(f"   âš ï¸ No teams processed successfully - using defaults")
+        except Exception as e:
+            print(f"❌ Error in weighted strengths: {e}")
             self._set_default_values()
 
     def _set_default_values(self):

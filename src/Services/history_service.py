@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from sbrscrape import Scoreboard
 import history_db
-import sqlite3
+import difflib
 
 def american_to_decimal(american_odds):
     if not american_odds: return 0.0
@@ -25,13 +25,16 @@ def update_pending_predictions():
     
     # 1. Get dates with pending predictions
     pending_dates = []
-    with sqlite3.connect(history_db.DB_PATH) as conn:
-        cursor = conn.execute("""
-            SELECT DISTINCT date FROM predictions 
-            WHERE result = 'PENDING' 
-            AND date <= date('now')
-        """)
-        pending_dates = [row[0] for row in cursor.fetchall()]
+    
+    # Supabase version
+    client = history_db._get_supabase()
+    if client:
+        try:
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            res = client.table('predictions').select('date').eq('result', 'PENDING').lte('date', today_str).execute()
+            pending_dates = list(set([row['date'] for row in res.data]))
+        except Exception as e:
+            print(f"[History Service DB Error] {e}")
         
     print(f"[History Service] Found pending predictions for dates: {pending_dates}")
     
@@ -47,6 +50,15 @@ def update_pending_predictions():
             if not games:
                 print(f"[History Service] No games found for {date_str} in SBR.")
                 continue
+            
+            # 2.5 Get pending match_ids for this specific date from Supabase
+            # to use for fuzzy matching
+            db_matches = []
+            try:
+                res = history_db._get_supabase().table('predictions').select('match_id').eq('date', date_str).eq('result', 'PENDING').execute()
+                db_matches = [r['match_id'] for r in res.data]
+            except:
+                pass
                 
             # Create a map of actual results
             # Key: mismo formato que la DB (date_away_home con espacios -> _)
@@ -66,9 +78,25 @@ def update_pending_predictions():
                     away = away.replace("Los Angeles Clippers", "LA Clippers")
                     
                     winner = home if home_score > away_score else away
-                    match_id = f"{date_str}_{away}_{home}".replace(" ", "_")
-                    results_map[match_id] = winner
-            
+                    
+                    # Try the explicit format used by recent updates (with ' vs ')
+                    match_id_new = f"{date_str} {away} vs {home}"
+                    # Try the legacy underscored format just in case
+                    match_id_legacy = f"{date_str}_{away}_{home}".replace(" ", "_")
+                    
+                    # Exact matches
+                    results_map[match_id_new] = winner
+                    results_map[match_id_legacy] = winner
+                    
+                    # Fuzzy Match against real pending DB matches
+                    for db_m in db_matches:
+                        # If both teams are somehow mentioned in the DB match_id string, it's a match
+                        # We use difflib or simple containment
+                        away_parts = away.split()[-1] # Usually the mascot e.g., 'Thunder'
+                        home_parts = home.split()[-1]
+                        if away_parts.lower() in db_m.lower() and home_parts.lower() in db_m.lower():
+                            results_map[db_m] = winner
+                            
             # 3. Update DB
             history_db.update_results(date_str, results_map)
             updated_count += len(results_map)

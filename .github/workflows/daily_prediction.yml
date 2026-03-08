@@ -2,8 +2,8 @@ name: Daily NBA Predictions
 
 on:
   schedule:
-    - cron: "0 8 * * *"     # 08:00 UTC = 03:00 AM Colombia
-    - cron: "0 15 * * *"    # 15:00 UTC = 10:00 AM Colombia (backup)
+    - cron: "0 8 * * *" # 08:00 UTC = 03:00 AM Colombia
+    - cron: "0 15 * * *" # 15:00 UTC = 10:00 AM Colombia (backup)
   workflow_dispatch:
 
 concurrency:
@@ -58,71 +58,15 @@ jobs:
         env:
           DEEPSEEK_API_KEY: "${{ secrets.DEEPSEEK_API_KEY }}"
           ODDS_API_KEY: "${{ secrets.ODDS_API_KEY }}"
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_KEY: "${{ secrets.SUPABASE_KEY }}"
         run: |
           python generate_daily_job.py
           echo "ENGINE_STATUS=$?" >> "$GITHUB_ENV"
 
       # ─────────────────────────────────────────────
-      # 5. Verificar que la BD existe
+      # 5. La BD se gestiona vía Supabase, ya no
+      #    hay necesidad de hacer commit a history.db
       # ─────────────────────────────────────────────
-      - name: Verify DB
-        run: |
-          if [ ! -f Data/history.db ]; then
-            echo "::error::history.db no encontrado tras predicciones"
-            exit 1
-          fi
-          echo "DB OK — tamaño: $(du -h Data/history.db | cut -f1)"
-
-      # ─────────────────────────────────────────────
-      # 6. Commit + Push robusto (sin rebase, usa merge)
-      #    Los archivos binarios LFS no soportan rebase;
-      #    usamos "merge -X ours" para aceptar siempre
-      #    nuestra versión de history.db en conflicto.
-      # ─────────────────────────────────────────────
-      - name: Commit and Push DB
-        run: |
-          git config user.name  "CourtsideAI-Bot"
-          git config user.email "bot@courtside.ai"
-
-          # Solo trackeamos la BD, ignoramos logs u otros artefactos del job
-          git add Data/history.db
-
-          if git diff-index --quiet HEAD; then
-            echo "Sin cambios en history.db — nada que pushear."
-            exit 0
-          fi
-
-          COMMIT_MSG="🤖 [Bot] Auto-update predictions $(date -u +%Y-%m-%d)"
-          git commit -m "$COMMIT_MSG"
-
-          for attempt in 1 2 3; do
-            echo "=== Intento de push $attempt/3 ==="
-
-            if git push origin main; then
-              echo "Push exitoso en el intento $attempt."
-              exit 0
-            fi
-
-            echo "Push rechazado — sincronizando con origin/main..."
-
-            # Traer los últimos cambios del remoto
-            git fetch origin main
-
-            # Merge: si hay conflicto en history.db (binario LFS),
-            # nos quedamos con NUESTRA versión (la recién generada).
-            git merge origin/main \
-              --no-edit \
-              --strategy=recursive \
-              --strategy-option=ours \
-              -m "🤖 [Bot] Merge remote before push (attempt $attempt)" \
-              || true
-
-            # Por si el merge no aplicó el commit automáticamente
-            git add Data/history.db
-            git diff-index --quiet HEAD || git commit -m "$COMMIT_MSG (retry $attempt)"
-
-            sleep 5
-          done
-
-          echo "::warning::Todos los intentos de push fallaron. Las predicciones se sirvieron via self-healing de Render."
-          exit 0
+      - name: Complete
+        run: echo "Predicciones completadas y guardadas en Supabase."

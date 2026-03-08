@@ -14,7 +14,7 @@ DEEPSEEK_MODEL = "deepseek-chat"
 THROTTLE_SECONDS = 8.0
 MAX_RETRIES = 3
 SEARCH_RESULTS = 6
-MAX_CONTEXT_CHARS = 1200
+MAX_CONTEXT_CHARS = 1600
 
 
 def _get_ddgs():
@@ -35,13 +35,13 @@ def _get_ddgs():
         return None
 
 
-def _search_web(home_team: str, away_team: str) -> str:
-    """Búsqueda web con DuckDuckGo. Contexto corto para evitar prompts grandes."""
+def _search_web(home_team: str, away_team: str, date_str: str) -> str:
+    """Búsqueda web con DuckDuckGo."""
     DDGS = _get_ddgs()
     if DDGS is None:
         return "Sin resultados (duckduckgo_search / ddgs no instalado)."
     year = time.strftime("%Y")
-    query = f"NBA {home_team} vs {away_team} news injuries {year}"
+    query = f"NBA {home_team} vs {away_team} news injuries {date_str}"
     try:
         snippets = []
         with DDGS() as ddgs:
@@ -49,7 +49,7 @@ def _search_web(home_team: str, away_team: str) -> str:
         for r in results:
             title = r.get("title", "")
             body = r.get("body", "")
-            s = f"{title}: {body[:120]}" if body else title
+            s = f"{title}: {body[:160]}" if body else title
             if s.strip():
                 snippets.append(s)
         text = "\n".join(snippets[:6])
@@ -59,16 +59,32 @@ def _search_web(home_team: str, away_team: str) -> str:
 
 
 def _build_prompt(home_team: str, away_team: str, date_str: str, web_context: str) -> str:
-    """Prompt compacto: noticias concretas, JSON estricto."""
-    return f"""Partido: {home_team} vs {away_team} ({date_str}).
+    """Prompt refinado para calidad profesional."""
+    return f"""Partido NBA: {home_team} vs {away_team}
+Fecha: {date_str}
 
-BÚSQUEDA:
+CONTEXTO WEB:
 {web_context}
 
-Extrae lo relevante. Responde SOLO JSON:
-{{"headline":"...","key_points":["p1","p2","p3"],"injuries":[{{"player":"","team":"","status":"out/questionable/probable"}}],"impact_assessment":"...","confidence_modifier":"higher|neutral|lower"}}
+INSTRUCCIONES:
+1. Analiza si hay noticias REALES de HOY ({date_str}) o muy recientes.
+2. 'injuries': Lista jugadores lesionados o en duda. 
+   - 'status': DEBE ser "Baja", "Dudoso" o "Probable" (usa estos términos exactos).
+   - IMPORTANTE: Si NO hay nombres específicos de jugadores en el contexto, deja la lista VACÍA []. 
+   - Prohibido usar "Información no disponible" como nombre de jugador.
+3. 'headline': Título profesional.
+4. 'impact_assessment': Análisis táctico de las bajas o contexto.
+5. 'key_points': 2-3 puntos clave del encuentro.
 
-Español. Máx 3 key_points. Sin datos: key_points ["Sin noticias"], injuries []."""
+Responde SOLO JSON:
+{{
+  "headline": "...",
+  "key_points": ["...", "..."],
+  "injuries": [{{"player": "Nombre Real", "team": "...", "status": "Baja|Dudoso|Probable"}}],
+  "impact_assessment": "...",
+  "confidence_modifier": "higher|neutral|lower"
+}}
+Español. Si no hay noticias relevantes, 'headline' debe decir 'Sin novedades destacadas' y 'injuries' []."""
 
 
 def _parse_response(content: str) -> dict:
@@ -79,7 +95,32 @@ def _parse_response(content: str) -> dict:
         last_fence = text.rfind("```")
         text = text[first_nl + 1:last_fence].strip()
     try:
-        return json.loads(text)
+        data = json.loads(text)
+        # Post-procesamiento: mapear estados y limpiar genéricos
+        status_map = {
+            "out": "Baja", "q": "Dudoso", "questionable": "Dudoso",
+            "p": "Probable", "probable": "Probable", "confirmed": "Confirmado"
+        }
+        clean_injuries = []
+        for inj in data.get("injuries", []):
+            p_name = str(inj.get("player") or "")
+            # Si el nombre es genérico o muy largo (placeholder), ignorar
+            if any(x in p_name.lower() for x in ["not disponible", "no disponible", "información", "específica", "contexto", "..."]):
+                continue
+            if len(p_name) < 3 or len(p_name) > 40:
+                continue
+            
+            # Limpiar estado
+            st = str(inj.get("status") or "").lower()
+            if "out" in st or "baja" in st: inj["status"] = "Baja"
+            elif "q" in st or "duda" in st or "dudoso" in st: inj["status"] = "Dudoso"
+            elif "p" in st or "prob" in st: inj["status"] = "Probable"
+            elif "confirm" in st: inj["status"] = "Confirmado"
+            else: inj["status"] = st.capitalize() if st else "Dudoso"
+            clean_injuries.append(inj)
+        
+        data["injuries"] = clean_injuries
+        return data
     except json.JSONDecodeError:
         return {
             "headline": "No se pudo procesar",
@@ -95,7 +136,7 @@ def _fetch_news(home_team: str, away_team: str, date_str: str) -> dict:
     if not DEEPSEEK_API_KEY:
         raise ValueError("DEEPSEEK_API_KEY no configurada. Añádela en GitHub Secrets o .env")
     from openai import OpenAI
-    web_context = _search_web(home_team, away_team)
+    web_context = _search_web(home_team, away_team, date_str)
     prompt = _build_prompt(home_team, away_team, date_str, web_context)
     client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
     for attempt in range(MAX_RETRIES):
@@ -125,9 +166,10 @@ def _cached_has_errors(news_list: list[dict]) -> bool:
     """True si hay errores en el cache."""
     for n in news_list or []:
         kp = n.get("key_points") or []
-        if any("Error" in str(p) for p in kp):
+        if any(err in str(p) for p in kp for err in ["Error", "Sin noticias", "No disponible"]):
             return True
-        if "No disponible" in str(n.get("headline", "")):
+        h = str(n.get("headline", ""))
+        if any(err in h for err in ["No disponible", "Sin noticias", "Sin resultados", "No se pudo"]):
             return True
     return False
 
