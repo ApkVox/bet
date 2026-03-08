@@ -26,7 +26,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: false
-          lfs: true
+          lfs: false
           fetch-depth: 0
           ref: main
 
