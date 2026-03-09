@@ -105,6 +105,19 @@ def save_historical_prediction(prediction_data: dict):
         print(f"[DB ERROR] save_historical_prediction: {e}")
 
 
+def _update_prediction_result(date: str, match_id: str, is_win: bool, profit: float):
+    client = _get_supabase()
+    if not client: return
+    try:
+        result_str = 'WIN' if is_win else 'LOSS'
+        client.table('predictions').update({
+            'result': result_str,
+            'profit': profit
+        }).eq('date', date).eq('match_id', match_id).execute()
+    except Exception as e:
+        print(f"[DB ERROR] _update_prediction_result on match {match_id}: {e}")
+
+
 def update_results(date: str, results: dict):
     """Actualiza resultados reales y calcula profit."""
     client = _get_supabase()

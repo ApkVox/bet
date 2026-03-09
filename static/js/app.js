@@ -338,7 +338,7 @@ function getLogoUrl(sport, team, backendLogo) {
 function renderPredictions(predictions) {
     const grid = document.getElementById('predictionsGrid');
     const titleEl = document.getElementById('todayTitle');
-    
+
     if (titleEl) {
         const todayObj = new Date();
         const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -443,7 +443,7 @@ function renderPredictions(predictions) {
                 </div>`;
             }).join('');
         });
-        
+
         grid.innerHTML = html;
 
     } else {
@@ -621,34 +621,7 @@ document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
     });
 });
 
-// Actualizar marcadores (PENDING -> WIN/LOSS) y recargar historial
-async function refreshHistoryScores() {
-    const btn = document.getElementById('btnRefreshScores');
-    if (!btn) return;
-    const wasDisabled = btn.disabled;
-    btn.disabled = true;
-    const icon = btn.querySelector('.btn-refresh-icon');
-    if (icon) icon.style.animation = 'spin 0.8s linear infinite';
-    showToast('Actualizando marcadores...', 'info');
-    try {
-        const res = await fetch('/history/refresh', { method: 'POST' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.detail || res.statusText || 'Error al actualizar');
-
-        // Show success msg
-        showToast(data.message || 'Marcadores actualizados y cuotas refrescadas', 'success');
-
-        // Reload both the history grid AND the predictions grid to show fresh odds
-        loadHistory();
-        loadPredictions();
-    } catch (e) {
-        showToast('Error al actualizar: ' + (e.message || 'Reintenta en un momento'), 'error');
-    } finally {
-        btn.disabled = wasDisabled;
-        if (icon) icon.style.animation = '';
-    }
-}
-document.getElementById('btnRefreshScores')?.addEventListener('click', refreshHistoryScores);
+// Actualizar marcadores button has been removed from public frontend
 
 // Modal with news
 function showDetails(index) {
