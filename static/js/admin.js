@@ -52,7 +52,7 @@ async function api(url, opts = {}) {
 
     const res = await fetch(url, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
     let data = null;
-    try { data = await res.json(); } catch (_) {}
+    try { data = await res.json(); } catch (_) { }
 
     if (res.status === 401) {
         logout();
@@ -292,7 +292,7 @@ async function loadDashboardStats() {
     try {
         const st = await api("/api/admin/status", { headers: {} });
         $("dTtlVal").textContent = `${st.token_ttl_hours ?? 1}h`;
-    } catch (_) {}
+    } catch (_) { }
 }
 
 async function handleRefreshHistory() {
@@ -304,6 +304,25 @@ async function handleRefreshHistory() {
         toast("Historial refrescado.", "ok");
     } catch (err) {
         msg.textContent = err.message || "Error al refrescar.";
+        toast(err.message, "err");
+    }
+}
+
+/* ═══════ FORCE CORRECT ═══════ */
+
+async function handleForceCorrect() {
+    if (!confirm('⚡ ¿Auto-corregir el sistema?\n\nEsto borrará TODAS las predicciones de hoy y las regenerará desde cero con los partidos reales.\n\n¿Continuar?')) return;
+    const msg = $("refreshMsg");
+    msg.textContent = "⚡ Auto-corrigiendo... esto puede tardar hasta 1 minuto.";
+    msg.style.color = "var(--warning)";
+    try {
+        const res = await api("/api/admin/force-correct", { method: "POST" });
+        msg.textContent = res.message || "Sistema auto-corregido.";
+        msg.style.color = "var(--success)";
+        toast(`✅ ${res.message}`, "ok");
+    } catch (err) {
+        msg.textContent = err.message || "Error al auto-corregir.";
+        msg.style.color = "var(--danger)";
         toast(err.message, "err");
     }
 }
@@ -350,6 +369,7 @@ function bootstrap() {
 
     // Dashboard actions
     $("btnRefreshHistory").addEventListener("click", handleRefreshHistory);
+    $("btnForceCorrect").addEventListener("click", handleForceCorrect);
 
     // Security
     $("btnChangePwd").addEventListener("click", handleChangePwd);

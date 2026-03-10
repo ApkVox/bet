@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,16 +18,20 @@
             --text3: #6b6b76;
             --accent: #0a84ff;
             --accent2: #409cff;
-            --accent-soft: rgba(10,132,255,0.1);
+            --accent-soft: rgba(10, 132, 255, 0.1);
             --success: #30d158;
             --danger: #ff453a;
             --warning: #ff9f0a;
-            --border: rgba(255,255,255,0.06);
+            --border: rgba(255, 255, 255, 0.06);
             --radius: 12px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -44,8 +49,9 @@
             justify-content: center;
             min-height: 100vh;
             padding: 24px;
-            background: radial-gradient(ellipse at 50% 0%, rgba(10,132,255,0.12) 0%, transparent 60%);
+            background: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.12) 0%, transparent 60%);
         }
+
         .login-card {
             background: var(--bg2);
             border: 1px solid var(--border);
@@ -56,477 +62,965 @@
             box-shadow: var(--shadow);
             text-align: center;
         }
-        .login-card h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
-        .login-card .sub { color: var(--text2); font-size: 12px; margin-bottom: 28px; }
-        .login-card .lock { font-size: 44px; margin-bottom: 16px; filter: drop-shadow(0 4px 12px rgba(10,132,255,0.3)); }
-        .login-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
-        .login-tab {
-            flex: 1; padding: 8px; border-radius: 999px; border: 1px solid transparent;
-            background: transparent; color: var(--text2); font-size: 12px; font-weight: 500;
-            cursor: pointer; transition: all 0.15s;
+
+        .login-card h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 4px;
         }
-        .login-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-        .login-tab:disabled { opacity: 0.4; cursor: default; }
-        .login-panel { display: none; text-align: left; }
-        .login-panel.active { display: block; animation: fadeIn 0.2s ease; }
-        .login-status { font-size: 11px; color: var(--text2); margin-bottom: 12px; text-align: center; }
-        .login-status span { color: var(--accent); font-weight: 600; }
+
+        .login-card .sub {
+            color: var(--text2);
+            font-size: 12px;
+            margin-bottom: 28px;
+        }
+
+        .login-card .lock {
+            font-size: 44px;
+            margin-bottom: 16px;
+            filter: drop-shadow(0 4px 12px rgba(10, 132, 255, 0.3));
+        }
+
+        .login-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+
+        .login-tab {
+            flex: 1;
+            padding: 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text2);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .login-tab.active {
+            background: var(--accent-soft);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .login-tab:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .login-panel {
+            display: none;
+            text-align: left;
+        }
+
+        .login-panel.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .login-status {
+            font-size: 11px;
+            color: var(--text2);
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .login-status span {
+            color: var(--accent);
+            font-weight: 600;
+        }
 
         /* ═══════ DASHBOARD LAYOUT ═══════ */
-        .app { display: none; }
-        .app.active { display: flex; min-height: 100vh; }
+        .app {
+            display: none;
+        }
+
+        .app.active {
+            display: flex;
+            min-height: 100vh;
+        }
 
         .topbar {
-            position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 30;
-            background: var(--bg2); border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 20px; gap: 12px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            z-index: 30;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
         }
-        .topbar .brand { font-size: 14px; font-weight: 700; }
-        .topbar .brand span { color: var(--text2); font-weight: 400; }
-        .topbar .spacer { flex: 1; }
+
+        .topbar .brand {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .topbar .brand span {
+            color: var(--text2);
+            font-weight: 400;
+        }
+
+        .topbar .spacer {
+            flex: 1;
+        }
+
         .topbar .session-tag {
-            font-size: 10px; color: var(--success); background: rgba(48,209,88,0.1);
-            padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(48,209,88,0.3);
+            font-size: 10px;
+            color: var(--success);
+            background: rgba(48, 209, 88, 0.1);
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(48, 209, 88, 0.3);
         }
 
         .sidebar {
-            width: 220px; min-height: 100vh; background: var(--bg2);
-            border-right: 1px solid var(--border); padding: 62px 8px 16px;
-            position: fixed; left: 0; top: 0; z-index: 20;
+            width: 220px;
+            min-height: 100vh;
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            padding: 62px 8px 16px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 20;
         }
+
         .sidebar .sec-label {
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.08em; color: var(--text3); padding: 14px 12px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text3);
+            padding: 14px 12px 6px;
         }
+
         .nav-btn {
-            display: flex; align-items: center; gap: 10px; width: 100%;
-            padding: 9px 12px; border-radius: 10px; border: none; background: none;
-            color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer;
-            transition: background 0.12s, color 0.12s; text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: none;
+            background: none;
+            color: var(--text2);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            text-align: left;
         }
-        .nav-btn:hover { color: var(--text); background: var(--bg3); }
-        .nav-btn.active { color: var(--accent); background: var(--accent-soft); }
-        .nav-btn .ico { font-size: 15px; width: 20px; text-align: center; }
-        .nav-btn.logout-btn { color: var(--danger); margin-top: auto; }
-        .nav-btn.logout-btn:hover { background: rgba(255,69,58,0.1); }
-        .sidebar-bottom { position: absolute; bottom: 16px; left: 8px; right: 8px; }
+
+        .nav-btn:hover {
+            color: var(--text);
+            background: var(--bg3);
+        }
+
+        .nav-btn.active {
+            color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .nav-btn .ico {
+            font-size: 15px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-btn.logout-btn {
+            color: var(--danger);
+            margin-top: auto;
+        }
+
+        .nav-btn.logout-btn:hover {
+            background: rgba(255, 69, 58, 0.1);
+        }
+
+        .sidebar-bottom {
+            position: absolute;
+            bottom: 16px;
+            left: 8px;
+            right: 8px;
+        }
 
         .main {
-            margin-left: 220px; flex: 1; padding: 62px 32px 32px; min-height: 100vh;
+            margin-left: 220px;
+            flex: 1;
+            padding: 62px 32px 32px;
+            min-height: 100vh;
         }
 
         /* ═══════ SECTION PANELS ═══════ */
-        .sec { display: none; }
-        .sec.active { display: block; animation: fadeIn 0.25s ease; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .sec {
+            display: none;
+        }
 
-        .sec-header { margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
-        .sec-header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-        .sec-header p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+        .sec.active {
+            display: block;
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sec-header {
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sec-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .sec-header p {
+            font-size: 12px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
 
         /* ═══════ CARD ═══════ */
         .card {
-            background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
-            padding: 20px 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
         }
-        .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-        .card .desc { font-size: 11px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+
+        .card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .card .desc {
+            font-size: 11px;
+            color: var(--text2);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
 
         /* ═══════ FORM ELEMENTS ═══════ */
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-        .form-row.single { grid-template-columns: 1fr; }
-        .fg { margin-bottom: 0; }
-        .fg label {
-            display: block; font-size: 11px; font-weight: 600; color: var(--text2);
-            margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
         }
-        .fg input[type="text"], .fg input[type="password"], .fg textarea {
-            width: 100%; padding: 9px 12px; border-radius: 9px;
-            border: 1px solid var(--border); background: var(--bg3);
-            color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        .fg {
+            margin-bottom: 0;
+        }
+
+        .fg label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .fg input[type="text"],
+        .fg input[type="password"],
+        .fg textarea {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
             transition: border 0.15s;
         }
-        .fg input:focus, .fg textarea:focus { border-color: var(--accent); }
-        .fg textarea { resize: vertical; min-height: 56px; }
-        .fg .hint { font-size: 10px; color: var(--text3); margin-top: 3px; }
 
-        .color-wrap { display: flex; align-items: center; gap: 8px; }
-        .color-wrap input[type="color"] {
-            -webkit-appearance: none; border: 2px solid var(--border); border-radius: 8px;
-            width: 36px; height: 32px; cursor: pointer; background: transparent; padding: 2px;
+        .fg input:focus,
+        .fg textarea:focus {
+            border-color: var(--accent);
         }
-        .color-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        .color-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
-        .color-wrap input[type="text"] { flex: 1; }
+
+        .fg textarea {
+            resize: vertical;
+            min-height: 56px;
+        }
+
+        .fg .hint {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: 3px;
+        }
+
+        .color-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-wrap input[type="color"] {
+            -webkit-appearance: none;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            width: 36px;
+            height: 32px;
+            cursor: pointer;
+            background: transparent;
+            padding: 2px;
+        }
+
+        .color-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-wrap input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 5px;
+        }
+
+        .color-wrap input[type="text"] {
+            flex: 1;
+        }
 
         .toggle-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 0; border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
         }
-        .toggle-row:last-child { border-bottom: none; }
-        .toggle-info h4 { font-size: 13px; font-weight: 600; }
-        .toggle-info p { font-size: 11px; color: var(--text2); margin-top: 1px; }
-        .toggle-sw { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
-        .toggle-sw input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-row:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-info h4 {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .toggle-info p {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 1px;
+        }
+
+        .toggle-sw {
+            position: relative;
+            width: 44px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .toggle-sw input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
         .toggle-sl {
-            position: absolute; cursor: pointer; inset: 0;
-            background: var(--bg4); border-radius: 13px; transition: 0.25s;
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--bg4);
+            border-radius: 13px;
+            transition: 0.25s;
         }
+
         .toggle-sl::before {
-            content: ''; position: absolute; height: 20px; width: 20px;
-            left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.25s;
+            content: '';
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.25s;
         }
-        .toggle-sw input:checked + .toggle-sl { background: var(--accent); }
-        .toggle-sw input:checked + .toggle-sl::before { transform: translateX(18px); }
+
+        .toggle-sw input:checked+.toggle-sl {
+            background: var(--accent);
+        }
+
+        .toggle-sw input:checked+.toggle-sl::before {
+            transform: translateX(18px);
+        }
 
         /* ═══════ BUTTONS ═══════ */
-        .bar { display: flex; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
-        .btn {
-            display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px;
-            border-radius: 10px; border: none; font-size: 13px; font-weight: 600;
-            cursor: pointer; font-family: inherit; transition: all 0.2s;
+        .bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
         }
-        .btn-p { background: var(--accent); color: #fff; }
-        .btn-p:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(10,132,255,0.3); }
-        .btn-o { background: transparent; color: var(--text); border: 1px solid var(--border); }
-        .btn-o:hover { border-color: var(--text2); background: rgba(255,255,255,0.03); }
-        .btn-d { background: rgba(255,69,58,0.1); color: var(--danger); }
-        .btn-d:hover { background: rgba(255,69,58,0.2); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 22px;
+            border-radius: 10px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .btn-p {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-p:hover {
+            background: var(--accent2);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.3);
+        }
+
+        .btn-o {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-o:hover {
+            border-color: var(--text2);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .btn-d {
+            background: rgba(255, 69, 58, 0.1);
+            color: var(--danger);
+        }
+
+        .btn-d:hover {
+            background: rgba(255, 69, 58, 0.2);
+        }
 
         /* ═══════ TOAST ═══════ */
         .toast-box {
-            position: fixed; top: 16px; right: 16px; z-index: 9999;
-            display: flex; flex-direction: column; gap: 6px;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
+
         .toast {
-            padding: 11px 16px; border-radius: 10px; font-size: 12px; font-weight: 600;
-            display: flex; align-items: center; gap: 6px; min-width: 260px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: slideIn 0.25s ease;
+            padding: 11px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 260px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            animation: slideIn 0.25s ease;
         }
-        .toast.ok { background: rgba(48,209,88,0.12); color: var(--success); border: 1px solid rgba(48,209,88,0.25); }
-        .toast.err { background: rgba(255,69,58,0.12); color: var(--danger); border: 1px solid rgba(255,69,58,0.25); }
-        .toast.info { background: rgba(10,132,255,0.12); color: var(--accent); border: 1px solid rgba(10,132,255,0.25); }
-        @keyframes slideIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+
+        .toast.ok {
+            background: rgba(48, 209, 88, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(48, 209, 88, 0.25);
+        }
+
+        .toast.err {
+            background: rgba(255, 69, 58, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(255, 69, 58, 0.25);
+        }
+
+        .toast.info {
+            background: rgba(10, 132, 255, 0.12);
+            color: var(--accent);
+            border: 1px solid rgba(10, 132, 255, 0.25);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
 
         /* ═══════ PROMO IFRAME ═══════ */
         .promo-frame {
-            width: 100%; min-height: 800px; border-radius: var(--radius);
-            border: 1px solid var(--border); background: var(--bg);
+            width: 100%;
+            min-height: 800px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg);
         }
 
         /* ═══════ STAT BLOCKS (dashboard) ═══════ */
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
         .stat {
-            background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
             padding: 16px 18px;
         }
-        .stat .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
-        .stat .val { font-size: 20px; font-weight: 800; margin-top: 4px; }
-        .stat .val.green { color: var(--success); }
-        .stat .val.blue { color: var(--accent); }
+
+        .stat .label {
+            font-size: 10px;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .stat .val {
+            font-size: 20px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        .stat .val.green {
+            color: var(--success);
+        }
+
+        .stat .val.blue {
+            color: var(--accent);
+        }
 
         /* ═══════ RESPONSIVE ═══════ */
         @media(max-width: 768px) {
-            .sidebar { display: none; }
-            .main { margin-left: 0; padding: 58px 16px 16px; }
-            .form-row { grid-template-columns: 1fr; }
-            .promo-frame { min-height: 600px; }
+            .sidebar {
+                display: none;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 58px 16px 16px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .promo-frame {
+                min-height: 600px;
+            }
         }
     </style>
 </head>
+
 <body>
 
-<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
-<div class="login-wrap" id="loginScreen">
-    <div class="login-card">
-        <div class="lock">🔐</div>
-        <h1>Admin Panel</h1>
-        <p class="sub">La Fija — Panel de Administración</p>
-        <p class="login-status" id="statusText">Comprobando estado…</p>
+    <!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+    <div class="login-wrap" id="loginScreen">
+        <div class="login-card">
+            <div class="lock">🔐</div>
+            <h1>Admin Panel</h1>
+            <p class="sub">La Fija — Panel de Administración</p>
+            <p class="login-status" id="statusText">Comprobando estado…</p>
 
-        <div class="login-tabs">
-            <button class="login-tab active" id="tabCreate">Crear cuenta inicial</button>
-            <button class="login-tab" id="tabLogin">Iniciar sesión</button>
-        </div>
+            <div class="login-tabs">
+                <button class="login-tab active" id="tabCreate">Crear cuenta inicial</button>
+                <button class="login-tab" id="tabLogin">Iniciar sesión</button>
+            </div>
 
-        <div class="login-panel active" id="panelCreate">
-            <div class="fg" style="margin-bottom:12px;">
-                <label>Nueva contraseña (mín. 6)</label>
-                <input type="password" id="createPwd" autocomplete="new-password">
+            <div class="login-panel active" id="panelCreate">
+                <div class="fg" style="margin-bottom:12px;">
+                    <label>Nueva contraseña (mín. 6)</label>
+                    <input type="password" id="createPwd" autocomplete="new-password">
+                </div>
+                <div class="fg" style="margin-bottom:12px;">
+                    <label>Confirmar contraseña</label>
+                    <input type="password" id="createPwd2" autocomplete="new-password">
+                </div>
+                <button class="btn btn-p" style="width:100%" id="btnCreate">Crear cuenta</button>
+                <div class="login-msg" id="createMsg" style="margin-top:10px;font-size:12px;"></div>
             </div>
-            <div class="fg" style="margin-bottom:12px;">
-                <label>Confirmar contraseña</label>
-                <input type="password" id="createPwd2" autocomplete="new-password">
-            </div>
-            <button class="btn btn-p" style="width:100%" id="btnCreate">Crear cuenta</button>
-            <div class="login-msg" id="createMsg" style="margin-top:10px;font-size:12px;"></div>
-        </div>
 
-        <div class="login-panel" id="panelLogin">
-            <div class="fg" style="margin-bottom:12px;">
-                <label>Contraseña</label>
-                <input type="password" id="loginPwd" autocomplete="current-password">
+            <div class="login-panel" id="panelLogin">
+                <div class="fg" style="margin-bottom:12px;">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPwd" autocomplete="current-password">
+                </div>
+                <button class="btn btn-p" style="width:100%" id="btnLogin">Iniciar sesión</button>
+                <div class="login-msg" id="loginMsg" style="margin-top:10px;font-size:12px;"></div>
             </div>
-            <button class="btn btn-p" style="width:100%" id="btnLogin">Iniciar sesión</button>
-            <div class="login-msg" id="loginMsg" style="margin-top:10px;font-size:12px;"></div>
         </div>
     </div>
-</div>
 
-<!-- ═══════════════════ APP (DASHBOARD) ═══════════════════ -->
-<div class="app" id="app">
-    <header class="topbar">
-        <span class="brand">Panel de administración <span>— La Fija</span></span>
-        <div class="spacer"></div>
-        <span class="session-tag" id="sessionTag">Sesión activa</span>
-    </header>
+    <!-- ═══════════════════ APP (DASHBOARD) ═══════════════════ -->
+    <div class="app" id="app">
+        <header class="topbar">
+            <span class="brand">Panel de administración <span>— La Fija</span></span>
+            <div class="spacer"></div>
+            <span class="session-tag" id="sessionTag">Sesión activa</span>
+        </header>
 
-    <aside class="sidebar">
-        <div class="sec-label">General</div>
-        <button class="nav-btn active" data-sec="dashboard"><span class="ico">📊</span> Dashboard</button>
-        <button class="nav-btn" data-sec="branding"><span class="ico">🏷️</span> Branding</button>
-        <button class="nav-btn" data-sec="theme"><span class="ico">🎨</span> Tema y Colores</button>
-        <button class="nav-btn" data-sec="features"><span class="ico">⚙️</span> Funciones</button>
+        <aside class="sidebar">
+            <div class="sec-label">General</div>
+            <button class="nav-btn active" data-sec="dashboard"><span class="ico">📊</span> Dashboard</button>
+            <button class="nav-btn" data-sec="branding"><span class="ico">🏷️</span> Branding</button>
+            <button class="nav-btn" data-sec="theme"><span class="ico">🎨</span> Tema y Colores</button>
+            <button class="nav-btn" data-sec="features"><span class="ico">⚙️</span> Funciones</button>
 
-        <div class="sec-label">Contenido</div>
-        <button class="nav-btn" data-sec="announcement"><span class="ico">📢</span> Anuncio</button>
-        <button class="nav-btn" data-sec="ads"><span class="ico">📺</span> Publicidad</button>
-        <button class="nav-btn" data-sec="betting"><span class="ico">💰</span> Apuestas</button>
-        <button class="nav-btn" data-sec="promo"><span class="ico">🖼️</span> Editor Promo</button>
+            <div class="sec-label">Contenido</div>
+            <button class="nav-btn" data-sec="announcement"><span class="ico">📢</span> Anuncio</button>
+            <button class="nav-btn" data-sec="ads"><span class="ico">📺</span> Publicidad</button>
+            <button class="nav-btn" data-sec="betting"><span class="ico">💰</span> Apuestas</button>
+            <button class="nav-btn" data-sec="promo"><span class="ico">🖼️</span> Editor Promo</button>
 
-        <div class="sec-label">Sistema</div>
-        <button class="nav-btn" data-sec="security"><span class="ico">🔒</span> Seguridad</button>
+            <div class="sec-label">Sistema</div>
+            <button class="nav-btn" data-sec="security"><span class="ico">🔒</span> Seguridad</button>
 
-        <div class="sidebar-bottom">
-            <button class="nav-btn logout-btn" id="btnLogout"><span class="ico">🚪</span> Cerrar sesión</button>
-        </div>
-    </aside>
-
-    <div class="main">
-
-        <!-- ── DASHBOARD ── -->
-        <div class="sec active" id="sec-dashboard">
-            <div class="sec-header">
-                <h1>Dashboard</h1>
-                <p>Vista rápida del estado del sistema y configuración activa.</p>
+            <div class="sidebar-bottom">
+                <button class="nav-btn logout-btn" id="btnLogout"><span class="ico">🚪</span> Cerrar sesión</button>
             </div>
-            <div class="stats">
-                <div class="stat"><div class="label">Estado API</div><div class="val green" id="dHealthVal">…</div></div>
-                <div class="stat"><div class="label">Nombre del sitio</div><div class="val blue" id="dBrandVal">…</div></div>
-                <div class="stat"><div class="label">Token TTL</div><div class="val" id="dTtlVal">1h</div></div>
-                <div class="stat"><div class="label">Fútbol</div><div class="val" id="dFootballVal">…</div></div>
-            </div>
-            <div class="card">
-                <h3>Acciones rápidas</h3>
-                <p class="desc">Refrescar datos o navegar a secciones importantes.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn btn-o" id="btnRefreshHistory">🔄 Refrescar historial y cuotas</button>
-                    <button class="btn btn-o" onclick="navTo('promo')">🖼️ Abrir editor de promos</button>
-                    <button class="btn btn-o" onclick="navTo('branding')">🏷️ Editar branding</button>
-                </div>
-                <div id="refreshMsg" style="margin-top:10px;font-size:11px;color:var(--text2);"></div>
-            </div>
-        </div>
+        </aside>
 
-        <!-- ── BRANDING ── -->
-        <div class="sec" id="sec-branding">
-            <div class="sec-header"><h1>Branding</h1><p>Identidad visual del sitio.</p></div>
-            <div class="card">
-                <h3>Identidad del Sitio</h3>
-                <p class="desc">Configura el nombre y logo de tu sitio web.</p>
-                <div class="form-row">
-                    <div class="fg"><label>Nombre</label><input type="text" id="brandTitle" placeholder="La Fija"></div>
-                    <div class="fg"><label>Emoji</label><input type="text" id="brandEmoji" placeholder="🏀" maxlength="4"><p class="hint">Dejar vacío para no mostrar emoji.</p></div>
-                </div>
-                <div class="form-row single">
-                    <div class="fg"><label>Subtítulo</label><textarea id="brandSubtitle" placeholder="Predicciones deportivas con IA"></textarea></div>
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
-            </div>
-        </div>
+        <div class="main">
 
-        <!-- ── THEME ── -->
-        <div class="sec" id="sec-theme">
-            <div class="sec-header"><h1>Tema y Colores</h1><p>Personaliza los colores del sitio.</p></div>
-            <div class="card">
-                <h3>Modo Oscuro</h3>
-                <p class="desc">Colores que se usan cuando el sitio está en modo oscuro.</p>
-                <div class="form-row" id="darkColors"></div>
+            <!-- ── DASHBOARD ── -->
+            <div class="sec active" id="sec-dashboard">
+                <div class="sec-header">
+                    <h1>Dashboard</h1>
+                    <p>Vista rápida del estado del sistema y configuración activa.</p>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="label">Estado API</div>
+                        <div class="val green" id="dHealthVal">…</div>
+                    </div>
+                    <div class="stat">
+                        <div class="label">Nombre del sitio</div>
+                        <div class="val blue" id="dBrandVal">…</div>
+                    </div>
+                    <div class="stat">
+                        <div class="label">Token TTL</div>
+                        <div class="val" id="dTtlVal">1h</div>
+                    </div>
+                    <div class="stat">
+                        <div class="label">Fútbol</div>
+                        <div class="val" id="dFootballVal">…</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Acciones rápidas</h3>
+                    <p class="desc">Refrescar datos o navegar a secciones importantes.</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-o" id="btnRefreshHistory">🔄 Refrescar historial y cuotas</button>
+                        <button class="btn btn-d" id="btnForceCorrect">⚡ Auto-Corregir Sistema</button>
+                        <button class="btn btn-o" onclick="navTo('promo')">🖼️ Abrir editor de promos</button>
+                        <button class="btn btn-o" onclick="navTo('branding')">🏷️ Editar branding</button>
+                    </div>
+                    <div id="refreshMsg" style="margin-top:10px;font-size:11px;color:var(--text2);"></div>
+                </div>
             </div>
-            <div class="card">
-                <h3>Modo Claro</h3>
-                <p class="desc">Colores que se usan cuando el sitio está en modo claro.</p>
-                <div class="form-row" id="lightColors"></div>
-            </div>
-            <div class="bar">
-                <button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button>
-                <button class="btn btn-o" onclick="resetTheme()">↩️ Restaurar defaults</button>
-            </div>
-        </div>
 
-        <!-- ── FEATURES ── -->
-        <div class="sec" id="sec-features">
-            <div class="sec-header"><h1>Funciones</h1><p>Activa o desactiva módulos del sitio.</p></div>
-            <div class="card">
-                <div class="toggle-row">
-                    <div class="toggle-info"><h4>⚽ Sección de Fútbol</h4><p>Predicciones de fútbol en el header.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="featFootball"><span class="toggle-sl"></span></label>
+            <!-- ── BRANDING ── -->
+            <div class="sec" id="sec-branding">
+                <div class="sec-header">
+                    <h1>Branding</h1>
+                    <p>Identidad visual del sitio.</p>
                 </div>
-                <div class="toggle-row">
-                    <div class="toggle-info"><h4>📥 Descargar Promo</h4><p>Botón de descarga de imagen en cada tarjeta.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="featPromo"><span class="toggle-sl"></span></label>
-                </div>
-                <div class="toggle-row">
-                    <div class="toggle-info"><h4>🌙 Modo Oscuro por Defecto</h4><p>Los visitantes nuevos ven el sitio en dark.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="featDark"><span class="toggle-sl"></span></label>
-                </div>
-                <div class="toggle-row">
-                    <div class="toggle-info"><h4>🤖 Análisis de IA</h4><p>Texto de análisis en detalles de cada partido.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="featAI"><span class="toggle-sl"></span></label>
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
-            </div>
-        </div>
-
-        <!-- ── ANNOUNCEMENT ── -->
-        <div class="sec" id="sec-announcement">
-            <div class="sec-header"><h1>Anuncio</h1><p>Configura un banner informativo en la parte superior del sitio.</p></div>
-            <div class="card">
-                <div class="toggle-row" style="margin-bottom:14px;">
-                    <div class="toggle-info"><h4>Activar Banner</h4><p>Muestra el mensaje en la parte superior del sitio.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="annEnabled"><span class="toggle-sl"></span></label>
-                </div>
-                <div class="form-row">
-                    <div class="fg"><label>Texto del Anuncio</label><input type="text" id="annText" maxlength="500" placeholder="🔥 ¡Nuevo modelo de IA disponible!"></div>
-                    <div class="fg">
-                        <label>Color del Banner</label>
-                        <div class="color-wrap">
-                            <input type="color" id="annColorPick" value="#0a84ff">
-                            <input type="text" id="annColorHex" placeholder="#0a84ff">
+                <div class="card">
+                    <h3>Identidad del Sitio</h3>
+                    <p class="desc">Configura el nombre y logo de tu sitio web.</p>
+                    <div class="form-row">
+                        <div class="fg"><label>Nombre</label><input type="text" id="brandTitle" placeholder="La Fija">
+                        </div>
+                        <div class="fg"><label>Emoji</label><input type="text" id="brandEmoji" placeholder="🏀"
+                                maxlength="4">
+                            <p class="hint">Dejar vacío para no mostrar emoji.</p>
                         </div>
                     </div>
-                </div>
-                <div id="annPreview" style="margin-top:10px;padding:12px;border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:#fff;">
-                    Vista previa del anuncio
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
-            </div>
-        </div>
-
-        <!-- ── ADS ── -->
-        <div class="sec" id="sec-ads">
-            <div class="sec-header"><h1>Publicidad</h1><p>Configuración de banners de Adsterra.</p></div>
-            <div class="card">
-                <div class="toggle-row" style="margin-bottom:14px;">
-                    <div class="toggle-info"><h4>Activar Publicidad</h4><p>Muestra los banners de Adsterra en los laterales.</p></div>
-                    <label class="toggle-sw"><input type="checkbox" id="adsEnabled"><span class="toggle-sl"></span></label>
-                </div>
-                <div class="form-row">
-                    <div class="fg"><label>Clave Banner Izquierdo</label><input type="text" id="adsLeft" placeholder="e2cbd291…"></div>
-                    <div class="fg"><label>Clave Banner Derecho</label><input type="text" id="adsRight" placeholder="e2cbd291…"></div>
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
-            </div>
-        </div>
-
-        <!-- ── BETTING CONFIG ── -->
-        <div class="sec" id="sec-betting">
-            <div class="sec-header"><h1>Apuestas</h1><p>Configura moneda, formato de cuotas y monto por defecto para la calculadora.</p></div>
-            <div class="card">
-                <h3>Configuración de Moneda y Cuotas</h3>
-                <p class="desc">Estos valores se usan en la sección de recomendaciones y calculadora de combinadas del sitio público.</p>
-                <div class="form-row">
-                    <div class="fg">
-                        <label>Moneda</label>
-                        <select id="betCurrency" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
-                            <option value="COP">COP - Peso Colombiano</option>
-                            <option value="USD">USD - Dolar Estadounidense</option>
-                            <option value="EUR">EUR - Euro</option>
-                            <option value="MXN">MXN - Peso Mexicano</option>
-                            <option value="ARS">ARS - Peso Argentino</option>
-                            <option value="BRL">BRL - Real Brasileño</option>
-                        </select>
+                    <div class="form-row single">
+                        <div class="fg"><label>Subtítulo</label><textarea id="brandSubtitle"
+                                placeholder="Predicciones deportivas con IA"></textarea></div>
                     </div>
-                    <div class="fg">
-                        <label>Simbolo de Moneda</label>
-                        <input type="text" id="betCurrencySymbol" placeholder="$" maxlength="4">
-                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
                 </div>
-                <div class="form-row">
-                    <div class="fg">
-                        <label>Formato de Cuotas</label>
-                        <select id="betOddsFormat" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
-                            <option value="decimal">Decimal (1.85, 2.10)</option>
-                            <option value="american">Americano (+150, -200)</option>
-                        </select>
-                        <p class="hint">Decimal es el formato más común en Latinoamérica.</p>
-                    </div>
-                    <div class="fg">
-                        <label>Monto por Defecto</label>
-                        <input type="text" id="betDefaultStake" placeholder="50000">
-                        <p class="hint">Monto pre-cargado en la calculadora de combinadas.</p>
-                    </div>
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
             </div>
-            <div class="card">
-                <h3>API de Inteligencia Artificial</h3>
-                <p class="desc">Clave de DeepSeek para noticias NBA y recomendaciones. Se obtiene en <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--accent)">platform.deepseek.com</a>.</p>
-                <div class="form-row single">
-                    <div class="fg">
-                        <label>DeepSeek API Key</label>
-                        <input type="password" id="betDeepSeekKey" placeholder="sk-...">
-                        <p class="hint">Configurar en GitHub Secrets (DEEPSEEK_API_KEY) para el job diario. Aquí solo para sesión local.</p>
-                    </div>
-                </div>
-                <div class="bar"><button class="btn btn-p" onclick="saveDeepSeekKey()">💾 Guardar API Key</button></div>
-            </div>
-        </div>
 
-        <!-- ── PROMO EDITOR ── -->
-        <div class="sec" id="sec-promo">
-            <div class="sec-header"><h1>Editor de Promos</h1><p>Ajusta el layout de las imágenes promocionales.</p></div>
-            <div class="card" style="padding:14px;">
-                <iframe class="promo-frame" id="promoFrame" src="" loading="lazy"></iframe>
+            <!-- ── THEME ── -->
+            <div class="sec" id="sec-theme">
+                <div class="sec-header">
+                    <h1>Tema y Colores</h1>
+                    <p>Personaliza los colores del sitio.</p>
+                </div>
+                <div class="card">
+                    <h3>Modo Oscuro</h3>
+                    <p class="desc">Colores que se usan cuando el sitio está en modo oscuro.</p>
+                    <div class="form-row" id="darkColors"></div>
+                </div>
+                <div class="card">
+                    <h3>Modo Claro</h3>
+                    <p class="desc">Colores que se usan cuando el sitio está en modo claro.</p>
+                    <div class="form-row" id="lightColors"></div>
+                </div>
+                <div class="bar">
+                    <button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button>
+                    <button class="btn btn-o" onclick="resetTheme()">↩️ Restaurar defaults</button>
+                </div>
             </div>
-        </div>
 
-        <!-- ── SECURITY ── -->
-        <div class="sec" id="sec-security">
-            <div class="sec-header"><h1>Seguridad</h1><p>Gestiona tu contraseña y sesión.</p></div>
-            <div class="card">
-                <h3>Cambiar Contraseña</h3>
-                <p class="desc">Actualiza la contraseña del panel de administración.</p>
-                <div class="form-row">
-                    <div class="fg"><label>Contraseña Actual</label><input type="password" id="secCurrent" placeholder="••••••"></div>
-                    <div class="fg"><label>Nueva Contraseña</label><input type="password" id="secNew" placeholder="Mínimo 6 caracteres"></div>
+            <!-- ── FEATURES ── -->
+            <div class="sec" id="sec-features">
+                <div class="sec-header">
+                    <h1>Funciones</h1>
+                    <p>Activa o desactiva módulos del sitio.</p>
                 </div>
-                <div class="bar" style="border-top:none;padding-top:4px;">
-                    <button class="btn btn-p" id="btnChangePwd">🔐 Cambiar contraseña</button>
+                <div class="card">
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <h4>⚽ Sección de Fútbol</h4>
+                            <p>Predicciones de fútbol en el header.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="featFootball"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <h4>📥 Descargar Promo</h4>
+                            <p>Botón de descarga de imagen en cada tarjeta.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="featPromo"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <h4>🌙 Modo Oscuro por Defecto</h4>
+                            <p>Los visitantes nuevos ven el sitio en dark.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="featDark"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <h4>🤖 Análisis de IA</h4>
+                            <p>Texto de análisis en detalles de cada partido.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="featAI"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
                 </div>
             </div>
-            <div class="card">
-                <h3>Información de Sesión</h3>
-                <p class="desc">Detalles técnicos de tu sesión.</p>
-                <div style="font-size:12px;color:var(--text2);line-height:2;">
-                    <div>🟢 <strong>Estado:</strong> Sesión activa</div>
-                    <div>⏱️ <strong>Expiración:</strong> 1 hora desde el login</div>
-                    <div>🛡️ <strong>Protección:</strong> bcrypt + JWT (HS256)</div>
-                    <div>🚫 <strong>Rate limit:</strong> 5 intentos / 15 min</div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Cerrar Sesión</h3>
-                <p class="desc">Borra el token de este navegador.</p>
-                <button class="btn btn-d" id="btnLogout2">🚪 Cerrar sesión</button>
-            </div>
-        </div>
 
+            <!-- ── ANNOUNCEMENT ── -->
+            <div class="sec" id="sec-announcement">
+                <div class="sec-header">
+                    <h1>Anuncio</h1>
+                    <p>Configura un banner informativo en la parte superior del sitio.</p>
+                </div>
+                <div class="card">
+                    <div class="toggle-row" style="margin-bottom:14px;">
+                        <div class="toggle-info">
+                            <h4>Activar Banner</h4>
+                            <p>Muestra el mensaje en la parte superior del sitio.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="annEnabled"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="form-row">
+                        <div class="fg"><label>Texto del Anuncio</label><input type="text" id="annText" maxlength="500"
+                                placeholder="🔥 ¡Nuevo modelo de IA disponible!"></div>
+                        <div class="fg">
+                            <label>Color del Banner</label>
+                            <div class="color-wrap">
+                                <input type="color" id="annColorPick" value="#0a84ff">
+                                <input type="text" id="annColorHex" placeholder="#0a84ff">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="annPreview"
+                        style="margin-top:10px;padding:12px;border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:#fff;">
+                        Vista previa del anuncio
+                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+                </div>
+            </div>
+
+            <!-- ── ADS ── -->
+            <div class="sec" id="sec-ads">
+                <div class="sec-header">
+                    <h1>Publicidad</h1>
+                    <p>Configuración de banners de Adsterra.</p>
+                </div>
+                <div class="card">
+                    <div class="toggle-row" style="margin-bottom:14px;">
+                        <div class="toggle-info">
+                            <h4>Activar Publicidad</h4>
+                            <p>Muestra los banners de Adsterra en los laterales.</p>
+                        </div>
+                        <label class="toggle-sw"><input type="checkbox" id="adsEnabled"><span
+                                class="toggle-sl"></span></label>
+                    </div>
+                    <div class="form-row">
+                        <div class="fg"><label>Clave Banner Izquierdo</label><input type="text" id="adsLeft"
+                                placeholder="e2cbd291…"></div>
+                        <div class="fg"><label>Clave Banner Derecho</label><input type="text" id="adsRight"
+                                placeholder="e2cbd291…"></div>
+                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+                </div>
+            </div>
+
+            <!-- ── BETTING CONFIG ── -->
+            <div class="sec" id="sec-betting">
+                <div class="sec-header">
+                    <h1>Apuestas</h1>
+                    <p>Configura moneda, formato de cuotas y monto por defecto para la calculadora.</p>
+                </div>
+                <div class="card">
+                    <h3>Configuración de Moneda y Cuotas</h3>
+                    <p class="desc">Estos valores se usan en la sección de recomendaciones y calculadora de combinadas
+                        del sitio público.</p>
+                    <div class="form-row">
+                        <div class="fg">
+                            <label>Moneda</label>
+                            <select id="betCurrency"
+                                style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
+                                <option value="COP">COP - Peso Colombiano</option>
+                                <option value="USD">USD - Dolar Estadounidense</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="MXN">MXN - Peso Mexicano</option>
+                                <option value="ARS">ARS - Peso Argentino</option>
+                                <option value="BRL">BRL - Real Brasileño</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label>Simbolo de Moneda</label>
+                            <input type="text" id="betCurrencySymbol" placeholder="$" maxlength="4">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="fg">
+                            <label>Formato de Cuotas</label>
+                            <select id="betOddsFormat"
+                                style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;">
+                                <option value="decimal">Decimal (1.85, 2.10)</option>
+                                <option value="american">Americano (+150, -200)</option>
+                            </select>
+                            <p class="hint">Decimal es el formato más común en Latinoamérica.</p>
+                        </div>
+                        <div class="fg">
+                            <label>Monto por Defecto</label>
+                            <input type="text" id="betDefaultStake" placeholder="50000">
+                            <p class="hint">Monto pre-cargado en la calculadora de combinadas.</p>
+                        </div>
+                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveSettings()">💾 Guardar</button></div>
+                </div>
+                <div class="card">
+                    <h3>API de Inteligencia Artificial</h3>
+                    <p class="desc">Clave de DeepSeek para noticias NBA y recomendaciones. Se obtiene en <a
+                            href="https://platform.deepseek.com/api_keys" target="_blank"
+                            style="color:var(--accent)">platform.deepseek.com</a>.</p>
+                    <div class="form-row single">
+                        <div class="fg">
+                            <label>DeepSeek API Key</label>
+                            <input type="password" id="betDeepSeekKey" placeholder="sk-...">
+                            <p class="hint">Configurar en GitHub Secrets (DEEPSEEK_API_KEY) para el job diario. Aquí
+                                solo para sesión local.</p>
+                        </div>
+                    </div>
+                    <div class="bar"><button class="btn btn-p" onclick="saveDeepSeekKey()">💾 Guardar API Key</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── PROMO EDITOR ── -->
+            <div class="sec" id="sec-promo">
+                <div class="sec-header">
+                    <h1>Editor de Promos</h1>
+                    <p>Ajusta el layout de las imágenes promocionales.</p>
+                </div>
+                <div class="card" style="padding:14px;">
+                    <iframe class="promo-frame" id="promoFrame" src="" loading="lazy"></iframe>
+                </div>
+            </div>
+
+            <!-- ── SECURITY ── -->
+            <div class="sec" id="sec-security">
+                <div class="sec-header">
+                    <h1>Seguridad</h1>
+                    <p>Gestiona tu contraseña y sesión.</p>
+                </div>
+                <div class="card">
+                    <h3>Cambiar Contraseña</h3>
+                    <p class="desc">Actualiza la contraseña del panel de administración.</p>
+                    <div class="form-row">
+                        <div class="fg"><label>Contraseña Actual</label><input type="password" id="secCurrent"
+                                placeholder="••••••"></div>
+                        <div class="fg"><label>Nueva Contraseña</label><input type="password" id="secNew"
+                                placeholder="Mínimo 6 caracteres"></div>
+                    </div>
+                    <div class="bar" style="border-top:none;padding-top:4px;">
+                        <button class="btn btn-p" id="btnChangePwd">🔐 Cambiar contraseña</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Información de Sesión</h3>
+                    <p class="desc">Detalles técnicos de tu sesión.</p>
+                    <div style="font-size:12px;color:var(--text2);line-height:2;">
+                        <div>🟢 <strong>Estado:</strong> Sesión activa</div>
+                        <div>⏱️ <strong>Expiración:</strong> 1 hora desde el login</div>
+                        <div>🛡️ <strong>Protección:</strong> bcrypt + JWT (HS256)</div>
+                        <div>🚫 <strong>Rate limit:</strong> 5 intentos / 15 min</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Cerrar Sesión</h3>
+                    <p class="desc">Borra el token de este navegador.</p>
+                    <button class="btn btn-d" id="btnLogout2">🚪 Cerrar sesión</button>
+                </div>
+            </div>
+
+        </div>
     </div>
-</div>
 
-<div class="toast-box" id="toastBox"></div>
+    <div class="toast-box" id="toastBox"></div>
 
-<script src="/static/js/admin.js?v=20260304b"></script>
+    <script src="/static/js/admin.js?v=20260304b"></script>
 </body>
+
 </html>

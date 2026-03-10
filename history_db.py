@@ -376,6 +376,20 @@ def delete_predictions_for_date(date: str) -> int:
         return 0
 
 
+def force_delete_all_predictions_for_date(date: str) -> int:
+    """Borra TODAS las predicciones de una fecha, sin importar el estado (PENDING, WIN, LOSS)."""
+    client = _get_supabase()
+    if not client: return 0
+    try:
+        res = client.table('predictions').delete().eq('date', date).execute()
+        deleted = len(res.data) if res.data else 0
+        print(f"[DB] Force deleted ALL {deleted} predictions for {date}")
+        return deleted
+    except Exception as e:
+        print(f"[DB ERROR] force_delete_all_predictions_for_date: {e}")
+        return 0
+
+
 def get_team_recent_results(team_name: str, limit: int = 5) -> list:
     client = _get_supabase()
     if not client: return []

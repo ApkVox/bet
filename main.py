@@ -600,6 +600,47 @@ async def refresh_history_scores():
         raise HTTPException(status_code=500, detail=msg)
 
 
+@app.post("/api/admin/force-correct")
+async def admin_force_correct(_: None = Depends(require_admin)):
+    """
+    Fuerza una autocorrección del sistema:
+    1. Borra TODAS las predicciones de hoy (correctas o incorrectas).
+    2. Actualiza resultados pendientes de días pasados.
+    3. Regenera predicciones NBA y Fútbol desde cero.
+    Solo accesible para administradores.
+    """
+    try:
+        from history_db import force_delete_all_predictions_for_date
+        from generate_daily_job import generate_nba_predictions, generate_football_predictions, update_past_results
+
+        today_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
+
+        # 1. Purge ALL today's predictions (not just PENDING)
+        deleted = await asyncio.to_thread(force_delete_all_predictions_for_date, today_str)
+        print(f"[admin] Auto-corrección: eliminadas {deleted} predicciones para {today_str}")
+
+        # 2. Update past results (PENDING -> WIN/LOSS)
+        await update_past_results()
+
+        # 3. Regenerate fresh predictions
+        nba_preds = await generate_nba_predictions()
+        football_preds = await generate_football_predictions()
+
+        nba_count = len(nba_preds) if nba_preds else 0
+        football_count = len(football_preds) if football_preds else 0
+
+        return {
+            "status": "ok",
+            "message": f"Sistema autocorregido. Eliminadas {deleted} predicciones antiguas. Regeneradas {nba_count} NBA + {football_count} Fútbol.",
+            "deleted": deleted,
+            "nba_regenerated": nba_count,
+            "football_regenerated": football_count
+        }
+    except Exception as e:
+        print(f"[admin] Error en force-correct: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/history/full")
 async def get_full_history(background_tasks: BackgroundTasks, days: int = 365):
     """Obtiene el historial NBA de los ├║ltimos d├¡as. Dispara actualizaci├│n de marcadores en background."""

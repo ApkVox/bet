@@ -104,14 +104,9 @@ async def generate_nba_predictions():
     try:
         scraper = sbrscrape.Scoreboard(sport="NBA")
         games = scraper.games
-        
-        if not games:
-            log("No hay juegos actuales (posiblemente fuera de temporada o sandbox). Usando fecha de prueba 2024-02-27.")
-            scraper = sbrscrape.Scoreboard(sport="NBA", date="2024-02-27")
-            games = scraper.games
 
         if not games:
-            log("No hay juegos NBA programados para hoy.")
+            log("No hay juegos NBA programados para hoy (posible descanso o fuera de temporada).")
             return
 
         today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
