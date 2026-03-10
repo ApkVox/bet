@@ -1,116 +1,57 @@
-# La Fija - Predicciones Deportivas
+# 🏀⚽ La Fija - Predicciones Deportivas Inteligentes
 
-Sistema de predicciones deportivas con Machine Learning para NBA y Futbol europeo.
+¡Bienvenido a **La Fija**! Este es un proyecto que utiliza Inteligencia Artificial (específicamente un tipo llamado Machine Learning) para intentar predecir los resultados de partidos deportivos de la **NBA** (Baloncesto) y **Fútbol Europeo**.
 
-## Arquitectura
+El sistema analiza datos y estadísticas históricas todos los días para darte la mejor "fija" (predicción) posible.
 
-- **API (Render)**: FastAPI ultraligera (~50MB RAM) que sirve predicciones pre-calculadas desde SQLite.
-- **Motor ML (GitHub Actions)**: XGBoost (NBA) y Poisson (Futbol) se ejecutan diariamente a las 3:00 AM COT.
-- **Persistencia**: GitOps - la base de datos `history.db` se commitea al repo automaticamente.
-- **Keep-Alive**: Servicio externo (cron-job.org) mantiene Render activo con pings cada 5 minutos.
+---
 
-## Stack Tecnologico
+## 🎯 ¿Qué hace este proyecto exactamente?
 
-| Capa | Tecnologia |
-|---|---|
-| Backend | Python 3.11, FastAPI, Uvicorn |
-| ML (NBA) | XGBoost, Pandas, sbrscrape |
-| ML (Futbol) | Distribucion Poisson, footy |
-| Frontend | HTML5, CSS3, JavaScript vanilla |
-| Base de Datos | SQLite3 |
-| CI/CD | GitHub Actions |
-| Hosting | Render (Free Tier) |
+Imagina un analista deportivo que no duerme. Eso es La Fija:
+1. **Recopila datos:** Todos los días, el sistema busca los partidos que se jugarán hoy.
+2. **Analiza estadísticas:** La IA mira cómo les ha ido a los equipos en el pasado.
+3. **Lee las noticias (Solo NBA):** Gracias a otra Inteligencia Artificial llamada DeepSeek, el sistema también lee si hay jugadores lesionados importantes que puedan afectar el resultado.
+4. **Te da el resultado:** La página web principal te muestra de forma muy clara quién cree el sistema que va a ganar.
 
-## Endpoints
+## 📚 ¿Sin conocimientos técnicos? ¡No hay problema!
 
-| Ruta | Descripcion |
-|---|---|
-| `GET /` | Frontend SPA |
-| `GET /api/health` | Health check |
-| `GET /predict-today` | Predicciones NBA del dia |
-| `GET /predict-football` | Predicciones futbol |
-| `GET /history/full` | Historial NBA |
-| `GET /history/football` | Historial futbol |
-| `GET /admin` | Panel de administración |
-| `GET /api/settings` | Configuración pública (tema, publicidad) |
-| `POST /api/admin/login` | Login admin (JWT) |
-| `GET/POST /api/admin/settings` | Configuración (requiere JWT) |
+Hemos creado guías paso a paso, explicadas con peras y manzanas, para que cualquier persona pueda entender, instalar y jugar con este proyecto.
 
-## Estructura del Proyecto
+Empieza por aquí:
 
-```
+🔹 **[Guía de Inicio Rápido (Paso a Paso)](docs/GUIA_INICIO_RAPIDO.md)**
+Aprende cómo descargar este código, preparar tu computadora y ver la página funcionando, ¡incluso si es tu primera vez!
+
+🔹 **[Entendiendo los Servicios y APIs Externas](docs/SERVICIOS_Y_APIS.md)**
+Aquí explicamos de forma sencilla todas esas palabras raras como "Render", "DeepSeek", "Supabase" o "Resend" y por qué las necesitamos.
+
+---
+
+## 🛠️ Para los más técnicos (Resumen Rápido)
+
+Si ya sabes de programación, aquí tienes el resumen de lo que usamos bajo el capó:
+
+- **Backend:** Python + FastAPI (súper ligero y rápido).
+- **Inteligencia Artificial (Modelos):** XGBoost para NBA, Distribución de Poisson para Fútbol.
+- **Frontend (La página web):** HTML, CSS y JavaScript clásicos (sin frameworks pesados).
+- **Base de Datos Principal:** SQLite3 (para guardar el historial de predicciones sin complicaciones).
+- **Automatización (CRON):** GitHub Actions ejecuta las predicciones todos los días a las 3:00 AM (Hora Colombia).
+- **Despliegue Gratuito:** Todo está pensado para alojarse sin costo en servicios como **Render**.
+
+### Estructura Principal del Código
+
+```text
 bet/
-├── main.py                  # API FastAPI (read-only, ultraligera)
-├── prediction_api.py        # Modelo XGBoost para NBA
-├── football_api.py          # Modelo Poisson para futbol
-├── history_db.py            # Capa de acceso a SQLite
-├── generate_daily_job.py    # Script CRON para GitHub Actions
-├── production_server.py     # Punto de entrada de produccion
-├── Dockerfile               # Imagen Docker para Render
-├── requirements.txt         # Dependencias completas (dev/CI)
-├── requirements_prod.txt    # Dependencias minimas (produccion)
-├── Data/
-│   └── history.db           # Base de datos SQLite
-├── Models/                  # Modelos XGBoost entrenados
-├── static/
-│   ├── index.html           # Frontend SPA
-│   └── js/app.js            # Logica del frontend
-└── .github/workflows/
-    └── daily_prediction.yml # CRON diario (3AM COT)
+├── main.py                  # El cerebro de la página web (FastAPI)
+├── prediction_api.py        # La IA que predice la NBA
+├── football_api.py          # La IA que predice el Fútbol
+├── history_db.py            # Archivo que guarda las cosas en la base de datos
+├── generate_daily_job.py    # El script que se ejecuta todos los días a las 3 AM
+├── docs/                    # Todas las guías y documentación detallada
+├── static/                  # La carpeta donde vive el diseño de la web
 ```
 
-## Despliegue
+---
 
-1. Fork/clone el repositorio
-2. Configurar Render con el Dockerfile
-3. Habilitar GitHub Actions (Settings > Actions > Workflow permissions > Read and write)
-4. Configurar cron-job.org para ping cada 5 min a `/api/health`
-
-**Noticias NBA y recomendaciones:** Solo para NBA (fútbol no implementado). Usa **DeepSeek**. Añade en **GitHub** → Settings → Secrets and variables → Actions:
-- `DEEPSEEK_API_KEY` — [platform.deepseek.com](https://platform.deepseek.com/api_keys)
-
-**Configuración persistente (admin, tema, promo):** En Render free el filesystem es efímero. Para que la contraseña del admin, el tema y la config del editor de promo no se pierdan:
-1. Crea un proyecto en [Supabase](https://supabase.com) (plan Free).
-2. En SQL Editor, ejecuta el contenido de `scripts/init_app_config.sql`.
-3. En Supabase → Project Settings → Database → **Connect** → Connection string.
-4. **Importante:** Render usa IPv4. Si la conexión Direct falla, usa **Connection pooling** → **Session mode** (soporta IPv4).
-5. En Render → tu servicio → Environment, añade `DATABASE_URL` con esa URI (reemplaza `[YOUR-PASSWORD]` por tu contraseña de postgres). Si la contraseña tiene caracteres especiales (`@`, `:`, `[`, `]`), codifícala en URL (ej. `[` → `%5B`).
-
-## Desarrollo Local
-
-1. **API key (noticias y recomendaciones):** Crea `.env` en la raíz (o copia `.env.example`):
-   ```
-   DEEPSEEK_API_KEY=sk-...
-   ```
-   El archivo `.env` está en `.gitignore`.
-
-2. **Iniciar servidor:**
-   ```bash
-   pip install -r requirements.txt
-   python production_server.py
-   # Acceder en http://localhost:8080
-   # Panel admin: http://localhost:8080/admin
-   ```
-
-3. **Refrescar noticias:** `POST http://localhost:8080/api/news/refresh`
-
-**Panel de administración:** La primera vez que entras a `/admin` verás **«Primera vez: crea tu contraseña de administrador»**. Crea la contraseña y ya podrás entrar. Si en Render la contraseña no funciona (archivo antiguo), en Environment añade **`FORCE_INITIAL_PASSWORD=1`**, redeploya, entra a `/admin`, crea tu contraseña y luego quita la variable. Alternativa: **`RESET_ADMIN_PASSWORD=TuContraseña`** (mín. 6 caracteres) para fijar la contraseña directamente.
-En local: `python admin_config.py set-password`.
-
-**Recuperar contraseña por correo:** En la pantalla de login, "¿Olvidaste tu contraseña?" envía un enlace al correo del administrador.
-
-- **Render Free:** El plan gratuito de Render **bloquea los puertos SMTP** (25, 465, 587), así que Gmail/Outlook SMTP no funcionan. Usa **Resend** (API HTTP, gratis ~100 emails/día):
-  1. Regístrate en [resend.com](https://resend.com) y crea una API Key en [resend.com/api-keys](https://resend.com/api-keys).
-  2. En Render → tu servicio → **Environment** añade:
-     - `ADMIN_RECOVERY_EMAIL`: tu correo (ej. `hasler9710@gmail.com`).
-     - `RESEND_API_KEY`: la API key de Resend (empieza por `re_`).
-     - `RESEND_FROM`: remitente, ej. `La Fija <onboarding@resend.dev>` (o un dominio verificado en Resend).
-     - `RENDER_EXTERNAL_URL` o `SITE_URL`: URL de tu sitio (ej. `https://tu-app.onrender.com`).
-  3. Guarda y redeploya. La recuperación usará la API de Resend en lugar de SMTP.
-- **Servidor con SMTP (VPS, Render paid, etc.):** Opcionalmente configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. Si además existe `RESEND_API_KEY`, se prioriza Resend.
-
-**Verificar historial (pendientes antes del 03/03/2026):**
-```bash
-python scripts/verify_history_db.py          # listar pendientes
-python scripts/verify_history_db.py --fix    # actualizar marcadores
-```
+*¡Gracias por echarle un vistazo a La Fija! Si tienes problemas durante la instalación, consulta nuestra [Guía de Inicio Rápido](docs/GUIA_INICIO_RAPIDO.md).*
