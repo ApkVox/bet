@@ -102,14 +102,14 @@ def _refresh_odds_for_existing(games: list, today_str: str):
 async def generate_nba_predictions():
     log("Iniciando scrapping de SBR para juegos NBA de hoy...")
     try:
-        scraper = sbrscrape.Scoreboard(sport="NBA")
+        today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
+        log(f"Fecha local (Colombia): {today_str}")
+        scraper = sbrscrape.Scoreboard(sport="NBA", date=today_str)
         games = scraper.games
 
         if not games:
             log("No hay juegos NBA programados para hoy (posible descanso o fuera de temporada).")
             return
-
-        today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
         existing = get_predictions_by_date(today_str)
         if existing and len(existing) >= len(games):
             log(f"Predicciones NBA para hoy ({len(existing)}) ya existen en BD. Actualizando cuotas si faltan...")
