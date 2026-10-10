@@ -1,5 +1,7 @@
 # 🛡️ Veredicto Técnico Final - Fase 2
 
+> ⚠️ **Obsoleto (oct 2026):** evaluado con features que incluían el resultado del propio partido (fuga) y sin reentrenar entre folds. El backtest vigente está en `src/Train-Models/XGBoost_Model_ML.py`.
+
 **Fecha:** 2026-02-03  
 **Estado:** ✅ **APROBADO PARA FASE 3**  
 **Versión del Modelo:** XGBoost Moneyline (Legacy)

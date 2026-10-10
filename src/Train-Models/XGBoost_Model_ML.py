@@ -1,250 +1,159 @@
+"""Modelo moneyline NBA (XGBoost sobre Elo + forma + descanso): backtest y modelo final.
+
+Backtest walk-forward: para cada temporada S de BACKTEST_SEASONS se entrena solo con
+temporadas anteriores y se predice S. Se compara contra el mercado (probabilidad
+implícita sin vig) y contra la mezcla modelo+mercado que se muestra en la web.
+
+El modelo es independiente del mercado (no ve cuotas): sirve para detectar valor.
+La mezcla (peso `blend_weight`, guardado dentro del modelo) es la que elige el pick.
+Las features salen de src/Utils/elo.py, el mismo código que usa la predicción en vivo.
+
+Uso:
+    PYTHONPATH=. python src/Train-Models/XGBoost_Model_ML.py            # backtest + guarda modelo
+    PYTHONPATH=. python src/Train-Models/XGBoost_Model_ML.py --dry-run  # solo backtest
+"""
 import argparse
-# [FROZEN] DO NOT MODIFY: Core ML Logic verified in Phase 2
-import sqlite3
+import json
+from datetime import datetime
 from pathlib import Path
 
-import joblib
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import accuracy_score, log_loss
-from sklearn.model_selection import TimeSeriesSplit
+
+import history_db
+from src.Utils import elo
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DATASET_DB = BASE_DIR / "Data" / "dataset.sqlite"
 MODEL_DIR = BASE_DIR / "Models" / "XGBoost_Models"
 
-DEFAULT_DATASET = "dataset_2012-26"
-TARGET_COLUMN = "Home-Team-Win"
-DATE_COLUMN = "Date"
-DROP_COLUMNS = [
-    "index",
-    "Score",
-    "Home-Team-Win",
-    "TEAM_NAME",
-    "Date",
-    "index.1",
-    "TEAM_NAME.1",
-    "Date.1",
-    "OU-Cover",
-    "OU",
-]
-NUM_CLASSES = 2
+TARGET = "home_win"
+FIRST_SEASON = "2008-09"  # 2007-08 solo calienta el Elo
+BACKTEST_SEASONS = ["2022-23", "2023-24", "2024-25", "2025-26"]
+PARAMS = {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "tree_method": "hist",
+    "max_depth": 3,
+    "eta": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 10,
+    "lambda": 1.0,
+    "seed": 42,
+}
+MAX_ROUNDS = 3000
 
 
-def load_dataset(dataset_name):
-    with sqlite3.connect(DATASET_DB) as con:
-        return pd.read_sql_query(f'SELECT * FROM "{dataset_name}"', con)
+def load_dataset():
+    """Partidos (histórico local + nba_games de Supabase) con sus features previas."""
+    games = elo.load_games(recent=history_db.get_game_results())
+    feats, _ = elo.replay(games)
+    df = games.join(feats)
+    df["Season"] = df["date"].map(elo.season_of)
+    df[TARGET] = (df["margin"] > 0).astype(int)
+    df["p_market"] = elo.market_home_prob(df["ml_home"], df["ml_away"])
+    return df[df["Season"] >= FIRST_SEASON].reset_index(drop=True)
 
 
-def prepare_data(df):
-    data = df.copy()
-    if DATE_COLUMN in data.columns:
-        data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN], errors="coerce")
-        data = data.sort_values(DATE_COLUMN)
-    y = data[TARGET_COLUMN].astype(int).to_numpy()
-    X = data.drop(columns=DROP_COLUMNS, errors="ignore").astype(float).to_numpy()
-    return X, y
-
-
-def split_train_test(X, y, test_size=0.1):
-    n = len(X)
-    if n == 0:
-        raise ValueError("Empty dataset.")
-    test_start = int(n * (1 - test_size))
-    return X[:test_start], y[:test_start], X[test_start:], y[test_start:]
-
-
-def split_train_calib(X, y, calib_size=0.1):
-    n = len(X)
-    if n == 0:
-        raise ValueError("Empty dataset.")
-    calib_start = int(n * (1 - calib_size))
-    return X[:calib_start], y[:calib_start], X[calib_start:], y[calib_start:]
-
-
-
-def compute_sample_weights(y, num_classes):
-    counts = np.bincount(y, minlength=num_classes)
-    total = len(y)
-    class_weights = {
-        cls: (total / (num_classes * count)) if count else 1.0
-        for cls, count in enumerate(counts)
+def metrics(p, y):
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    return {
+        "n": int(len(y)),
+        "acc": float(((p > 0.5) == y).mean()),
+        "logloss": float(-(y * np.log(p) + (1 - y) * np.log(1 - p)).mean()),
+        "brier": float(((p - y) ** 2).mean()),
+        "p_local": float(p.mean()),
     }
-    return np.array([class_weights[label] for label in y])
 
 
-def sample_params(rng, seed):
-    eta = 10 ** rng.uniform(np.log10(0.003), np.log10(0.3))
-    params = {
-        "max_depth": int(rng.integers(2, 13)),
-        "eta": float(eta),
-        "subsample": float(rng.uniform(0.5, 1.0)),
-        "colsample_bytree": float(rng.uniform(0.5, 1.0)),
-        "colsample_bylevel": float(rng.uniform(0.5, 1.0)),
-        "colsample_bynode": float(rng.uniform(0.5, 1.0)),
-        "min_child_weight": int(rng.integers(1, 21)),
-        "gamma": float(rng.uniform(0.0, 10.0)),
-        "max_delta_step": int(rng.integers(0, 11)),
-        "max_bin": int(rng.integers(128, 1025)),
-        "lambda": float(10 ** rng.uniform(np.log10(0.1), np.log10(10.0))),
-        "alpha": float(10 ** rng.uniform(np.log10(0.01), np.log10(5.0))),
-        "objective": "multi:softprob",
-        "num_class": NUM_CLASSES,
-        "eval_metric": ["mlogloss", "merror"],
-        "seed": seed,
-        "tree_method": "hist",
-    }
-    num_boost_round = int(rng.integers(300, 2501))
-    return params, num_boost_round
+def fit_blend_weight(p_model, p_market, y):
+    grid = np.linspace(0, 1, 101)
+    losses = [metrics(elo.blend(p_model, p_market, w), y)["logloss"] for w in grid]
+    return float(grid[int(np.argmin(losses))])
 
 
-def train_model(X_train, y_train, X_val, y_val, params, num_boost_round):
-    dtrain = xgb.DMatrix(X_train, label=y_train, weight=compute_sample_weights(y_train, num_classes=NUM_CLASSES))
-    dval = xgb.DMatrix(X_val, label=y_val)
-    model = xgb.train(
-        params,
-        dtrain,
-        num_boost_round=num_boost_round,
-        evals=[(dtrain, "train"), (dval, "val")],
-        early_stopping_rounds=60,
-        verbose_eval=False,
-    )
-    return model
+def train(train_df, valid_df, feats):
+    """Early stopping con valid_df y reentrena con train+valid usando esas rondas."""
+    def dmatrix(d):
+        return xgb.DMatrix(d[feats].astype(float), label=d[TARGET], feature_names=feats)
+    probe = xgb.train(PARAMS, dmatrix(train_df), MAX_ROUNDS, evals=[(dmatrix(valid_df), "valid")],
+                      early_stopping_rounds=100, verbose_eval=False)
+    rounds = probe.best_iteration + 1
+    return xgb.train(PARAMS, dmatrix(pd.concat([train_df, valid_df])), rounds), rounds
 
 
-def format_param(value, precision=3):
-    formatted = f"{value:.{precision}f}" if isinstance(value, float) else str(value)
-    return formatted.replace(".", "p")
+def predict(booster, df, feats):
+    return booster.predict(xgb.DMatrix(df[feats].astype(float), feature_names=feats))
 
 
-class BoosterWrapper:
-    def __init__(self, booster, num_class):
-        self.booster = booster
-        self.classes_ = np.arange(num_class)
+def backtest(df, feats):
+    """Predicciones fuera de muestra para cada temporada de BACKTEST_SEASONS."""
+    parts = []
+    for season in BACKTEST_SEASONS:
+        past = sorted(s for s in df["Season"].unique() if s < season)
+        booster, rounds = train(df[df["Season"].isin(past[:-1])], df[df["Season"] == past[-1]], feats)
+        test = df[df["Season"] == season]
+        parts.append(test.assign(p_model=predict(booster, test, feats)))
+        print(f"  {season}: entrenado con {past[0]}..{past[-1]} ({rounds} rondas, {len(test)} partidos)")
+    return pd.concat(parts)
 
-    def fit(self, X, y):
-        return self
 
-    def predict_proba(self, X):
-        return self.booster.predict(xgb.DMatrix(X))
-
-
-def walk_forward_cv_loss(X, y, params, num_boost_round, n_splits):
-    tscv = TimeSeriesSplit(n_splits=n_splits)
-    losses = []
-    for train_idx, val_idx in tscv.split(X):
-        model = train_model(X[train_idx], y[train_idx], X[val_idx], y[val_idx], params, num_boost_round)
-        val_probs = model.predict(xgb.DMatrix(X[val_idx]))
-        loss = log_loss(y[val_idx], val_probs, labels=list(range(NUM_CLASSES)))
-        losses.append(loss)
-    return float(np.mean(losses)) if losses else None
+def report(oos, w):
+    rows = []
+    for season, g in list(oos.groupby("Season")) + [("TODAS", oos)]:
+        y = g[TARGET].to_numpy()
+        has_mkt = g["p_market"].notna().to_numpy()
+        for name, p in (("modelo", g["p_model"]), ("mercado", g["p_market"]),
+                        (f"mezcla w={w:.2f}", elo.blend(g["p_model"], g["p_market"], w))):
+            p = np.asarray(p, dtype=float)
+            rows.append({"temporada": season, "fuente": name, **metrics(p[has_mkt], y[has_mkt])})
+    table = pd.DataFrame(rows)
+    print(f"\nlocal gana realmente: {oos[TARGET].mean() * 100:.1f}%  (métricas sobre partidos con cuota)")
+    print(table.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    return table
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train XGBoost moneyline model with walk-forward CV.")
-    parser.add_argument("--dataset", default=DEFAULT_DATASET, help="Dataset table name.")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed.")
-    parser.add_argument("--trials", type=int, default=100, help="Number of parameter trials.")
-    parser.add_argument("--splits", type=int, default=5, help="Walk-forward CV splits.")
-    parser.add_argument(
-        "--calibration",
-        default="sigmoid",
-        choices=["sigmoid", "isotonic", "none"],
-        help="Calibration method for probabilities.",
-    )
+    parser = argparse.ArgumentParser(description="Backtest y entrenamiento del modelo moneyline.")
+    parser.add_argument("--dry-run", action="store_true", help="Solo backtest, no guarda modelo.")
     args = parser.parse_args()
 
+    df = load_dataset()
+    feats = elo.FEATURES
+    print(f"{len(df)} partidos ({df['date'].min()} -> {df['date'].max()}), features: {feats}\nBacktest:")
+    oos = backtest(df, feats)
+    y = oos[TARGET].to_numpy()
+
+    # Peso de la mezcla: se ajusta con las 2 primeras temporadas y se valida con las 2 últimas
+    first = oos["Season"].isin(BACKTEST_SEASONS[:2]).to_numpy()
+    last = oos["Season"].isin(BACKTEST_SEASONS[2:]).to_numpy() & oos["p_market"].notna().to_numpy()
+    w_val = fit_blend_weight(oos["p_model"][first], oos["p_market"][first], y[first])
+    held = metrics(elo.blend(oos["p_model"][last], oos["p_market"][last], w_val), y[last])
+    mkt = metrics(oos["p_market"][last], y[last])
+    print(f"\nMezcla validada: w={w_val:.2f} (ajustado en {BACKTEST_SEASONS[:2]}) -> en {BACKTEST_SEASONS[2:]}: "
+          f"logloss {held['logloss']:.4f} vs mercado {mkt['logloss']:.4f}")
+    w = fit_blend_weight(oos["p_model"], oos["p_market"], y)
+    table = report(oos, w)
+
+    if args.dry_run:
+        return
+
+    seasons = sorted(df["Season"].unique())
+    booster, rounds = train(df[df["Season"].isin(seasons[:-1])], df[df["Season"] == seasons[-1]], feats)
+    summary = table[table["temporada"] == "TODAS"].set_index("fuente")
+    booster.set_attr(
+        blend_weight=str(w),
+        model_accuracy=f"{summary['acc'].iloc[0] * 100:.1f}%",
+        pick_accuracy=f"{summary['acc'].iloc[2] * 100:.1f}%",
+        trained_on=f"{seasons[0]}..{seasons[-1]} ({df['date'].max()})",
+        backtest=json.dumps(table[table["temporada"] == "TODAS"].to_dict("records")),
+        created=datetime.now().isoformat(timespec="seconds"),
+    )
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-
-    df = load_dataset(args.dataset)
-    if df.empty:
-        print(f"No rows found for dataset {args.dataset}.")
-        return
-
-    X, y = prepare_data(df)
-    X_train_val, y_train_val, X_test, y_test = split_train_test(X, y)
-
-    rng = np.random.default_rng(args.seed)
-    best = {
-        "val_loss": float("inf"),
-        "params": None,
-        "num_boost_round": None,
-    }
-
-    for trial in range(1, args.trials + 1):
-        params, num_boost_round = sample_params(rng, seed=args.seed + trial)
-        val_loss = walk_forward_cv_loss(X_train_val, y_train_val, params, num_boost_round, args.splits)
-        if val_loss is None:
-            continue
-
-        if val_loss < best["val_loss"]:
-            best["val_loss"] = val_loss
-            best["params"] = params
-            best["num_boost_round"] = num_boost_round
-
-        print(f"Trial {trial}/{args.trials}: val log loss {val_loss:.4f}")
-
-    if best["params"] is None:
-        print("No valid parameter set found.")
-        return
-
-    X_train, y_train, X_calib, y_calib = split_train_calib(X_train_val, y_train_val)
-    best_model = train_model(
-        X_train,
-        y_train,
-        X_calib,
-        y_calib,
-        best["params"],
-        best["num_boost_round"],
-    )
-
-    calibrator = None
-    if args.calibration == "none":
-        probabilities = best_model.predict(xgb.DMatrix(X_test))
-    else:
-        calibrator = CalibratedClassifierCV(
-            BoosterWrapper(best_model, NUM_CLASSES),
-            method=args.calibration,
-            cv="prefit",
-        )
-        calibrator.fit(X_calib, y_calib)
-        probabilities = calibrator.predict_proba(X_test)
-
-    y_pred = np.argmax(probabilities, axis=1)
-    accuracy = accuracy_score(y_test, y_pred)
-    test_loss = log_loss(y_test, probabilities, labels=list(range(NUM_CLASSES)))
-
-    print(f"Best val log loss: {best['val_loss']:.4f}")
-    print(f"Test accuracy: {accuracy:.4f}")
-    print(f"Test log loss: {test_loss:.4f}")
-
-    params = best["params"]
-    model_name = (
-        f"XGBoost_{accuracy * 100:.1f}%_ML"
-        f"_md{params['max_depth']}"
-        f"_eta{format_param(params['eta'])}"
-        f"_sub{format_param(params['subsample'])}"
-        f"_col{format_param(params['colsample_bytree'])}"
-        f"_cbl{format_param(params['colsample_bylevel'])}"
-        f"_cbn{format_param(params['colsample_bynode'])}"
-        f"_mcw{params['min_child_weight']}"
-        f"_g{format_param(params['gamma'])}"
-        f"_mds{params['max_delta_step']}"
-        f"_mb{params['max_bin']}"
-        f"_l{format_param(params['lambda'])}"
-        f"_a{format_param(params['alpha'])}"
-        f"_nb{best['num_boost_round']}.json"
-    )
-    model_path = MODEL_DIR / model_name
-    best_model.save_model(str(model_path))
-    print(f"Saved model: {model_path}")
-
-    if calibrator is not None:
-        calibration_path = MODEL_DIR / f"{model_path.stem}_calibration.pkl"
-        joblib.dump(calibrator, calibration_path)
-        print(f"Saved calibration: {calibration_path}")
+    path = MODEL_DIR / f"XGBoost_{summary['acc'].iloc[0] * 100:.1f}%_ML_elo_nb{rounds}.json"
+    booster.save_model(str(path))
+    print(f"\nModelo guardado: {path.name} (blend_weight={w:.2f})")
 
 
 if __name__ == "__main__":

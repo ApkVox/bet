@@ -13,7 +13,7 @@ Sistema de predicciones deportivas automatizado que utiliza modelos de Machine L
 ## Flujos Criticos
 
 ### Flujo de Prediccion (GitHub Actions - 3AM COT)
-1. `generate_daily_job.py` carga modelos XGBoost y Poisson
+1. `generate_daily_job.py` sincroniza marcadores NBA en Supabase (`nba_games`) y carga modelos XGBoost y Poisson
 2. Obtiene juegos del dia via sbrscrape y APIs de futbol
 3. Genera predicciones con probabilidades calibradas
 4. Actualiza resultados Win/Loss de dias anteriores
@@ -26,7 +26,7 @@ Sistema de predicciones deportivas automatizado que utiliza modelos de Machine L
 4. Consumo de memoria: <50MB
 
 ## Modelos
-- **NBA**: XGBoost con features punto-en-el-tiempo (stats historicas al momento del partido)
+- **NBA**: XGBoost sobre Elo + forma (últimos 10) + descanso, calculados solo con partidos anteriores (`src/Utils/elo.py`). El pick mostrado mezcla el modelo con la probabilidad del mercado (`blend_weight`). Backtest: `PYTHONPATH=. python src/Train-Models/XGBoost_Model_ML.py --dry-run`
 - **Futbol**: Distribucion de Poisson para predicciones 1X2
 
 ## Zona Horaria
