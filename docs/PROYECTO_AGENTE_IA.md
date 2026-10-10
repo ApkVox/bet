@@ -90,7 +90,9 @@
 |----------|-----|-------|
 | `DEEPSEEK_API_KEY` | Noticias y recomendaciones | GitHub Secrets, `.env` local |
 | `ODDS_API_KEY` | Cuotas (opcional) | GitHub Secrets |
-| `DATABASE_URL` | Supabase para config persistente | Render |
+| `DATABASE_URL` | Supabase (PostgreSQL) para config persistente | Render, `.env` local |
+| `SUPABASE_URL` | Supabase REST: historial de predicciones | Render, GitHub Secrets, `.env` local |
+| `SUPABASE_KEY` | Supabase `service_role` key (no la anon) | Render, GitHub Secrets, `.env` local |
 | `PORT` | Puerto del servidor | Render (8080 local) |
 
 ---
