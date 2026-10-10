@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import asyncio
 from datetime import datetime, timezone, timedelta
 import json
@@ -23,6 +24,10 @@ from football_api import football_api
 import history_db
 from history_db import save_prediction, save_football_prediction, get_predictions_by_date
 import sbrscrape
+from src.Utils import elo
+from src.Utils.Dictionaries import team_index_current
+
+NBA_TEAMS = {elo.normalize(t) for t in team_index_current}
 
 # Logging helper
 def log(msg: str):
@@ -104,6 +109,9 @@ async def generate_nba_predictions():
     try:
         today_str = datetime.now(TZ_COLOMBIA).strftime("%Y-%m-%d")
         log(f"Fecha local (Colombia): {today_str}")
+        if not elo.in_season(today_str):
+            log("Fuera de temporada regular/playoffs (config.toml): no se predice pretemporada ni verano.")
+            return
         scraper = sbrscrape.Scoreboard(sport="NBA", date=today_str)
         games = scraper.games
 
@@ -142,6 +150,9 @@ async def generate_nba_predictions():
         final_preds = []
         for pred, game_input in zip(predictions, games_to_predict):
             pred_dict = pred if isinstance(pred, dict) else pred.dict()
+            if pred_dict.get('is_mock'):
+                log(f"Saltado {game_input['away_team']} @ {game_input['home_team']}: {pred_dict.get('error')}")
+                continue
             pred_dict['date'] = today_str
             pred_dict['match_id'] = f"{today_str}_{pred_dict['away_team']}_{pred_dict['home_team']}".replace(" ", "_")
             
@@ -220,6 +231,57 @@ def _update_parlay_result(date_str: str, results: dict):
 
 
 # ==========================================
+# MARCADORES NBA (alimentan el Elo del modelo)
+# ==========================================
+def results_from_games(day: str, games: list) -> list:
+    """Marcadores finales de equipos NBA, solo en temporada regular/playoffs."""
+    if not elo.in_season(day):
+        return []
+    rows = []
+    for g in games or []:
+        home, away = elo.normalize(g.get('home_team', '')), elo.normalize(g.get('away_team', ''))
+        final = 'final' in str(g.get('status', '')).lower()
+        if not final or home not in NBA_TEAMS or away not in NBA_TEAMS:
+            continue
+        if g.get('home_score') is None or g.get('away_score') is None:
+            continue
+        rows.append({
+            'date': day, 'home': home, 'away': away,
+            'home_score': int(g['home_score']), 'away_score': int(g['away_score']),
+            'ml_home': get_single_odd(g.get('home_ml')), 'ml_away': get_single_odd(g.get('away_ml')),
+        })
+    return rows
+
+
+def sync_game_results(until: str = None, max_requests: int = 200) -> int:
+    """Guarda en nba_games los marcadores desde el último partido conocido hasta ayer.
+
+    Recupera huecos si el job estuvo caído. Fuera de temporada no hace peticiones.
+    """
+    until = until or (datetime.now(TZ_COLOMBIA) - timedelta(days=1)).strftime("%Y-%m-%d")
+    stored = history_db.get_game_results()
+    last = max([r['date'] for r in stored] + [elo.load_history()['date'].max()])
+    day = datetime.strptime(last[:10], "%Y-%m-%d") + timedelta(days=1)
+    saved = requests_done = 0
+    while day.strftime("%Y-%m-%d") <= until and requests_done < max_requests:
+        day_str = day.strftime("%Y-%m-%d")
+        day += timedelta(days=1)
+        if not elo.in_season(day_str):
+            continue
+        try:
+            rows = results_from_games(day_str, sbrscrape.Scoreboard(sport="NBA", date=day_str).games)
+            requests_done += 1
+            history_db.save_game_results(rows)
+            saved += len(rows)
+            time.sleep(1)
+        except Exception as e:
+            log(f"Error guardando marcadores {day_str}: {e}. Se reintenta desde aquí en la próxima ejecución.")
+            break  # cortar evita huecos: el próximo job retoma desde el último día guardado
+    log(f"Marcadores NBA sincronizados: {saved} partidos nuevos ({requests_done} días consultados).")
+    return saved
+
+
+# ==========================================
 # RESULT UPDATER (WIN / LOSS)
 # ==========================================
 async def update_past_results():
@@ -283,8 +345,9 @@ async def run_news_and_recommendations():
 async def run_all():
     log("=== LA FIJA: DAILY PREDICTION JOB STARTED ===")
     
-    # 0. Actualizar resultados pendientes (Win/Loss)
+    # 0. Actualizar resultados pendientes (Win/Loss) y marcadores para el Elo
     await update_past_results()
+    sync_game_results()
     
     # 1. Ejecutar análisis NBA
     await generate_nba_predictions()
