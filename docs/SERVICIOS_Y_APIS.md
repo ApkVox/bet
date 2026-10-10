@@ -57,10 +57,16 @@ Por lo tanto, le pedimos a Supabase que sea nuestro Armario. Guardaremos las **c
 1. Regístrate en [supabase.com](https://supabase.com).
 2. Toca "New Project". (Te pedirán nombre y contraseña para tu armario).
 3. Una vez creado el armario grande ("Project"), busca en su interfaz la sección **SQL Editor**. (A la izquierda, suele ser un ícono cuadrado con `/` adentro).
-4. Dentro del editor, tienes un espacio en blanco enorme. Tienes que copiar un texto especial y pegarlo ahí adentro. Ese texto especial está guardado en este proyecto, en un archivo llamado `/scripts/init_app_config.sql`. Lo pegas entero, y le das "Correr/Run". ¡Magia, te acaba de crear los organizadores dentro de tu armario!
+4. Dentro del editor, tienes un espacio en blanco enorme. Tienes que copiar un texto especial y pegarlo ahí adentro. Ese texto especial está guardado en este proyecto, en un archivo llamado `/scripts/init_supabase.sql`. Lo pegas entero, y le das "Correr/Run". ¡Magia, te acaba de crear todos los organizadores (historial de predicciones, noticias, configuración) dentro de tu armario! (Es seguro correrlo más de una vez.)
 5. Para conectarnos, ve a "Project Settings" (Configuraciones) -> "Database" (Base de Datos) -> Busca "Connect" -> Usa "Connection string" y una opción llamada **"Session mode"** (porque Render es viejito en conexiones y usa IPv4).
 6. Te darán un link laaaaaaargo que se ve algo así: `postgresql://postgres.[tu_nombre_del_armario]:[tu_contraseña]@aws-0-[ubicacion].pooler.supabase.com:5432/postgres`. (Copia todo y no te olvides cambiar el pedacito de  `[YOUR-PASSWORD]` por la contraseña de armario que inventaste al crear el proyecto.
 7. Al igual que DeepSeek, pones esa ruta bajo tu variable mágica llamada `DATABASE_URL` en tu archivo `.env` local, o en las variables "Environment" o Variables de entorno de Render para Producción.
+8. Faltan dos llaves más, las del historial de predicciones. Ve a "Project Settings" -> "API" y copia:
+   - `SUPABASE_URL`: el "Project URL" (algo como `https://xxxxxxxx.supabase.co`).
+   - `SUPABASE_KEY`: la llave **`service_role`** (la secreta). **No uses la `anon`/`publishable`**: las tablas están protegidas y con esa llave verías todo vacío.
+
+   Ponlas en `.env` y también en Render. (En GitHub, el CRON ya las lee de *Settings → Secrets → Actions*: `SUPABASE_URL` y `SUPABASE_KEY`.)
+9. Comprueba que todo quedó conectado con: `python scripts/check_supabase.py`. Cada línea con ✓ está bien; las ✗ te dicen qué falta.
 
 *(Nota: En Supabase la "Database password" es la contraseña general del armario que llenaste recién le diste al botón en el Paso 2).*
 

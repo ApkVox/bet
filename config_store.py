@@ -137,7 +137,7 @@ def _set_in_db(key: str, value: dict) -> None:
         err = str(e).lower()
         if "app_config" in err or "relation" in err or "does not exist" in err:
             raise ConfigStoreError(
-                "La tabla app_config no existe. Ejecuta el SQL de scripts/init_app_config.sql en Supabase (SQL Editor)."
+                "La tabla app_config no existe. Ejecuta el SQL de scripts/init_supabase.sql en Supabase (SQL Editor)."
             ) from e
         raise ConfigStoreError(f"Error al guardar: {e}") from e
     finally:

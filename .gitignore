@@ -136,3 +136,6 @@ site_settings.json
 
 # Copias de respaldo locales
 main_reference.py
+
+# Entorno virtual de la guía de inicio
+mi_entorno/
