@@ -502,14 +502,18 @@ def get_match_ids_for_date(date: str) -> set:
 # NBA GAMES (marcadores para el Elo del modelo)
 # =============================================
 
-def save_game_results(games: list[dict]) -> None:
-    """Upsert de marcadores: [{date, home, away, home_score, away_score, ml_home, ml_away}]."""
+def save_game_results(games: list[dict]) -> bool:
+    """Upsert de marcadores: [{date, home, away, home_score, away_score, ml_home, ml_away}].
+    Devuelve False si no se pudo guardar (sin cliente o error, p. ej. clave sin permisos)."""
     client = _get_supabase()
-    if not client or not games: return
+    if not client: return False
+    if not games: return True
     try:
         client.table('nba_games').upsert(games, on_conflict='date,home,away').execute()
+        return True
     except Exception as e:
         print(f"[DB ERROR] save_game_results: {e}")
+        return False
 
 
 def get_game_results() -> list[dict]:

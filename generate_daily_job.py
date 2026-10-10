@@ -253,15 +253,20 @@ def results_from_games(day: str, games: list) -> list:
     return rows
 
 
-def sync_game_results(until: str = None, max_requests: int = 200) -> int:
+# ponytail: SBR tarda ~23 s/día desde GitHub Actions; 20 días por corrida caben en el timeout
+# de 20 min y solo se miran los últimos 30 días. Huecos más viejos: backfill local con
+# sync_game_results(max_requests=500, lookback_days=None).
+def sync_game_results(until: str = None, max_requests: int = 20, lookback_days: int = 30) -> int:
     """Guarda en nba_games los marcadores desde el último partido conocido hasta ayer.
 
-    Recupera huecos si el job estuvo caído. Fuera de temporada no hace peticiones.
+    Recupera huecos recientes si el job estuvo caído. Fuera de temporada no hace peticiones.
     """
     until = until or (datetime.now(TZ_COLOMBIA) - timedelta(days=1)).strftime("%Y-%m-%d")
     stored = history_db.get_game_results()
     last = max([r['date'] for r in stored] + [elo.load_history()['date'].max()])
     day = datetime.strptime(last[:10], "%Y-%m-%d") + timedelta(days=1)
+    if lookback_days is not None:
+        day = max(day, datetime.strptime(until, "%Y-%m-%d") - timedelta(days=lookback_days))
     saved = requests_done = 0
     while day.strftime("%Y-%m-%d") <= until and requests_done < max_requests:
         day_str = day.strftime("%Y-%m-%d")
@@ -271,7 +276,9 @@ def sync_game_results(until: str = None, max_requests: int = 200) -> int:
         try:
             rows = results_from_games(day_str, sbrscrape.Scoreboard(sport="NBA", date=day_str).games)
             requests_done += 1
-            history_db.save_game_results(rows)
+            if not history_db.save_game_results(rows):
+                log(f"No se pudo guardar en nba_games ({day_str}). ¿SUPABASE_KEY es la service_role? Se corta la sincronización.")
+                break
             saved += len(rows)
             time.sleep(1)
         except Exception as e:
