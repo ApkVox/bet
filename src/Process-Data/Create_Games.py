@@ -1,11 +1,10 @@
+import bisect
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-# [FROZEN] DO NOT MODIFY: Core ML Logic verified in Phase 2
-import timel
 import toml
 
 from src.Utils.Dictionaries import (
@@ -76,10 +75,22 @@ def get_team_index_map(season_key):
     return team_index_current if start_year >= 2022 else team_index_14
 
 
-def fetch_team_table(teams_con, date_str):
-    if not table_exists(teams_con, date_str):
+def list_snapshot_dates(teams_con):
+    names = [r[0] for r in teams_con.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+    return sorted(n for n in names if len(n) == 10 and n[4] == "-" and n[7] == "-")
+
+
+def fetch_team_table(teams_con, snapshot_dates, date_str):
+    """Snapshot ESTRICTAMENTE anterior al partido.
+
+    Las tablas de TeamData usan DateTo inclusivo: la del día D ya contiene el
+    resultado del partido de D. Usarla filtra el resultado (fuga). En vivo se
+    usa el último snapshot < D, así que el entrenamiento debe hacer lo mismo.
+    """
+    i = bisect.bisect_left(snapshot_dates, date_str[:10]) - 1
+    if i < 0:
         return None
-    return pd.read_sql_query(f'SELECT * FROM "{date_str}"', teams_con)
+    return pd.read_sql_query(f'SELECT * FROM "{snapshot_dates[i]}"', teams_con)
 
 
 def build_game_features(team_df, home_team, away_team, index_map):
@@ -121,8 +132,15 @@ def main():
     games = []
     days_rest_away = []
     days_rest_home = []
+    game_dates = []
+    seasons = []
+    ml_home = []
+    ml_away = []
+    home_names = []
+    away_names = []
 
     with sqlite3.connect(ODDS_DB_PATH) as odds_con, sqlite3.connect(TEAMS_DB_PATH) as teams_con:
+        snapshot_dates = list_snapshot_dates(teams_con)
         for season_key in config["create-games"].keys():
             print(season_key)
             odds_table = select_odds_table(odds_con, season_key)
@@ -139,7 +157,7 @@ def main():
 
             for row in odds_df.itertuples(index=False):
                 date_str = normalize_date(row.Date)
-                team_df = fetch_team_table(teams_con, date_str)
+                team_df = fetch_team_table(teams_con, snapshot_dates, date_str)
                 if team_df is None:
                     continue
 
@@ -152,6 +170,12 @@ def main():
                 days_rest_home.append(row.Days_Rest_Home)
                 days_rest_away.append(row.Days_Rest_Away)
                 win_margin.append(1 if row.Win_Margin > 0 else 0)
+                game_dates.append(date_str)
+                seasons.append(season_key)
+                ml_home.append(row.ML_Home)
+                ml_away.append(row.ML_Away)
+                home_names.append(row.Home)
+                away_names.append(row.Away)
 
                 if row.Points < row.OU:
                     ou_cover.append(0)
@@ -174,9 +198,16 @@ def main():
     frame["OU-Cover"] = np.asarray(ou_cover)
     frame["Days-Rest-Home"] = np.asarray(days_rest_home)
     frame["Days-Rest-Away"] = np.asarray(days_rest_away)
+    # Solo para evaluación y mezcla con el mercado; el modelo independiente no las usa
+    frame["Game_Date"] = game_dates
+    frame["Season"] = seasons
+    frame["ML_Home"] = np.asarray(ml_home, dtype=float)
+    frame["ML_Away"] = np.asarray(ml_away, dtype=float)
+    frame["Home"] = home_names
+    frame["Away"] = away_names
 
     for field in frame.columns.values:
-        if "TEAM_" in field or "Date" in field:
+        if "TEAM_" in field or "Date" in field or field in ("Season", "Home", "Away"):
             continue
         frame[field] = frame[field].astype(float)
 

@@ -33,7 +33,7 @@ Aquí explicamos de forma sencilla todas esas palabras raras como "Render", "Dee
 Si ya sabes de programación, aquí tienes el resumen de lo que usamos bajo el capó:
 
 - **Backend:** Python + FastAPI (súper ligero y rápido).
-- **Inteligencia Artificial (Modelos):** XGBoost para NBA, Distribución de Poisson para Fútbol.
+- **Inteligencia Artificial (Modelos):** XGBoost sobre Elo + forma + descanso para NBA (el pick se mezcla con las cuotas del mercado), Distribución de Poisson para Fútbol.
 - **Frontend (La página web):** HTML, CSS y JavaScript clásicos (sin frameworks pesados).
 - **Base de Datos Principal:** SQLite3 (para guardar el historial de predicciones sin complicaciones).
 - **Automatización (CRON):** GitHub Actions ejecuta las predicciones todos los días a las 3:00 AM (Hora Colombia).

@@ -30,6 +30,13 @@ DROP_COLUMNS = [
     "Date.1",
     "OU-Cover",
     "OU",
+    # Columnas de evaluación añadidas por Create_Games (no son features)
+    "Game_Date",
+    "Season",
+    "Home",
+    "Away",
+    "ML_Home",
+    "ML_Away",
 ]
 
 

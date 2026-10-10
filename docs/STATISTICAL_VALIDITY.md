@@ -1,5 +1,7 @@
 # 📊 Validez Estadística del Sistema NBA Predictor AI
 
+> ⚠️ **Obsoleto (oct 2026):** evaluado con features que incluían el resultado del propio partido (fuga) y sin reentrenar entre folds. El backtest vigente está en `src/Train-Models/XGBoost_Model_ML.py`.
+
 Este documento resume la validación técnica del sistema de predicciones, los riesgos mitigados, y la interpretación correcta de las métricas de precisión.
 
 ---

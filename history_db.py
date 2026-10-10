@@ -64,7 +64,8 @@ def save_prediction(prediction_data: dict):
         'home_team': prediction_data['home_team'],
         'away_team': prediction_data['away_team'],
         'predicted_winner': prediction_data['winner'],
-        'prob_model': prediction_data['win_probability'],
+        # prob_model = modelo independiente; prob_final = mezcla con el mercado (la que se muestra)
+        'prob_model': prediction_data.get('model_probability', prediction_data['win_probability']),
         'prob_final': prediction_data['win_probability'],
         'odds': prediction_data['market_odds'],
         'ev_value': prediction_data['ev_value'],
@@ -495,6 +496,39 @@ def get_match_ids_for_date(date: str) -> set:
     except Exception as e:
         print(f"[DB ERROR] get_match_ids_for_date: {e}")
         return set()
+
+
+# =============================================
+# NBA GAMES (marcadores para el Elo del modelo)
+# =============================================
+
+def save_game_results(games: list[dict]) -> None:
+    """Upsert de marcadores: [{date, home, away, home_score, away_score, ml_home, ml_away}]."""
+    client = _get_supabase()
+    if not client or not games: return
+    try:
+        client.table('nba_games').upsert(games, on_conflict='date,home,away').execute()
+    except Exception as e:
+        print(f"[DB ERROR] save_game_results: {e}")
+
+
+def get_game_results() -> list[dict]:
+    """Todos los marcadores guardados (paginado, PostgREST devuelve máx. 1000 por página)."""
+    client = _get_supabase()
+    if not client: return []
+    rows, start = [], 0
+    try:
+        while True:
+            page = client.table('nba_games')\
+                .select('date, home, away, home_score, away_score, ml_home, ml_away')\
+                .order('date').range(start, start + 999).execute().data
+            rows += page
+            if len(page) < 1000:
+                return rows
+            start += 1000
+    except Exception as e:
+        print(f"[DB ERROR] get_game_results: {e}")
+        return rows
 
 
 # =============================================
