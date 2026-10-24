@@ -754,7 +754,7 @@ function renderRecommendations(data, history) {
 
     const recos = data.recommendations || [];
     if (!recos.length) {
-        let html = `<div class="empty-state"><div class="empty-icon">\uD83D\uDCC8</div><p>No hay recomendaciones disponibles hoy.<br><span style="font-size:13px;color:var(--text-tertiary)">Se generan cuando hay partidos NBA con valor.</span></p></div>`;
+        let html = `<div class="empty-state"><div class="empty-icon">\uD83D\uDCC8</div><p>No hay recomendaciones disponibles hoy.<br><span style="font-size:13px;color:var(--text-tertiary)">Solo se recomiendan picks con 70% o más de probabilidad.</span></p></div>`;
         if (history.length) html += renderRecoHistory(history);
         container.innerHTML = html;
         return;
@@ -795,9 +795,9 @@ function renderRecommendations(data, history) {
         <div class="reco-left">${recoCardsHtml}</div>
         <div class="reco-right">
             <div class="parlay-card">
-                <div class="parlay-title">Combinada del Dia</div>
+                <div class="parlay-title">${recos.length > 1 ? 'Combinada del Dia' : 'Pick del Dia'}</div>
                 <div class="parlay-odds-value">${parlayOdds > 0 ? parlayOdds.toFixed(2) : 'N/A'}</div>
-                <div class="parlay-label">Cuota combinada</div>
+                <div class="parlay-label">${recos.length > 1 ? 'Cuota combinada' : 'Cuota'}</div>
                 <div class="parlay-matches">${parlayMatchRows}</div>
                 <div class="calc-section">
                     <div class="calc-input-group">

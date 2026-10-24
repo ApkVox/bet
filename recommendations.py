@@ -12,22 +12,37 @@ DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
 MODEL = "deepseek-chat"
 
 
-def _score_prediction(pred: dict) -> float:
-    """Puntúa predicción para ranking. Mayor = mejor candidato."""
-    prob = pred.get("win_probability") or pred.get("prob_final") or 0
-    ev = pred.get("ev_score") or pred.get("ev_value") or 0
-    if (pred.get("warning_level") or "").upper() == "HIGH":
-        return -1
-    odds_winner = pred.get("odds_home") if pred.get("winner") == pred.get("home_team") else pred.get("odds_away")
-    odds_bonus = min(odds_winner / 5.0, 0.5) if odds_winner and odds_winner > 0 else 0
-    return (prob * 0.55) + (max(ev, 0) * 0.35) + (odds_bonus * 0.10)
+# Backtest 2022-23 -> 2025-26 (5.149 partidos fuera de muestra, prob = cuotas sin vig):
+#   3 favoritos sin filtro -> combinada acierta 50% (cuota 2.03); real ene-may 2026: 45%.
+#   2 picks con prob >= 70% -> combinada acierta 70% (cuota 1.38), hay combinada el 68% de los días;
+#   si solo 1 pick llega al 70% se recomienda solo (acierta 77%). Ninguna regla tiene ROI > 0 (vig).
+# El modelo propio no mejora el acierto a igual prob. de mercado: el filtro usa solo las cuotas.
+MIN_PROB = 70.0
+MAX_LEGS = 2
 
 
-def select_candidates(predictions: list[dict], top_n: int = 5) -> list[dict]:
-    """Pre-filtra y ordena predicciones, devuelve top N."""
-    scored = [(s, p) for p in predictions if (s := _score_prediction(p)) > 0]
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [p for _, p in scored[:top_n]]
+def _pick_odds(pred: dict):
+    return pred.get("odds_home") if pred.get("winner") == pred.get("home_team") else pred.get("odds_away")
+
+
+def _market_prob(pred: dict):
+    """Probabilidad (%) del pick según las cuotas decimales, sin el margen de la casa. Sin cuotas -> None."""
+    oh, oa = pred.get("odds_home"), pred.get("odds_away")
+    if not oh or not oa or oh <= 1 or oa <= 1:
+        return None
+    p_home = (1 / oh) / (1 / oh + 1 / oa)
+    return 100 * (p_home if pred.get("winner") == pred.get("home_team") else 1 - p_home)
+
+
+def select_picks(predictions: list[dict]) -> list[dict]:
+    """Los MAX_LEGS picks más probables del día con prob. de mercado >= MIN_PROB (puede devolver 0 o 1)."""
+    picks = []
+    for p in predictions:
+        prob = _market_prob(p)
+        if prob is not None and prob >= MIN_PROB and (p.get("warning_level") or "").upper() != "HIGH":
+            picks.append({**p, "market_prob": round(prob, 1)})
+    picks.sort(key=lambda p: p["market_prob"], reverse=True)
+    return picks[:MAX_LEGS]
 
 
 def calculate_parlay(odds_list: list[float], amount: float) -> dict:
@@ -40,18 +55,18 @@ def calculate_parlay(odds_list: list[float], amount: float) -> dict:
     return {"combined_odds": round(combined, 3), "stake": amount, "potential_return": round(potential, 2), "profit": round(potential - amount, 2)}
 
 
-def _build_prompt(candidates: list[dict], news_by_match: dict) -> str:
-    """Prompt ultra-compacto."""
+def _build_prompt(picks: list[dict], news_by_match: dict) -> str:
+    """Prompt ultra-compacto. La IA solo explica: los picks ya están elegidos por probabilidad."""
     lines = []
-    for i, c in enumerate(candidates[:5], 1):
-        mid = c.get("match_id", "")
-        news = news_by_match.get(mid, {}).get("headline", "Sin noticias")[:120]
-        lines.append(f"{i}. {c.get('home_team')} vs {c.get('away_team')} -> {c.get('winner')} ({c.get('win_probability',0)}%). Cuota: {c.get('odds_home') or c.get('odds_away')}. Noticia: {news}")
+    for i, c in enumerate(picks, 1):
+        news = news_by_match.get(c.get("match_id", ""), {}).get("headline", "Sin noticias")[:120]
+        lines.append(f"{i}. {c.get('home_team')} vs {c.get('away_team')} -> {c.get('winner')} ({c['market_prob']}%). "
+                     f"Cuota: {_pick_odds(c)}. Noticia: {news}")
     ctx = "\n".join(lines)
-    return f"""Analista NBA. Candidatos:
+    return f"""Analista NBA. Picks del día:
 {ctx}
-Pick 3 mejores parlay. Responde SOLO JSON minificado:
-{{"selected_indices":[1,2,3],"reasoning":"(breve)","individual_analyses":[{{"match":"...","pick":"...","confidence":"alta|media","reason":"(1 frase)"}}],"risk_level":"bajo|medio|alto","parlay_assessment":"(breve)"}}
+Explica cada pick. Responde SOLO JSON minificado:
+{{"reasoning":"(breve)","individual_analyses":[{{"match":"...","pick":"...","confidence":"alta|media","reason":"(1 frase)"}}],"risk_level":"bajo|medio|alto","parlay_assessment":"(breve)"}}
 Español."""
 
 
@@ -64,7 +79,7 @@ def _parse_reco_response(content: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        return {"selected_indices": [1, 2, 3], "reasoning": text[:300], "individual_analyses": [], "risk_level": "medio", "parlay_assessment": "Error parsing."}
+        return {"reasoning": text[:300], "individual_analyses": [], "risk_level": "medio", "parlay_assessment": "Error parsing."}
 
 
 def generate_recommendations_sync(date_str: str) -> dict:
@@ -80,19 +95,20 @@ def generate_recommendations_sync(date_str: str) -> dict:
     if not predictions:
         return {"recommendations": [], "parlay_analysis": "No hay partidos.", "parlay_odds": 0}
 
-    candidates = select_candidates(predictions)
-    if len(candidates) < 2:
-        return {"recommendations": [], "parlay_analysis": "Insuficientes partidos con valor.", "parlay_odds": 0}
+    selected = select_picks(predictions)
+    if not selected:
+        return {"recommendations": [], "parlay_analysis": f"Hoy ningún pick llega al {MIN_PROB:.0f}% de probabilidad.",
+                "parlay_odds": 0}
 
     news_list = history_db.get_news_for_date(date_str)
     news_by_match = {n["match_id"]: n for n in news_list}
 
-    analysis = {"selected_indices": [1, 2, 3], "reasoning": "Selección automática.", "individual_analyses": [], "risk_level": "medio", "parlay_assessment": ""}
+    analysis = {"reasoning": "Selección automática.", "individual_analyses": [], "risk_level": "medio", "parlay_assessment": ""}
     if DEEPSEEK_API_KEY:
         try:
             from openai import OpenAI
             client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
-            prompt = _build_prompt(candidates, news_by_match)
+            prompt = _build_prompt(selected, news_by_match)
             response = client.chat.completions.create(
                 model=MODEL,
                 messages=[{"role": "user", "content": prompt}],
@@ -104,31 +120,25 @@ def generate_recommendations_sync(date_str: str) -> dict:
             print(f"[RECO] Error DeepSeek: {e}")
             analysis["parlay_assessment"] = str(e)[:150]
 
-    selected_indices = analysis.get("selected_indices", [1, 2, 3])
-    selected = [candidates[i - 1] for i in selected_indices if 1 <= i <= len(candidates)]
-    if not selected:
-        selected = candidates[:3]
-
     reco_items = []
     odds_for_parlay = []
     for item in selected:
         winner = item.get("winner", "")
-        odds_val = item.get("odds_home") if winner == item.get("home_team") else item.get("odds_away")
-        if odds_val:
-            odds_for_parlay.append(float(odds_val))
+        odds_val = _pick_odds(item)
+        odds_for_parlay.append(float(odds_val))
         individual = next((a for a in analysis.get("individual_analyses", []) if item.get("home_team", "") in a.get("match", "")), {})
         reco_items.append({
             "match_id": item.get("match_id", ""),
             "home_team": item.get("home_team", ""),
             "away_team": item.get("away_team", ""),
             "pick": winner,
-            "win_probability": item.get("win_probability", 0),
+            "win_probability": item["market_prob"],
             "odds": odds_val,
             "confidence": individual.get("confidence", "media"),
             "reason": individual.get("reason", ""),
         })
 
-    parlay = calculate_parlay(odds_for_parlay, 50000) if odds_for_parlay else {"combined_odds": 0}
+    parlay = calculate_parlay(odds_for_parlay, 50000)
     result = {
         "recommendations": reco_items,
         "parlay_analysis": analysis.get("parlay_assessment", analysis.get("reasoning", "")),
