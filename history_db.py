@@ -535,6 +535,16 @@ def get_game_results() -> list[dict]:
         return rows
 
 
+def game_winners(games: list[dict], dates) -> dict:
+    """{fecha: {match_id: ganador}} a partir de filas de nba_games, con el match_id de la tabla predictions."""
+    out = {}
+    for g in games:
+        if g['date'] in dates:
+            winner = g['home'] if g['home_score'] > g['away_score'] else g['away']
+            out.setdefault(g['date'], {})[f"{g['date']}_{g['away']}_{g['home']}".replace(" ", "_")] = winner
+    return out
+
+
 # =============================================
 # MATCH NEWS
 # =============================================

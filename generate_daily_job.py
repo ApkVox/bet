@@ -298,40 +298,20 @@ def sync_game_results(until: str = None, max_requests: int = 20, lookback_days: 
 # ==========================================
 # RESULT UPDATER (WIN / LOSS)
 # ==========================================
-async def update_past_results():
-    log("Actualizando resultados finalizados de los últimos 3 días...")
-    from history_db import update_results
-    import sbrscrape
-    from datetime import date, timedelta
-    
-    today = date.today()
-    for n in range(1, 4): # Revisa ayer, antier, tras-antier
-        past_date = today - timedelta(days=n)
-        date_str = past_date.strftime("%Y-%m-%d")
-        
-        try:
-            board = sbrscrape.Scoreboard(sport="NBA", date=date_str)
-            games = getattr(board, 'games', [])
-            if not games:
-                continue
-            
-            results = {}
-            for g in games:
-                 if g.get('home_score') and g.get('away_score'):
-                     home_score = int(g['home_score'])
-                     away_score = int(g['away_score'])
-                     winner = g['home_team'] if home_score > away_score else g['away_team']
-                     home = g['home_team'].replace("Los Angeles Clippers", "LA Clippers")
-                     away = g['away_team'].replace("Los Angeles Clippers", "LA Clippers")
-                     match_id = f"{date_str}_{away}_{home}".replace(" ", "_")
-                     results[match_id] = winner
-                     
-            if results:
-                update_results(date_str, results)
-                log(f"Resultados actualizados para {date_str}: {len(results)} partidos resolvidos")
-                _update_parlay_result(date_str, results)
-        except Exception as e:
-            log(f"Error actualizando resultados {date_str}: {e}")
+async def update_past_results(days: int = 3):
+    """Sincroniza nba_games y califica con esos marcadores las predicciones y combinadas de los últimos días.
+
+    No se vuelve a consultar sbrscrape por días pasados: une Oddstrader por nombre de equipo sin mirar la
+    fecha, así que un día pasado se lleva el marcador del último partido entre los mismos equipos
+    (en playoffs, el juego siguiente de la serie). nba_games guarda cada día cuando aún es el último.
+    """
+    sync_game_results()
+    today = datetime.now(TZ_COLOMBIA).date()
+    dates = {(today - timedelta(days=n)).isoformat() for n in range(1, days + 1)}
+    for date_str, results in sorted(history_db.game_winners(history_db.get_game_results(), dates).items()):
+        history_db.update_results(date_str, results)
+        log(f"Resultados actualizados para {date_str}: {len(results)} partidos resueltos")
+        _update_parlay_result(date_str, results)
 
 # ==========================================
 # MAIN ENTRYPOINT (GITHUB ACTIONS)
@@ -361,7 +341,6 @@ async def run_all():
     
     # 0. Actualizar resultados pendientes (Win/Loss) y marcadores para el Elo
     await update_past_results()
-    sync_game_results()
     
     # 1. Ejecutar análisis NBA
     await generate_nba_predictions()

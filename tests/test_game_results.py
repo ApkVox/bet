@@ -51,6 +51,15 @@ class TestResultsFromGames(unittest.TestCase):
             self.assertEqual(job.sync_game_results(until='2026-10-23'), 1)
         self.assertEqual([r['date'] for r in saved], ['2026-10-21'])
 
+    def test_califica_con_nba_games_del_mismo_dia(self):
+        # Serie de playoffs: el juego 2 (20) no debe calificar el juego 1 (18)
+        games = [{'date': '2026-04-18', 'home': 'New York Knicks', 'away': 'Atlanta Hawks', 'home_score': 113, 'away_score': 102},
+                 {'date': '2026-04-20', 'home': 'New York Knicks', 'away': 'Atlanta Hawks', 'home_score': 106, 'away_score': 107},
+                 {'date': '2026-04-18', 'home': 'LA Clippers', 'away': 'Utah Jazz', 'home_score': 90, 'away_score': 95}]
+        self.assertEqual(job.history_db.game_winners(games, {'2026-04-18'}), {'2026-04-18': {
+            '2026-04-18_Atlanta_Hawks_New_York_Knicks': 'New York Knicks',
+            '2026-04-18_Utah_Jazz_LA_Clippers': 'Utah Jazz'}})
+
 
 if __name__ == '__main__':
     unittest.main()
