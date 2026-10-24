@@ -275,8 +275,14 @@ def sync_game_results(until: str = None, max_requests: int = 20, lookback_days: 
         if not elo.in_season(day_str):
             continue
         try:
-            rows = results_from_games(day_str, sbrscrape.Scoreboard(sport="NBA", date=day_str).games)
+            games = sbrscrape.Scoreboard(sport="NBA", date=day_str).games
+            rows = results_from_games(day_str, games)
             requests_done += 1
+            if games and not rows:
+                # Oddstrader falla a veces sin avisar y el día sale sin marcadores: no avanzar
+                # o quedaría un hueco permanente; la próxima ejecución reintenta desde aquí.
+                log(f"{day_str}: {len(games)} partidos sin marcador final. Se reintenta en la próxima ejecución.")
+                break
             if not history_db.save_game_results(rows):
                 log(f"No se pudo guardar en nba_games ({day_str}). ¿SUPABASE_KEY es la service_role? Se corta la sincronización.")
                 break

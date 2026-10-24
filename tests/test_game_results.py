@@ -4,6 +4,9 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from unittest import mock
+
+import generate_daily_job as job
 from generate_daily_job import results_from_games
 
 
@@ -31,6 +34,22 @@ class TestResultsFromGames(unittest.TestCase):
         games = [{'home_team': 'Boston Celtics', 'away_team': 'New York Knicks',
                   'home_score': 110, 'away_score': 104}]
         self.assertEqual(results_from_games('2026-10-10', games), [])
+
+    def test_sync_corta_en_dia_sin_marcadores(self):
+        # 22 sin marcadores (Oddstrader caído): no debe guardar el 23 o quedaría un hueco
+        fake = {'2026-10-21': [{'home_team': 'Boston Celtics', 'away_team': 'New York Knicks',
+                                'home_score': 110, 'away_score': 100}],
+                '2026-10-22': [{'home_team': 'Miami Heat', 'away_team': 'Detroit Pistons',
+                                'home_score': None, 'away_score': None}],
+                '2026-10-23': [{'home_team': 'Utah Jazz', 'away_team': 'Phoenix Suns',
+                                'home_score': 99, 'away_score': 98}]}
+        saved = []
+        with mock.patch.object(job.sbrscrape, 'Scoreboard', lambda sport, date: mock.Mock(games=fake.get(date, []))), \
+             mock.patch.object(job.history_db, 'get_game_results', lambda: [{'date': '2026-10-20'}]), \
+             mock.patch.object(job.history_db, 'save_game_results', lambda rows: saved.extend(rows) or True), \
+             mock.patch.object(job.time, 'sleep', lambda s: None):
+            self.assertEqual(job.sync_game_results(until='2026-10-23'), 1)
+        self.assertEqual([r['date'] for r in saved], ['2026-10-21'])
 
 
 if __name__ == '__main__':
