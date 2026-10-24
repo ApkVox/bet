@@ -316,7 +316,7 @@ async function loadHistory() {
     container.innerHTML = `<div class="loading"><div class="spinner"></div><span>Cargando historial...</span></div>`;
 
     try {
-        const endpoint = currentSport === 'football' ? '/history/football?days=60' : '/history/full?days=60';
+        const endpoint = currentSport === 'football' ? '/history/football?days=60' : '/history/full?days=365';
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Error al cargar historial');
         const data = await response.json();

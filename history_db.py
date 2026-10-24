@@ -234,12 +234,18 @@ def get_history(days: int = 7) -> list[dict]:
     
     date_threshold = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     try:
-        res = client.table('predictions')\
-            .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit')\
-            .gte('date', date_threshold)\
-            .order('date', desc=True)\
-            .execute()
-            
+        rows, start = [], 0
+        while True:  # PostgREST devuelve máx. 1000 filas por página
+            page = client.table('predictions')\
+                .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit')\
+                .gte('date', date_threshold)\
+                .order('date', desc=True).order('match_id')\
+                .range(start, start + 999).execute().data
+            rows += page
+            if len(page) < 1000:
+                break
+            start += 1000
+
         return [
             {
                 "date": row['date'],
@@ -254,7 +260,7 @@ def get_history(days: int = 7) -> list[dict]:
                 "result": row['result'],
                 "profit": row.get('profit', 0)
             }
-            for row in res.data
+            for row in rows
         ]
     except Exception as e:
         print(f"[DB ERROR] get_history: {e}")
