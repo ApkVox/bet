@@ -240,10 +240,11 @@ def results_from_games(day: str, games: list) -> list:
     rows = []
     for g in games or []:
         home, away = elo.normalize(g.get('home_team', '')), elo.normalize(g.get('away_team', ''))
-        final = 'final' in str(g.get('status', '')).lower()
-        if not final or home not in NBA_TEAMS or away not in NBA_TEAMS:
+        # No usar 'status': sbrscrape lo pisa con el de Oddstrader (no dice "Final").
+        # Solo se consultan días pasados, así que marcador > 0 = partido terminado.
+        if home not in NBA_TEAMS or away not in NBA_TEAMS:
             continue
-        if g.get('home_score') is None or g.get('away_score') is None:
+        if not g.get('home_score') or not g.get('away_score'):
             continue
         rows.append({
             'date': day, 'home': home, 'away': away,
