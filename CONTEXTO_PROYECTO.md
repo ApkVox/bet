@@ -8,7 +8,7 @@ Sistema de predicciones deportivas automatizado que utiliza modelos de Machine L
 - **Frontend**: SPA con HTML5/CSS3/JS vanilla
 - **Persistencia**: SQLite (history.db) versionada en Git
 - **ML Pipeline**: GitHub Actions ejecuta modelos diariamente a las 3AM COT
-- **Hosting**: Render Free Tier + cron-job.org para keep-alive
+- **Hosting**: Render Free Tier; se mantiene despierto con un autoping cada 10 min (`main._keep_awake`), el cron de GitHub es solo respaldo
 
 ## Flujos Criticos
 

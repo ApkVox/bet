@@ -708,6 +708,38 @@ def delete_daily_recommendations(date: str) -> None:
         print(f"[DB ERROR] delete_daily_recommendations: {e}")
 
 
+def parlay_result(picks: list[dict], winners: dict) -> Optional[str]:
+    """'loss' si alguna pierna ya perdió, 'win' si todas ganaron, None si faltan marcadores."""
+    actual = [winners.get(p.get('match_id')) for p in picks]
+    if any(w and w != p.get('pick') for w, p in zip(actual, picks)):
+        return 'loss'
+    return 'win' if picks and all(actual) else None
+
+
+def settle_parlays() -> int:
+    """Califica todas las combinadas pendientes con los marcadores de nba_games, sin límite de días.
+
+    Una pierna perdida ya hace 'loss'; 'win' solo cuando todas las piernas tienen marcador.
+    """
+    client = _get_supabase()
+    if not client: return 0
+    try:
+        pending = client.table('daily_recommendations').select('date, recommendations').eq('result', 'pending').execute().data
+    except Exception as e:
+        print(f"[DB ERROR] settle_parlays: {e}")
+        return 0
+    winners = game_winners(get_game_results(), {r['date'] for r in pending}) if pending else {}
+    settled = 0
+    for row in pending:
+        result = parlay_result(row.get('recommendations') or [], winners.get(row['date'], {}))
+        if not result:
+            continue
+        update_recommendation_result(row['date'], result)
+        print(f"[DB] Combinada {row['date']}: {result.upper()}")
+        settled += 1
+    return settled
+
+
 def update_recommendation_result(date: str, result: str) -> None:
     client = _get_supabase()
     if not client: return

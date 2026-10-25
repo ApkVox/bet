@@ -692,7 +692,7 @@ async function loadMatchNews(matchId, containerId) {
 
         let freshnessHtml = '';
         if (n.created_at) {
-            const created = new Date(n.created_at + 'Z');
+            const created = new Date(n.created_at);
             const diffMs = Date.now() - created.getTime();
             const diffH = Math.floor(diffMs / 3600000);
             freshnessHtml = `<div class="news-freshness">Actualizado hace ${diffH < 1 ? 'menos de 1 hora' : diffH + ' hora' + (diffH > 1 ? 's' : '')}</div>`;

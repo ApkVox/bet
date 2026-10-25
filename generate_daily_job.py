@@ -204,32 +204,6 @@ async def generate_football_predictions():
         return []
 
 
-def _update_parlay_result(date_str: str, results: dict):
-    """Check if the parlay for a given date was won or lost."""
-    try:
-        reco = history_db.get_daily_recommendations(date_str)
-        if not reco or reco.get("result") not in (None, "pending", ""):
-            return
-        picks = reco.get("recommendations", [])
-        if not picks:
-            return
-        all_correct = True
-        for pick in picks:
-            mid = pick.get("match_id", "")
-            chosen = pick.get("pick", "")
-            actual_winner = results.get(mid)
-            if actual_winner is None:
-                return
-            if actual_winner != chosen:
-                all_correct = False
-                break
-        result = "win" if all_correct else "loss"
-        history_db.update_recommendation_result(date_str, result)
-        log(f"Combinada {date_str}: {result.upper()}")
-    except Exception as e:
-        log(f"Error actualizando resultado combinada {date_str}: {e}")
-
-
 # ==========================================
 # MARCADORES NBA (alimentan el Elo del modelo)
 # ==========================================
@@ -311,7 +285,7 @@ async def update_past_results(days: int = 3):
     for date_str, results in sorted(history_db.game_winners(history_db.get_game_results(), dates).items()):
         history_db.update_results(date_str, results)
         log(f"Resultados actualizados para {date_str}: {len(results)} partidos resueltos")
-        _update_parlay_result(date_str, results)
+    history_db.settle_parlays()
 
 # ==========================================
 # MAIN ENTRYPOINT (GITHUB ACTIONS)

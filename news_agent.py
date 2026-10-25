@@ -7,6 +7,8 @@ import json
 import os
 import time
 
+import requests
+
 import history_db
 
 DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
@@ -15,6 +17,7 @@ THROTTLE_SECONDS = 8.0
 MAX_RETRIES = 3
 SEARCH_RESULTS = 6
 MAX_CONTEXT_CHARS = 1600
+ESPN_NBA = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 
 
 def _get_ddgs():
@@ -33,6 +36,25 @@ def _get_ddgs():
         return DDGS
     except ImportError:
         return None
+
+
+def _espn_context(home_team: str, away_team: str) -> str:
+    """Parte de lesiones y titulares de ESPN (JSON público, sin clave). Los nombres de equipo coinciden con los nuestros."""
+    lines = []
+    try:
+        for team in requests.get(f"{ESPN_NBA}/injuries", timeout=15).json().get("injuries", []):
+            if team.get("displayName") in (home_team, away_team):
+                for inj in team.get("injuries", []):
+                    lines.append(f"LESIÓN {team['displayName']}: {inj.get('athlete', {}).get('displayName', '')} "
+                                 f"({inj.get('status', '')}) - {inj.get('shortComment', '')[:200]}")
+        nicknames = (home_team.split()[-1], away_team.split()[-1])
+        for art in requests.get(f"{ESPN_NBA}/news", params={"limit": 50}, timeout=15).json().get("articles", []):
+            text = f"{art.get('headline', '')}: {art.get('description', '')}"
+            if any(n in text for n in nicknames):
+                lines.append(f"NOTICIA ESPN {art.get('published', '')[:10]}: {text[:250]}")
+    except Exception as e:
+        print(f"[NEWS] ESPN no disponible: {type(e).__name__}")
+    return "\n".join(lines)
 
 
 def _search_web(home_team: str, away_team: str, date_str: str) -> str:
@@ -136,7 +158,7 @@ def _fetch_news(home_team: str, away_team: str, date_str: str) -> dict:
     if not DEEPSEEK_API_KEY:
         raise ValueError("DEEPSEEK_API_KEY no configurada. Añádela en GitHub Secrets o .env")
     from openai import OpenAI
-    web_context = _search_web(home_team, away_team, date_str)
+    web_context = "\n".join(filter(None, [_espn_context(home_team, away_team), _search_web(home_team, away_team, date_str)]))
     prompt = _build_prompt(home_team, away_team, date_str, web_context)
     client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
     for attempt in range(MAX_RETRIES):

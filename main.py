@@ -43,6 +43,17 @@ def _run_history_update():
     except Exception as e:
         print(f"[main] Error actualizando historial (no cr├¡tico): {e}")
 
+def _keep_awake():
+    """Render Free duerme tras 15 min sin tráfico entrante. El autoping entra por la URL pública,
+    así que cuenta como tráfico; el cron de GitHub (keep-alive.yml) llega cada 2-5 h y no alcanza."""
+    import time, urllib.request
+    while True:
+        time.sleep(600)
+        try:
+            urllib.request.urlopen(RENDER_EXTERNAL_URL, timeout=30).close()
+        except Exception as e:
+            print(f"[keep-awake] Ping fallido: {e}")
+
 # ===========================================
 # CONFIGURACI├ôN
 # ===========================================
@@ -132,6 +143,8 @@ async def startup_event():
     
     # 1. Actualizar marcadores en background
     threading.Thread(target=_run_history_update, daemon=True).start()
+    if os.getenv("RENDER_EXTERNAL_URL"):  # Render la define; en local no se autopinguea producción
+        threading.Thread(target=_keep_awake, daemon=True).start()
     
     # 2. Disparar noticias y combinada del día si faltan
     async def _auto_news_job():

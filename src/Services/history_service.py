@@ -34,5 +34,6 @@ def update_pending_predictions():
             history_db.update_results(date_str, results)
             updated_count += len(results)
 
+    history_db.settle_parlays()
     print(f"[History Service] Update complete. Updated {updated_count} matches.")
     return {"status": "success", "updated_count": updated_count}
