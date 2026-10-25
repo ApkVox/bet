@@ -1,1797 +1,775 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Fija - Predicciones Deportivas</title>
-    <meta name="description" content="Predicciones NBA y Futbol con Inteligencia Artificial y Machine Learning">
+    <title>La Fija - Predicciones</title>
+    <meta name="description" content="Predicciones NBA con Machine Learning">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ===== Diseño A · TABLERO: marcador de estadio / gráfica de transmisión ===== */
         :root {
-            --bg-primary: #f5f5f7;
-            --bg-secondary: #ffffff;
-            --bg-card: #ffffff;
-            --bg-card-hover: #fafafa;
-            --text-primary: #1d1d1f;
-            --text-secondary: #86868b;
-            --text-tertiary: #6e6e73;
-            --accent: #0071e3;
-            --accent-hover: #0077ed;
-            --accent-glow: rgba(0, 113, 227, 0.15);
-            --success: #34c759;
-            --success-bg: rgba(52, 199, 89, 0.1);
-            --danger: #ff3b30;
-            --danger-bg: rgba(255, 59, 48, 0.1);
-            --warning: #ff9500;
-            --warning-bg: rgba(255, 149, 0, 0.1);
-            --border: rgba(0, 0, 0, 0.06);
-            --border-hover: rgba(0, 0, 0, 0.12);
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-            --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-            --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.1);
-            --shadow-glow: 0 0 24px rgba(0, 113, 227, 0.08);
-            --radius-xs: 8px;
-            --radius-sm: 12px;
-            --radius-md: 16px;
-            --radius-lg: 20px;
-            --radius-xl: 24px;
+            --bg: #E8E5DE; --panel: #F6F4EF; --panel-2: #EEEBE4; --line: #D3CFC6; --line-2: #BDB8AD;
+            --ink: #0E0F12; --dim: #5B5F66; --mute: #8A8D92;
+            --acc: #E2460C; --acc-ink: #FFFFFF; --win: #0F9D58; --loss: #D92D2D; --pend: #B7791F;
+            --glow: 0; --scan: rgba(0, 0, 0, .035);
+            --f-d: 'Big Shoulders Display', Impact, sans-serif;
+            --f-b: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+            --ease: cubic-bezier(.7, 0, .2, 1); --out: cubic-bezier(.16, 1, .3, 1);
+            color-scheme: light;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0A0B0D; --panel: #121418; --panel-2: #181B20; --line: #252930; --line-2: #343941;
+                --ink: #F1EFE9; --dim: #8B919B; --mute: #5A606A;
+                --acc: #FF5A1F; --acc-ink: #0A0B0D; --win: #33E08A; --loss: #FF4747; --pend: #FFC23D;
+                --glow: 1; --scan: rgba(255, 255, 255, .025); color-scheme: dark;
+            }
+        }
+        :root[data-theme="dark"] {
+            --bg: #0A0B0D; --panel: #121418; --panel-2: #181B20; --line: #252930; --line-2: #343941;
+            --ink: #F1EFE9; --dim: #8B919B; --mute: #5A606A;
+            --acc: #FF5A1F; --acc-ink: #0A0B0D; --win: #33E08A; --loss: #FF4747; --pend: #FFC23D;
+            --glow: 1; --scan: rgba(255, 255, 255, .025); color-scheme: dark;
         }
 
-        [data-theme="dark"] {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #141414;
-            --bg-card: #1a1a1a;
-            --bg-card-hover: #222222;
-            --text-primary: #f5f5f7;
-            --text-secondary: #8e8e93;
-            --text-tertiary: #636366;
-            --accent: #0a84ff;
-            --accent-hover: #409cff;
-            --accent-glow: rgba(10, 132, 255, 0.12);
-            --success: #30d158;
-            --success-bg: rgba(48, 209, 88, 0.1);
-            --danger: #ff453a;
-            --danger-bg: rgba(255, 69, 58, 0.1);
-            --warning: #ff9f0a;
-            --warning-bg: rgba(255, 159, 10, 0.1);
-            --border: rgba(255, 255, 255, 0.06);
-            --border-hover: rgba(255, 255, 255, 0.12);
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-            --shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.4);
-            --shadow-glow: 0 0 24px rgba(10, 132, 255, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+        html { scroll-behavior: smooth; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.5;
-            min-height: 100vh;
-            transition: background 0.4s ease, color 0.3s ease;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ==========================================
-           ANIMATIONS
-           ========================================== */
-        @keyframes fadeSlideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: -200% 0;
-            }
-
-            100% {
-                background-position: 200% 0;
-            }
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.6;
-            }
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes scaleIn {
-            from {
-                opacity: 0;
-                transform: scale(0.92);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        @keyframes barGrow {
-            from {
-                width: 0;
-            }
-        }
-
-        @keyframes countUp {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes subtleBounce {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-6px);
-            }
-        }
-
-        .animate-in {
-            animation: fadeSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        .section.active {
-            animation: fadeIn 0.3s ease both;
-        }
-
-        /* ==========================================
-           HEADER
-           ========================================== */
-        .header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(var(--bg-secondary-rgb, 255, 255, 255), 0.72);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-bottom: 1px solid var(--border);
-        }
-
-        [data-theme="dark"] .header {
-            background: rgba(20, 20, 20, 0.72);
-        }
-
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-icon {
-            font-size: 26px;
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .theme-toggle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .theme-toggle:hover {
-            transform: rotate(30deg) scale(1.1);
-            border-color: var(--accent);
-        }
-
-        .sport-selector {
-            display: flex;
-            background: var(--bg-card);
-            padding: 3px;
-            border-radius: 99px;
-            border: 1px solid var(--border);
-            position: relative;
-        }
-
-        .sport-btn {
-            padding: 6px 16px;
-            border-radius: 99px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .sport-btn.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 2px 12px rgba(0, 113, 227, 0.3);
-        }
-
-        .sport-btn:hover:not(.active) {
-            color: var(--text-primary);
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 2px;
-            background: var(--bg-card);
-            padding: 3px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-        }
-
-        .nav-tab {
-            padding: 8px 18px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-            position: relative;
-        }
-
-        .nav-tab.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 2px 8px rgba(0, 113, 227, 0.25);
-        }
-
-        .nav-tab:hover:not(.active) {
-            background: var(--bg-card-hover);
-        }
-
-        /* ==========================================
-           LAYOUT
-           ========================================== */
-        .app-container {
-            display: grid;
-            grid-template-columns: minmax(260px, 1fr) minmax(320px, 1080px) minmax(260px, 1fr);
-            gap: 16px;
-            max-width: 1920px;
-            margin: 0 auto;
-            padding: 0 12px;
-        }
-
-        .main {
-            padding: 28px 0;
-            padding-bottom: 100px;
-            grid-column: 2;
-        }
-
-        .ad-banner {
-            position: sticky;
-            top: 100px;
-            height: calc(100vh - 140px);
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 8px;
-        }
-
-        .ad-placeholder,
-        .ad-slot {
-            width: 100%;
-            height: 100%;
-            min-height: 250px;
-            border: 1px dashed var(--border);
-            background: transparent;
-            border-radius: var(--radius-lg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-tertiary);
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            opacity: 0.4;
-        }
-
-        .ad-slot {
-            opacity: 1;
-            transform: none;
-            writing-mode: horizontal-tb;
-            border: none;
-            min-height: 600px;
-        }
-
-        @media (max-width: 1440px) {
-            .app-container {
-                display: block;
-                max-width: 1100px;
-                padding: 0 20px;
-            }
-
-            .ad-banner {
-                display: none;
-            }
-
-            .main {
-                padding: 24px 0;
-            }
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .section-title {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            margin-bottom: 24px;
-        }
-
-        /* ==========================================
-           PREDICTION CARDS
-           ========================================== */
-        .predictions-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        .date-group-header {
-            grid-column: 1 / -1;
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-top: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--border);
-            text-transform: capitalize;
-        }
-
-        .prediction-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-xl);
-            padding: 24px;
-            border: 1px solid var(--border);
-            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .prediction-card::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .prediction-card:hover {
-            transform: translateY(-6px);
-            box-shadow: var(--shadow-hover);
-            border-color: var(--border-hover);
-        }
-
-        .prediction-card:hover::after {
-            opacity: 1;
-        }
-
-        .card-league-badge {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            margin-bottom: 16px;
-            font-weight: 700;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .card-league-badge img {
-            height: 16px;
-            opacity: 0.7;
-        }
-
-        .match-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .team {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            flex: 1;
-            gap: 8px;
-        }
-
-        .team-logo {
-            width: 56px;
-            height: 56px;
-            object-fit: contain;
-            transition: transform 0.3s ease;
-        }
-
-        .prediction-card:hover .team-logo {
-            transform: scale(1.08);
-        }
-
-        .team-name {
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.3;
-            max-width: 120px;
-        }
-
-        .team-name.favored {
-            color: var(--accent);
-        }
-
-        .vs-badge {
-            font-size: 10px;
-            font-weight: 800;
-            color: var(--text-tertiary);
-            padding: 6px 12px;
-            background: var(--bg-secondary);
-            border-radius: 99px;
-            letter-spacing: 1px;
-        }
-
-        .prediction-result {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
-            padding: 16px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .predicted-winner {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 4px;
-        }
-
-        .probability {
-            font-size: 32px;
-            font-weight: 900;
-            letter-spacing: -1px;
-        }
-
-        .probability-label {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 2px;
-        }
-
-        /* Probability bars */
-        .prob-bar-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 20px;
-        }
-
-        .prob-item {
-            text-align: center;
-            padding: 12px 8px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .prob-item.highlighted {
-            border-color: var(--accent);
-            background: var(--accent-glow);
-        }
-
-        .prob-item .prob-label {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-
-        .prob-item .prob-value {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-
-        .prob-item.highlighted .prob-value {
-            color: var(--accent);
-        }
-
-        .prob-bar-track {
-            height: 3px;
-            background: var(--border);
-            border-radius: 99px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .prob-bar-fill {
-            height: 100%;
-            border-radius: 99px;
-            background: var(--accent);
-            animation: barGrow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        /* Confidence Modifier Badge */
-        .confidence-badge {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            z-index: 5;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .confidence-higher {
-            background: #e6f6ec;
-            color: #10b981;
-            border: 1px solid #c1efd6;
-        }
-
-        .dark-mode .confidence-higher {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.3);
-        }
-
-        .confidence-lower {
-            background: #fff1f2;
-            color: #f43f5e;
-            border: 1px solid #ffe4e6;
-        }
-
-        .dark-mode .confidence-lower {
-            background: rgba(244, 63, 94, 0.15);
-            color: #fb7185;
-            border-color: rgba(244, 63, 94, 0.3);
-        }
-
-        .card-prediction-footer {
-            margin-top: 16px;
-            padding: 12px 16px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .card-prediction-footer .footer-label {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .card-prediction-footer .footer-value {
-            font-weight: 800;
-            color: var(--accent);
-            font-size: 14px;
-        }
-
-        .prediction-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-
-        .meta-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 5px 12px;
-            background: var(--bg-secondary);
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .meta-tag.positive {
-            background: var(--success-bg);
-            color: var(--success);
-        }
-
-        .meta-tag.negative {
-            background: var(--danger-bg);
-            color: var(--danger);
-        }
-
-        .promo-download-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 5px 12px;
-            background: var(--bg-secondary);
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--accent);
-            text-decoration: none;
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
-        }
-
-        .promo-download-btn:hover {
-            background: var(--accent-glow, rgba(10, 132, 255, 0.12));
-            color: var(--accent);
-            transform: scale(1.04);
-        }
-
-        .promo-card-dl {
-            margin-top: 10px;
-            align-self: center;
-        }
-
-        /* ==========================================
-           HISTORY
-           ========================================== */
-        .history-filters {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 8px 18px;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 99px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .filter-btn.active {
-            background: var(--accent);
-            color: white;
-            border-color: var(--accent);
-            box-shadow: 0 2px 10px rgba(0, 113, 227, 0.25);
-        }
-
-        .filter-btn:hover:not(.active) {
-            background: var(--bg-card-hover);
-            border-color: var(--border-hover);
-        }
-
-        .filter-btn.btn-refresh {
-            margin-left: auto;
-        }
-
-        .filter-btn.btn-refresh .btn-refresh-icon {
-            display: inline-block;
-        }
-
-        .filter-btn.btn-refresh:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .history-day {
-            margin-bottom: 32px;
-        }
-
-        .history-day-header {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-            text-transform: capitalize;
-            letter-spacing: 0.3px;
-        }
-
-        .history-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-
-        .history-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-xl);
-            padding: 24px;
-            border: 1px solid var(--border);
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .history-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            border-radius: 3px 0 0 3px;
-        }
-
-        .history-card.win::before {
-            background: var(--success);
-        }
-
-        .history-card.loss::before {
-            background: var(--danger);
-        }
-
-        .history-card.pending::before {
-            background: var(--warning);
-        }
-
-        .history-card.win {
-            border-color: rgba(52, 199, 89, 0.15);
-        }
-
-        .history-card.loss {
-            border-color: rgba(255, 59, 48, 0.15);
-        }
-
-        .history-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .history-teams {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-
-        .history-team {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            flex: 1;
-            gap: 6px;
-        }
-
-        .history-team-logo {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .history-team-name {
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .history-vs {
-            font-size: 10px;
-            font-weight: 800;
-            color: var(--text-tertiary);
-            padding: 4px 10px;
-            background: var(--bg-secondary);
-            border-radius: 99px;
-            letter-spacing: 1px;
-        }
-
-        .history-prediction {
-            font-size: 12px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .result-badge {
-            padding: 6px 14px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 700;
+            background: var(--bg); color: var(--ink); font: 500 16px/1.45 var(--f-b);
+            -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden;
+            transition: background .35s, color .35s;
+        }
+        button, input { font: inherit; color: inherit; }
+        button { cursor: pointer; background: none; border: 0; }
+        img { display: block; }
+        [hidden] { display: none !important; }
+        :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+        .num { font-family: var(--f-d); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+        .lbl { font: 700 12px/1 var(--f-b); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+
+        /* Anuncio del admin */
+        .ann { background: var(--ann, var(--acc)); color: #fff; text-align: center; padding: 8px 16px; font-weight: 700; letter-spacing: .04em; }
+
+        /* ===== Ticker ===== */
+        .ticker { display: flex; height: 34px; background: var(--ink); color: var(--bg); overflow: hidden; position: relative; z-index: 3; }
+        .ticker-clock {
+            flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 14px; background: var(--acc); color: var(--acc-ink);
+            font: 800 15px/1 var(--f-d); letter-spacing: .08em; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); padding-right: 26px;
+        }
+        .ticker-clock i { width: 8px; height: 8px; background: currentColor; animation: blink 1.2s steps(2) infinite; }
+        .ticker-view { flex: 1; overflow: hidden; display: flex; align-items: center; mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+        .ticker-track { display: flex; width: max-content; animation: tick var(--dur, 40s) linear infinite; }
+        .ticker:hover .ticker-track { animation-play-state: paused; }
+        .tk { display: flex; align-items: center; gap: 8px; padding: 0 22px; font: 700 15px/1 var(--f-d); letter-spacing: .06em; white-space: nowrap; border-right: 1px solid color-mix(in srgb, var(--bg) 20%, transparent); }
+        .tk b { color: var(--acc); }
+        .tk em { font-style: normal; opacity: .55; }
+        @keyframes tick { to { transform: translateX(-50%); } }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ===== Header ===== */
+        .hdr { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+        .hdr-in { max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 64px; display: flex; align-items: center; gap: 24px; }
+        .brand { display: flex; align-items: center; gap: 10px; font: 900 30px/1 var(--f-d); text-transform: uppercase; letter-spacing: .02em; }
+        .brand-mark { width: 30px; height: 30px; background: var(--acc); clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%); position: relative; }
+        .brand-mark::after { content: ''; position: absolute; inset: 9px 8px; background: var(--bg); clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%); }
+        .tabs { display: flex; position: relative; margin-left: auto; height: 100%; }
+        .tab { position: relative; padding: 0 18px; height: 100%; font: 800 18px/1 var(--f-d); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); transition: color .25s; }
+        .tab:hover, .tab[aria-current="true"] { color: var(--ink); }
+        .tab-bar { position: absolute; bottom: -1px; height: 4px; background: var(--acc); transition: transform .45s var(--out), width .45s var(--out); left: 0; }
+        .seg { display: flex; border: 1px solid var(--line-2); }
+        .seg button { padding: 8px 14px; font: 800 14px/1 var(--f-d); letter-spacing: .12em; color: var(--dim); transition: background .25s, color .25s; }
+        .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+        .sq { width: 40px; height: 40px; border: 1px solid var(--line-2); display: grid; place-items: center; transition: background .2s, border-color .2s; }
+        .sq:hover { border-color: var(--acc); }
+        .sq svg { width: 18px; height: 18px; transition: transform .5s var(--out); }
+        .sq:hover svg { transform: rotate(-35deg); }
+
+        /* ===== Layout ===== */
+        .wrap { display: grid; grid-template-columns: 1fr minmax(0, 1200px) 1fr; gap: 20px; padding: 0 20px; }
+        main { grid-column: 2; padding: 28px 0 120px; min-width: 0; }
+        .rail { display: none; position: sticky; top: 90px; height: 600px; width: 160px; justify-self: center; }
+        @media (min-width: 1620px) { .rail.filled { display: block; } }
+        .sec { display: none; }
+        .sec.active { display: block; animation: secIn .5s var(--out) both; }
+        @keyframes secIn { from { opacity: 0; transform: translateY(14px); } }
+
+        .h2 { display: flex; align-items: flex-end; gap: 14px; margin: 44px 0 18px; }
+        .h2 h2 { font: 900 clamp(34px, 5vw, 56px)/.85 var(--f-d); text-transform: uppercase; letter-spacing: .01em; }
+        .h2 .slash { width: 26px; height: 40px; background: var(--acc); clip-path: polygon(60% 0, 100% 0, 40% 100%, 0 100%); flex: none; }
+        .h2 .lbl { margin-left: auto; padding-bottom: 6px; white-space: nowrap; }
+
+        /* Paneles con marcas de esquina */
+        .pnl { background: var(--panel); border: 1px solid var(--line); position: relative; }
+        .pnl::before, .pnl::after { content: ''; position: absolute; width: 10px; height: 10px; border: 2px solid var(--acc); pointer-events: none; }
+        .pnl::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .pnl::after { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        /* Revelado tipo barrido */
+        .rv { clip-path: inset(0 100% 0 0); }
+        .rv.in { clip-path: inset(0 0 0 0); transition: clip-path .8s var(--ease) var(--d, 0s); }
+        .rv > :not(.shine) { transition: transform .9s var(--out) calc(var(--d, 0s) + .1s), opacity .6s calc(var(--d, 0s) + .1s); }
+        .rv:not(.in) > :not(.shine) { transform: translateX(-24px); opacity: 0; }
+
+        /* ===== Jumbotron ===== */
+        .jumbo { display: grid; grid-template-columns: 1.15fr 1fr 1fr 1fr; overflow: hidden; }
+        .cell { padding: 22px 22px 18px; border-right: 1px solid var(--line); position: relative; min-width: 0; }
+        .cell:last-child { border-right: 0; }
+        .cell .lbl { display: flex; justify-content: space-between; gap: 8px; }
+        .led {
+            display: block; margin-top: 10px; font: 900 clamp(54px, 7.2vw, 96px)/.82 var(--f-d); color: var(--acc); font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 calc(var(--glow) * 22px) color-mix(in srgb, var(--acc) 55%, transparent);
+            -webkit-mask: radial-gradient(circle, #000 58%, transparent 64%) 0 0 / 5px 5px; mask: radial-gradient(circle, #000 58%, transparent 64%) 0 0 / 5px 5px;
             white-space: nowrap;
-            letter-spacing: 0.3px;
         }
-
-        .result-badge.win {
-            background: var(--success-bg);
-            color: var(--success);
-        }
-
-        .result-badge.loss {
-            background: var(--danger-bg);
-            color: var(--danger);
-        }
-
-        .result-badge.pending {
-            background: var(--warning-bg);
-            color: var(--warning);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        /* ==========================================
-           LOADING & SKELETONS
-           ========================================== */
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 40px;
-            color: var(--text-secondary);
-            gap: 16px;
-        }
-
-        .spinner {
-            width: 36px;
-            height: 36px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .skeleton {
-            background: linear-gradient(90deg, var(--bg-card-hover) 25%, var(--bg-secondary) 50%, var(--bg-card-hover) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s ease-in-out infinite;
-            border-radius: var(--radius-sm);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 40px;
-            color: var(--text-secondary);
-        }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            animation: subtleBounce 2s ease-in-out infinite;
-        }
-
-        .empty-state p {
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        /* ==========================================
-           TOAST
-           ========================================== */
-        #toast-container {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .toast {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 14px 20px;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: var(--shadow-hover);
-            animation: fadeSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .toast::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 2px;
-            background: var(--accent);
-            animation: toastProgress 3s linear forwards;
-        }
-
-        @keyframes toastProgress {
-            from {
-                width: 100%;
-            }
-
-            to {
-                width: 0;
-            }
-        }
-
-        .toast.error {
-            border-left: 3px solid var(--danger);
-        }
-
-        .toast.success {
-            border-left: 3px solid var(--success);
-        }
-
-        .toast.info {
-            border-left: 3px solid var(--accent);
-        }
-
-        /* ==========================================
-           MOBILE NAV
-           ========================================== */
-        .mobile-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border);
-            padding: 6px 16px calc(env(safe-area-inset-bottom, 0px) + 6px);
-            z-index: 100;
-            justify-content: space-around;
-            align-items: center;
-        }
-
-        [data-theme="dark"] .mobile-nav {
-            background: rgba(20, 20, 20, 0.85);
-        }
-
-        .mobile-nav-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            background: transparent;
-            color: var(--text-tertiary);
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            transition: color 0.2s;
-        }
-
-        .mobile-nav-btn.active {
-            color: var(--accent);
-        }
-
-        .mobile-nav-btn span {
-            font-size: 22px;
-        }
-
-        /* ==========================================
-           MODAL
-           ========================================== */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal-overlay.active .modal {
-            animation: scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        .modal {
-            background: var(--bg-card);
-            border-radius: var(--radius-xl);
-            max-width: 480px;
-            width: 100%;
-            max-height: 85vh;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
-        }
-
-        .modal::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .modal::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .modal::-webkit-scrollbar-thumb {
-            background-color: var(--border);
-            border-radius: 10px;
-            border: 2px solid transparent;
-        }
-
-        .modal:hover::-webkit-scrollbar-thumb {
-            background-color: var(--text-tertiary);
-            opacity: 0.5;
-        }
-
-        .modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-        }
-
-        .modal-close {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: var(--bg-secondary);
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .modal-close:hover {
-            background: var(--danger);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .modal-body {
-            padding: 24px 32px 32px;
-        }
-
-        .analysis-text {
-            font-size: 14px;
-            line-height: 1.7;
-            color: var(--text-secondary);
-        }
-
-        .load-more-container {
-            text-align: center;
-            padding: 24px;
-        }
-
-        .load-more-btn {
-            padding: 12px 32px;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 99px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .load-more-btn:hover {
-            background: var(--accent);
-            color: white;
-            border-color: var(--accent);
-        }
-
-        /* ==========================================
-           RESPONSIVE
-           ========================================== */
-        @media (max-width: 768px) {
-            .logo-text {
-                display: none;
-            }
-
-            .header .nav-tabs {
-                display: none;
-            }
-
-            .mobile-nav {
-                display: flex;
-            }
-
-            .predictions-grid,
-            .history-cards {
-                grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-            }
-
-            .section-title {
-                font-size: 24px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .main {
-                padding: 16px 0;
-                padding-bottom: 90px;
-            }
-
-            .section-title {
-                font-size: 22px;
-            }
-
-            .prediction-card,
-            .history-card {
-                padding: 20px;
-            }
-
-            .team-logo {
-                width: 44px;
-                height: 44px;
-            }
-
-            .probability {
-                font-size: 28px;
-            }
-
-            .predictions-grid,
-            .history-cards {
-                gap: 14px;
-            }
-        }
-
-        .ad-link {
-            display: block;
-            width: 100%;
-            height: 100%;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            transition: transform 0.2s;
-        }
-
-        .ad-link:hover {
-            transform: scale(1.02);
-        }
-
-        .ad-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        /* ==========================================
-           RECOMMENDATIONS
-           ========================================== */
-        .reco-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .reco-left {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .reco-right {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .reco-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .reco-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .reco-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            background: var(--accent);
-            border-radius: 3px 0 0 3px;
-        }
-
-        .reco-match {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .reco-pick {
-            font-size: 16px;
-            font-weight: 800;
-            color: var(--accent);
-            margin-bottom: 2px;
-        }
-
-        .reco-odds {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 6px;
-        }
-
-        .reco-reason {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .reco-confidence {
-            display: inline-flex;
-            padding: 3px 10px;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 8px;
-        }
-
-        .reco-confidence.alta {
-            background: var(--success-bg);
-            color: var(--success);
-        }
-
-        .reco-confidence.media {
-            background: var(--warning-bg);
-            color: var(--warning);
-        }
-
-        .parlay-card {
-            background: var(--bg-card);
-            border: 2px solid var(--accent);
-            border-radius: var(--radius-xl);
-            padding: 24px;
-            text-align: center;
-        }
-
-        .parlay-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 6px;
-        }
-
-        .parlay-odds-value {
-            font-size: 40px;
-            font-weight: 900;
-            color: var(--accent);
-            letter-spacing: -1.5px;
-            line-height: 1.1;
-        }
-
-        .parlay-label {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            margin-top: 2px;
-            margin-bottom: 16px;
-        }
-
-        .parlay-matches {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            text-align: left;
-            margin-bottom: 16px;
-        }
-
-        .parlay-match-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 14px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .parlay-match-row .pm-odds {
-            color: var(--accent);
-            font-weight: 800;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .parlay-match-row .pm-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            margin-right: 8px;
-        }
-
-        .calc-section {
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-        }
-
-        .calc-input-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: center;
-            margin-bottom: 10px;
-        }
-
-        .calc-input {
-            width: 130px;
-            padding: 10px 12px;
-            border: 2px solid var(--border);
-            border-radius: var(--radius-sm);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 15px;
-            font-weight: 700;
-            text-align: center;
-            transition: border-color 0.2s;
-            font-family: inherit;
-        }
-
-        .calc-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .calc-currency {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
-
-        .calc-result {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--success);
-            text-align: center;
-        }
-
-        .calc-result-label {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            text-align: center;
-            margin-top: 2px;
-        }
-
-        .reco-analysis {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .reco-analysis-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-
-        .reco-analysis-text {
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-        }
-
-        .reco-history-section {
-            margin-top: 24px;
-        }
-
-        .reco-history-title {
-            font-size: 18px;
-            font-weight: 800;
-            margin-bottom: 16px;
-        }
-
-        .reco-history-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-            gap: 14px;
-        }
-
-        .reco-history-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 16px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .reco-history-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            border-radius: 3px 0 0 3px;
-        }
-
-        .reco-history-card.win::before {
-            background: var(--success);
-        }
-
-        .reco-history-card.loss::before {
-            background: var(--danger);
-        }
-
-        .reco-history-card.pending::before {
-            background: var(--warning);
-        }
-
-        .rh-date {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .rh-picks {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            margin-bottom: 6px;
-        }
-
-        .rh-odds {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .rh-result {
-            display: inline-flex;
-            padding: 3px 10px;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 700;
-            margin-top: 6px;
-        }
-
-        .rh-result.win {
-            background: var(--success-bg);
-            color: var(--success);
-        }
-
-        .rh-result.loss {
-            background: var(--danger-bg);
-            color: var(--danger);
-        }
-
-        .rh-result.pending {
-            background: var(--warning-bg);
-            color: var(--warning);
-        }
-
-        @media (max-width: 768px) {
-            .reco-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ==========================================
-           NEWS IN MODAL
-           ========================================== */
-        .news-section {
-            margin-top: 20px;
-            border-top: 1px solid var(--border);
-            padding-top: 20px;
-        }
-
-        .news-headline {
-            font-size: 16px;
-            font-weight: 800;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        .news-points {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 16px;
-        }
-
-        .news-points li {
-            padding: 6px 0 6px 16px;
-            position: relative;
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .news-points li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 12px;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--accent);
-        }
-
-        .news-injuries {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 16px;
-            font-size: 12px;
-        }
-
-        .news-injuries th {
-            text-align: left;
-            padding: 6px 10px;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .news-injuries td {
-            padding: 8px 10px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-secondary);
-        }
-
-        .news-impact {
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-            padding: 12px 16px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-        }
-
-        .news-freshness {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            margin-top: 10px;
-            text-align: right;
-        }
-
-        .news-loading {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-tertiary);
-            font-size: 13px;
+        .led small { font-size: .45em; margin-left: 2px; }
+        #jRec { font-size: clamp(40px, 4.4vw, 62px); line-height: 1.32; }
+        .led.ink { color: var(--ink); text-shadow: none; }
+        .cell .sub { margin-top: 10px; color: var(--dim); font-size: 14px; font-weight: 600; }
+        .jumbo-scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, var(--scan) 0 1px, transparent 1px 3px); }
+        .jumbo-scan::after { content: ''; position: absolute; left: 0; right: 0; height: 30%; background: linear-gradient(transparent, color-mix(in srgb, var(--acc) 6%, transparent), transparent); animation: sweep 6s linear infinite; }
+        @keyframes sweep { from { top: -30%; } to { top: 100%; } }
+        .form { display: flex; gap: 3px; margin-top: 14px; }
+        .form i { flex: 1; height: 14px; max-width: 14px; background: var(--line); transform: scaleY(0); transform-origin: bottom; }
+        .in .form i, .form.in i { animation: pop .35s var(--out) both; animation-delay: calc(var(--n) * 40ms + .4s); }
+        .form i.win { background: var(--win); }
+        .form i.loss { background: var(--loss); }
+        @keyframes pop { to { transform: scaleY(1); } }
+
+        /* ===== Cartelera ===== */
+        .board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .match { padding: 18px 20px 16px; cursor: pointer; overflow: hidden; transition: border-color .25s, transform .35s var(--out), background .25s; }
+        .match:hover { border-color: var(--line-2); transform: translateY(-3px); background: var(--panel-2); }
+        .match .shine { position: absolute; inset: 0; pointer-events: none; transform: translateX(-110%) skewX(-20deg); background: color-mix(in srgb, var(--acc) 7%, transparent); width: 40%; }
+        .match:hover .shine { transform: translateX(300%) skewX(-20deg); transition: transform .8s var(--ease); }
+        .m-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .m-no { font: 800 15px/1 var(--f-d); color: var(--mute); letter-spacing: .08em; }
+        .tag { font: 800 12px/1 var(--f-d); letter-spacing: .12em; text-transform: uppercase; padding: 5px 10px 4px; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+        .tag.fija { background: var(--acc); color: var(--acc-ink); }
+        .tag.ev { background: var(--win); color: var(--bg); }
+        .tag.risk { background: var(--loss); color: #fff; }
+        .tag.ghost { background: var(--panel-2); color: var(--dim); border: 0; }
+        .m-top .grow { flex: 1; }
+        .m-top .open { font: 700 12px/1 var(--f-b); letter-spacing: .12em; color: var(--dim); text-transform: uppercase; display: flex; gap: 6px; align-items: center; transition: color .2s, gap .3s var(--out); }
+        .match:hover .open { color: var(--acc); gap: 10px; }
+
+        .teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+        .tm { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .tm.r { flex-direction: row-reverse; text-align: right; }
+        .tm img { width: 52px; height: 52px; object-fit: contain; transition: transform .45s var(--out); flex: none; }
+        .match:hover .tm img { transform: scale(1.12) rotate(-4deg); }
+        .match:hover .tm.r img { transform: scale(1.12) rotate(4deg); }
+        .tm-ab { font: 900 40px/.9 var(--f-d); letter-spacing: .02em; }
+        .tm-nm { font-size: 13px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tm.pick .tm-ab { color: var(--acc); }
+        .at { font: 800 18px/1 var(--f-d); color: var(--mute); }
+
+        .tug { display: flex; height: 10px; margin: 16px 0 8px; gap: 3px; }
+        .tug span { height: 100%; background: var(--line-2); transition: width 1.1s var(--out) .35s; position: relative; }
+        .tug span.pk { background: var(--acc); box-shadow: 0 0 calc(var(--glow) * 12px) color-mix(in srgb, var(--acc) 60%, transparent); }
+        .match:not(.in) .tug span { width: 33.3% !important; }
+        .tug-nums { display: flex; justify-content: space-between; align-items: baseline; }
+        .tug-nums .num { font-weight: 900; font-size: 30px; line-height: 1; }
+        .tug-nums .num.pk { color: var(--acc); }
+        .tug-nums .num.mid { font-size: 18px; color: var(--dim); }
+        .odds { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line-2); font-size: 14px; color: var(--dim); font-weight: 600; }
+        .odds b { font: 800 17px/1 var(--f-d); color: var(--ink); margin-left: 6px; letter-spacing: .04em; }
+        .promo { font: 700 12px/1 var(--f-b); letter-spacing: .12em; color: var(--acc); text-decoration: none; text-transform: uppercase; }
+        .promo:hover { text-decoration: underline; }
+
+        /* Esqueleto y estados */
+        .skel { height: 196px; background: var(--panel); border: 1px solid var(--line); position: relative; overflow: hidden; }
+        .skel::after { content: ''; position: absolute; inset: 0; width: 30%; background: color-mix(in srgb, var(--ink) 5%, transparent); transform: skewX(-20deg); animation: skel 1.3s var(--ease) infinite; }
+        @keyframes skel { from { left: -40%; } to { left: 120%; } }
+        .empty { grid-column: 1 / -1; padding: 60px 24px; text-align: center; border: 1px dashed var(--line-2); }
+        .empty .num { font-size: 64px; font-weight: 900; color: var(--mute); line-height: 1; }
+        .empty p { color: var(--dim); margin-top: 10px; font-weight: 600; }
+
+        /* ===== Apuestas ===== */
+        .reco { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr); gap: 18px; align-items: start; }
+        .legs { display: grid; gap: 12px; }
+        .leg { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 16px; padding: 16px 18px; }
+        .leg-n { font: 900 54px/.8 var(--f-d); color: var(--acc); }
+        .leg-pk { font: 900 26px/1 var(--f-d); text-transform: uppercase; letter-spacing: .02em; }
+        .leg-mt { color: var(--dim); font-size: 14px; font-weight: 600; margin-top: 4px; }
+        .leg-why { color: var(--dim); font-size: 14px; margin-top: 8px; max-width: 60ch; }
+        .leg-bar { height: 4px; background: var(--line); margin-top: 10px; }
+        .leg-bar i { display: block; height: 100%; background: var(--acc); width: 0; transition: width 1.2s var(--out) .4s; }
+        .leg.in .leg-bar i { width: var(--w); }
+        .leg-od { text-align: right; }
+        .leg-od .num { font-size: 40px; font-weight: 900; line-height: .9; display: block; }
+
+        .slip {
+            background: var(--ink); color: var(--bg); padding: 26px 24px 28px; position: sticky; top: 90px;
+            mask: radial-gradient(circle at 11px 0, transparent 7px, #000 7.5px) 0 0 / 22px 51% repeat-x, radial-gradient(circle at 11px 100%, transparent 7px, #000 7.5px) 0 100% / 22px 51% repeat-x;
+            -webkit-mask: radial-gradient(circle at 11px 0, transparent 7px, #000 7.5px) 0 0 / 22px 51% repeat-x, radial-gradient(circle at 11px 100%, transparent 7px, #000 7.5px) 0 100% / 22px 51% repeat-x;
+        }
+        .slip .lbl { color: color-mix(in srgb, var(--bg) 60%, transparent); }
+        .slip-hd { display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px dashed color-mix(in srgb, var(--bg) 25%, transparent); }
+        .slip-hd strong { font: 900 24px/1 var(--f-d); letter-spacing: .08em; text-transform: uppercase; }
+        .flaps { display: flex; gap: 4px; margin: 20px 0 6px; perspective: 400px; }
+        .flap { width: 54px; height: 76px; background: color-mix(in srgb, var(--bg) 10%, var(--ink)); display: grid; place-items: center; font: 900 60px/1 var(--f-d); color: var(--acc); position: relative; animation: flap .6s var(--out) both; animation-delay: calc(var(--n) * 90ms + .2s); transform-origin: 50% 50%; }
+        .flap::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--ink); }
+        .flap.dot { width: 18px; background: none; }
+        .flap.dot::after { display: none; }
+        @keyframes flap { from { transform: rotateX(-100deg); opacity: 0; } 60% { transform: rotateX(12deg); opacity: 1; } }
+        .slip-rows { margin: 16px 0; display: grid; gap: 1px; }
+        .slip-row { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--bg) 12%, transparent); }
+        .slip-row b { font: 800 18px/1 var(--f-d); color: var(--acc); }
+        .stake { display: flex; align-items: stretch; border: 2px solid color-mix(in srgb, var(--bg) 30%, transparent); margin-top: 8px; transition: border-color .2s; }
+        .stake:focus-within { border-color: var(--acc); }
+        .stake span { display: grid; place-items: center; padding: 0 12px; font: 800 20px/1 var(--f-d); opacity: .6; }
+        .stake input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; padding: 12px 4px; font: 900 30px/1 var(--f-d); letter-spacing: .04em; color: var(--bg); }
+        .stake input::-webkit-inner-spin-button { display: none; }
+        .chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .chips button { flex: 1; padding: 8px 6px; border: 1px solid color-mix(in srgb, var(--bg) 25%, transparent); font: 800 14px/1 var(--f-d); letter-spacing: .06em; transition: background .2s, color .2s, transform .15s; }
+        .chips button:hover { background: var(--bg); color: var(--ink); }
+        .chips button:active { transform: scale(.95); }
+        .payout { margin-top: 22px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+        .payout .num { font-size: 46px; font-weight: 900; line-height: .85; color: var(--acc); }
+        .payout .num.bump { animation: bump .35s var(--out); }
+        @keyframes bump { 40% { transform: translateY(-4px); } }
+        .net { margin-top: 8px; font-weight: 600; opacity: .7; text-align: right; }
+        .net b { color: var(--win); opacity: 1; }
+        .note { margin-top: 18px; font-size: 13px; opacity: .55; }
+
+        .agent { margin-top: 18px; padding: 18px 20px; }
+        .agent p { margin-top: 10px; color: var(--dim); max-width: 75ch; }
+
+        .rh { margin-top: 10px; }
+        .rh-form { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+        .rh-form i { width: 26px; height: 26px; display: grid; place-items: center; font: 900 14px/1 var(--f-d); font-style: normal; color: var(--bg); background: var(--line-2); opacity: 0; animation: pop2 .4s var(--out) both; animation-delay: calc(var(--n) * 50ms); }
+        .rh-form i.win { background: var(--win); }
+        .rh-form i.loss { background: var(--loss); }
+        .rh-form i.pending { background: var(--pend); }
+        @keyframes pop2 { from { opacity: 0; transform: translateY(8px) scale(.6); } to { opacity: 1; } }
+
+        /* ===== Tablas (historial y combinadas) ===== */
+        .tbl { width: 100%; border-collapse: collapse; }
+        .tbl th { text-align: left; padding: 10px 14px; font: 700 12px/1 var(--f-b); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line-2); }
+        .tbl td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+        .tbl tr { transition: background .2s; }
+        .tbl tbody tr:hover { background: var(--panel-2); }
+        .tbl .r { text-align: right; }
+        .mu { display: flex; align-items: center; gap: 8px; font: 800 20px/1 var(--f-d); letter-spacing: .03em; white-space: nowrap; }
+        .mu img { width: 26px; height: 26px; object-fit: contain; }
+        .mu em { font-style: normal; color: var(--mute); font-size: 14px; }
+        .mu .w { color: var(--acc); }
+        .score { font: 800 18px/1 var(--f-d); color: var(--dim); white-space: nowrap; }
+        .res { display: inline-flex; align-items: center; gap: 8px; font: 800 14px/1 var(--f-d); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+        .res i { width: 10px; height: 10px; background: currentColor; box-shadow: 0 0 calc(var(--glow) * 10px) currentColor; }
+        .res.win { color: var(--win); }
+        .res.loss { color: var(--loss); }
+        .res.pending { color: var(--pend); }
+        .res.pending i { animation: blink 1.4s steps(2) infinite; }
+        .tbl tbody tr { opacity: 0; transform: translateX(-12px); }
+        .in .tbl tbody tr, .tbl.in tbody tr { animation: rowIn .45s var(--out) both; animation-delay: calc(var(--n, 0) * 30ms); }
+        @keyframes rowIn { to { opacity: 1; transform: none; } }
+
+        .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+        .flt { padding: 10px 18px 9px; font: 800 16px/1 var(--f-d); letter-spacing: .1em; text-transform: uppercase; background: var(--panel); color: var(--dim); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); transition: background .2s, color .2s; display: flex; gap: 10px; }
+        .flt b { color: var(--mute); }
+        .flt:hover { color: var(--ink); }
+        .flt[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); }
+        .flt[aria-pressed="true"] b { color: inherit; opacity: .7; }
+        .day { margin-bottom: 18px; overflow: hidden; }
+        .day-hd { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+        .day-hd strong { font: 900 22px/1 var(--f-d); text-transform: uppercase; letter-spacing: .04em; }
+        .day-hd .rec { margin-left: auto; font: 800 18px/1 var(--f-d); letter-spacing: .06em; }
+        .day-hd .rec .w { color: var(--win); }
+        .day-hd .rec .l { color: var(--loss); }
+        .tbl-wrap { overflow-x: auto; }
+        .more { display: block; margin: 24px auto 0; padding: 14px 34px 13px; border: 2px solid var(--ink); font: 900 18px/1 var(--f-d); letter-spacing: .14em; text-transform: uppercase; transition: background .2s, color .2s; }
+        .more:hover { background: var(--ink); color: var(--bg); }
+
+        /* ===== Drawer de detalle ===== */
+        .drawer { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: flex-end; visibility: hidden; }
+        .drawer.open { visibility: visible; }
+        .drawer-bg { position: absolute; inset: 0; background: rgba(5, 6, 8, .6); opacity: 0; transition: opacity .4s; }
+        .drawer.open .drawer-bg { opacity: 1; }
+        .drawer-pn { position: relative; width: min(560px, 100%); height: 100%; background: var(--bg); border-left: 4px solid var(--acc); overflow-y: auto; transform: translateX(100%); transition: transform .55s var(--ease); }
+        .drawer.open .drawer-pn { transform: none; }
+        .dr-hd { position: sticky; top: 0; background: var(--ink); color: var(--bg); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 2; }
+        .dr-hd strong { font: 900 22px/1 var(--f-d); letter-spacing: .08em; text-transform: uppercase; }
+        .dr-hd .sq { border-color: color-mix(in srgb, var(--bg) 30%, transparent); }
+        .dr-body { padding: 24px 20px 40px; }
+        .dr-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; text-align: center; }
+        .dr-vs img { width: 84px; height: 84px; object-fit: contain; margin: 0 auto 8px; }
+        .dr-vs .tm-ab { font-size: 52px; }
+        .dr-pk { margin: 22px 0; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .dr-pk .led { margin: 0; font-size: 80px; }
+        .dr-pk .who { font: 900 28px/1 var(--f-d); text-transform: uppercase; }
+        .dr-sec { margin-top: 26px; }
+        .dr-sec > .lbl { display: block; padding-bottom: 10px; border-bottom: 1px solid var(--line-2); margin-bottom: 12px; }
+        .dr-h { font: 900 28px/1 var(--f-d); text-transform: uppercase; margin-bottom: 12px; }
+        .pts { list-style: none; counter-reset: p; display: grid; gap: 10px; }
+        .pts li { counter-increment: p; display: grid; grid-template-columns: 34px 1fr; gap: 8px; color: var(--dim); }
+        .pts li::before { content: counter(p, decimal-leading-zero); font: 900 22px/1 var(--f-d); color: var(--acc); }
+        .impact { padding: 14px 16px; border-left: 4px solid var(--acc); background: var(--panel); color: var(--dim); }
+        .fresh { margin-top: 10px; font-size: 13px; color: var(--mute); text-align: right; }
+        .dr-ld { color: var(--mute); padding: 16px 0; display: flex; align-items: center; gap: 10px; }
+        .dr-ld i { width: 10px; height: 10px; background: var(--acc); animation: blink .8s steps(2) infinite; }
+
+        /* ===== Toast ===== */
+        .toasts { position: fixed; top: 110px; right: 20px; z-index: 60; display: grid; gap: 8px; }
+        .toast { background: var(--ink); color: var(--bg); padding: 12px 18px; font-weight: 700; border-left: 4px solid var(--loss); animation: secIn .4s var(--out) both; }
+
+        /* ===== Navegación móvil ===== */
+        .mnav { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--ink); color: var(--bg); padding-bottom: env(safe-area-inset-bottom, 0); }
+        .mnav button { flex: 1; padding: 12px 4px 10px; font: 800 14px/1 var(--f-d); letter-spacing: .12em; text-transform: uppercase; opacity: .55; position: relative; transition: opacity .2s; }
+        .mnav button[aria-current="true"] { opacity: 1; color: var(--acc); }
+        .mnav button[aria-current="true"]::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 3px; background: var(--acc); animation: grow .4s var(--out); }
+        @keyframes grow { from { transform: scaleX(0); } }
+
+        @media (max-width: 980px) {
+            .board, .reco { grid-template-columns: 1fr; }
+            .jumbo { grid-template-columns: 1fr 1fr; }
+            .cell:nth-child(2) { border-right: 0; }
+            .cell:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+            .slip { position: relative; top: 0; }
+        }
+        @media (max-width: 760px) {
+            .tabs, .hdr .sq { display: none; }
+            .seg { margin-left: auto; }
+            .mnav { display: flex; }
+            .wrap { padding: 0 16px; }
+            .hdr-in { padding: 0 16px; }
+            main { padding-top: 18px; }
+            .tm img { width: 40px; height: 40px; }
+            .tm-ab { font-size: 32px; }
+            .tm-nm { display: none; }
+            .leg { grid-template-columns: 44px 1fr; }
+            .leg-n { font-size: 40px; }
+            .leg-od { grid-column: 2; text-align: left; }
+            .flap { width: 44px; height: 62px; font-size: 48px; }
+            .h2 { flex-wrap: wrap; }
+            .h2 .lbl { margin-left: 0; width: 100%; }
+            .tbl .hide-s { display: none; }
+            .cell { padding: 16px 14px 14px; }
+            .dr-pk .led { font-size: 56px; }
+            #jRec { font-size: 38px; line-height: 1.9; }
+            .dr-pk .who { font-size: 22px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+            .rv { clip-path: none; }
+            .ticker-track { animation: none; }
         }
     </style>
 </head>
 
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">
-                <span class="logo-icon" id="headerLogoIcon" aria-hidden="true">&#127936;</span>
-                <span class="logo-text" id="headerLogoText">La Fija</span>
+    <div class="ann" data-announcement hidden></div>
+
+    <div class="ticker" aria-label="Picks de hoy">
+        <div class="ticker-clock"><i></i><span id="clock">COL --:--</span></div>
+        <div class="ticker-view">
+            <div class="ticker-track" id="ticker"><span class="tk">CARGANDO CARTELERA…</span></div>
+        </div>
+    </div>
+
+    <header class="hdr">
+        <div class="hdr-in">
+            <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span data-brand-emoji hidden></span><span data-brand>La Fija</span></div>
+            <nav class="tabs" id="tabs">
+                <button class="tab" data-go="hoy">Hoy</button>
+                <button class="tab" data-go="apuestas">Apuestas</button>
+                <button class="tab" data-go="historial">Historial</button>
+                <span class="tab-bar" id="tabBar"></span>
+            </nav>
+            <div class="seg" role="group" aria-label="Deporte">
+                <button data-sport="nba" aria-pressed="true">NBA</button>
+                <button data-sport="football" aria-pressed="false" hidden>FÚTBOL</button>
             </div>
-            <div class="header-right">
-                <div class="sport-selector">
-                    <button class="sport-btn active" data-sport="nba">&#127936; NBA</button>
-                    <button class="sport-btn" data-sport="football" id="sportBtnFootball">&#9917; Futbol</button>
-                </div>
-                <nav class="nav-tabs">
-                    <button class="nav-tab active" data-section="predictions">Predicciones</button>
-                    <button class="nav-tab" data-section="recommendations">Apuestas</button>
-                    <button class="nav-tab" data-section="history">Historial</button>
-                </nav>
-                <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">&#9790;</button>
-            </div>
+            <button class="sq" data-theme-toggle aria-label="Cambiar tema">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" /><rect x="8" y="8" width="8" height="8" /></svg>
+            </button>
         </div>
     </header>
 
-    <div id="toast-container"></div>
-
-    <div class="app-container">
-        <aside class="ad-banner left">
-            <div class="ad-placeholder"><span>Publicidad aqui</span></div>
-        </aside>
-
-        <main class="main">
-            <section id="predictions" class="section active">
-                <h2 class="section-title" id="todayTitle">Partidos de Hoy</h2>
-                <div class="predictions-grid" id="predictionsGrid">
-                    <div class="loading">
-                        <div class="spinner"></div><span>Cargando predicciones...</span>
-                    </div>
+    <div class="wrap">
+        <aside class="rail" data-ad="left"></aside>
+        <main>
+            <!-- HOY -->
+            <section class="sec" id="sec-hoy">
+                <div class="jumbo pnl rv" id="jumbo">
+                    <div class="cell"><span class="lbl"><span>Partidos hoy</span><span id="jDate">—</span></span><span class="led ink" id="jGames">0</span><div class="sub" id="jFijas">&nbsp;</div></div>
+                    <div class="cell"><span class="lbl">Acierto 12 meses</span><span class="led" id="jRate">0<small>%</small></span><div class="sub" id="jRateSub">&nbsp;</div></div>
+                    <div class="cell"><span class="lbl">Récord</span><span class="led ink" id="jRec">0-0</span><div class="sub" id="jPend">&nbsp;</div></div>
+                    <div class="cell"><span class="lbl">Racha actual</span><span class="led" id="jStreak">—</span><div class="form" id="jForm"></div></div>
+                    <div class="jumbo-scan"></div>
                 </div>
+
+                <div class="h2"><span class="slash"></span><h2>Cartelera</h2><span class="lbl" id="boardSub">Toca un partido para ver el análisis</span></div>
+                <div class="board" id="board"></div>
             </section>
 
-            <section id="recommendations" class="section">
-                <h2 class="section-title">Apuestas del Dia</h2>
-                <div id="recoContainer">
-                    <div class="loading">
-                        <div class="spinner"></div><span>Analizando mejores apuestas...</span>
-                    </div>
-                </div>
+            <!-- APUESTAS -->
+            <section class="sec" id="sec-apuestas">
+                <div class="h2"><span class="slash"></span><h2>La fija del día</h2><span class="lbl">Solo picks con 70% o más</span></div>
+                <div id="recoBox"></div>
             </section>
 
-            <section id="history" class="section">
-                <h2 class="section-title">Historial</h2>
-                <div class="history-filters">
-                    <button class="filter-btn active" data-filter="all">Todas</button>
-                    <button class="filter-btn" data-filter="win">Ganadas</button>
-                    <button class="filter-btn" data-filter="loss">Perdidas</button>
-                    <button class="filter-btn" data-filter="pending">Pendientes</button>
-                </div>
-                <div id="historyContainer">
-                    <div class="loading">
-                        <div class="spinner"></div><span>Cargando historial...</span>
-                    </div>
-                </div>
+            <!-- HISTORIAL -->
+            <section class="sec" id="sec-historial">
+                <div class="h2"><span class="slash"></span><h2>Historial</h2><span class="lbl" id="histSub">Últimos 12 meses</span></div>
+                <div class="filters" id="filters"></div>
+                <div id="histBox"></div>
             </section>
         </main>
+        <aside class="rail" data-ad="right"></aside>
+    </div>
 
-        <aside class="ad-banner right">
-            <div class="ad-placeholder"><span>Publicidad aqui</span></div>
+    <nav class="mnav" id="mnav">
+        <button data-go="hoy">Hoy</button>
+        <button data-go="apuestas">Apuestas</button>
+        <button data-go="historial">Historial</button>
+        <button data-theme-toggle>Tema</button>
+    </nav>
+
+    <div class="drawer" id="drawer" aria-hidden="true">
+        <div class="drawer-bg" data-close></div>
+        <aside class="drawer-pn" role="dialog" aria-modal="true" aria-labelledby="drTitle">
+            <div class="dr-hd"><strong id="drTitle">Análisis</strong><button class="sq" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 5l14 14M19 5 5 19" /></svg></button></div>
+            <div class="dr-body" id="drBody"></div>
         </aside>
     </div>
 
-    <nav class="mobile-nav">
-        <button class="mobile-nav-btn active" data-section="predictions"><span>&#127936;</span>Hoy</button>
-        <button class="mobile-nav-btn" data-section="recommendations"><span>&#128176;</span>Apuestas</button>
-        <button class="mobile-nav-btn" data-section="history"><span>&#128220;</span>Historial</button>
-        <button class="mobile-nav-btn" id="mobileThemeToggle"><span id="mobileThemeIcon">&#9790;</span>Tema</button>
-    </nav>
+    <div class="toasts" id="toasts"></div>
 
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modalTitle">Analisis</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <p class="analysis-text">Cargando...</p>
-            </div>
-        </div>
-    </div>
+    <script src="/static/js/core.js?v=20261025a"></script>
+    <script>
+        const $ = (s, r = document) => r.querySelector(s);
+        const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+        const { esc } = LF;
+        const img = (src, alt = '') => src ? `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onerror="this.style.visibility='hidden'">` : '';
+        const RES = { win: 'Ganada', loss: 'Perdida', pending: 'Pendiente' };
 
-    <script src="/static/js/app.js?v=20260308a"></script>
+        let preds = [], predDate = null, hist = [], filter = 'all', limit = 40, recoLoaded = false, current = null;
+
+        function toast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            $('#toasts').appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        // ---------- Navegación ----------
+        const SECTIONS = ['hoy', 'apuestas', 'historial'];
+        function go(id, push = true) {
+            if (!SECTIONS.includes(id)) id = 'hoy';
+            current = id;
+            $$('.sec').forEach(s => s.classList.toggle('active', s.id === 'sec-' + id));
+            $$('[data-go]').forEach(b => b.setAttribute('aria-current', b.dataset.go === id));
+            moveBar();
+            if (push) history.replaceState(null, '', '#' + id);
+            if (id === 'apuestas' && !recoLoaded) { recoLoaded = true; loadReco(); }
+            requestAnimationFrame(() => LF.reveal($('#sec-' + id)));
+        }
+        function moveBar() {
+            const b = $(`.tab[data-go="${current}"]`), bar = $('#tabBar');
+            if (!b || !b.offsetWidth) return;
+            bar.style.width = b.offsetWidth + 'px';
+            bar.style.transform = `translateX(${b.offsetLeft}px)`;
+        }
+        $$('[data-go]').forEach(b => b.addEventListener('click', () => { go(b.dataset.go); scrollTo({ top: 0, behavior: 'smooth' }); }));
+        $$('[data-theme-toggle]').forEach(b => b.addEventListener('click', LF.toggleTheme));
+        addEventListener('resize', moveBar);
+        addEventListener('hashchange', () => go(location.hash.slice(1), false));
+
+        $$('[data-sport]').forEach(b => b.addEventListener('click', () => {
+            if (LF.state.sport === b.dataset.sport) return;
+            LF.state.sport = b.dataset.sport;
+            $$('[data-sport]').forEach(x => x.setAttribute('aria-pressed', x === b));
+            loadToday(); loadHistory();
+        }));
+
+        // Reloj de Bogotá
+        const clock = () => $('#clock').textContent = 'COL ' + LF.bogota();
+        clock(); setInterval(clock, 20000);
+
+        // ---------- HOY ----------
+        async function loadToday() {
+            $('#board').innerHTML = Array(6).fill('<div class="skel"></div>').join('');
+            try {
+                const { date, list } = await LF.predictions();
+                preds = list; predDate = date || LF.todayBogota();
+                renderToday(predDate);
+            } catch (e) {
+                console.error(e);
+                $('#board').innerHTML = `<div class="empty"><div class="num">ERR</div><p>No se pudieron cargar las predicciones.</p></div>`;
+                toast('Error cargando predicciones');
+            }
+        }
+
+        function renderToday(date) {
+            $('#jDate').textContent = LF.day(date, { day: 'numeric', month: 'short' }).toUpperCase();
+            LF.countUp($('#jGames'), preds.length, 0, 900);
+            const fijas = preds.filter(p => p.prob >= 70).length;
+            $('#jFijas').textContent = fijas ? `${fijas} con 70% o más` : 'Ninguno pasa del 70%';
+            renderTicker();
+
+            if (!preds.length) {
+                $('#board').innerHTML = `<div class="empty"><div class="num">0</div><p>No hay partidos programados o faltan cuotas para hoy.</p></div>`;
+                return;
+            }
+            const nba = LF.state.sport === 'nba';
+            $('#board').innerHTML = preds.map((p, n) => {
+                const [L, R] = nba ? ['away', 'home'] : ['home', 'away'];
+                const t = s => ({ ab: p[s + 'Abbr'], nm: p[s], logo: p[s + 'Logo'], pk: p.side === s });
+                const l = t(L), r = t(R);
+                let segs, nums;
+                if (p.probs) {
+                    const pr = [p.probs[L], p.probs.draw, p.probs[R]], sides = [L, 'draw', R];
+                    segs = pr.map((v, k) => `<span class="${p.side === sides[k] ? 'pk' : ''}" style="width:${v}%"></span>`).join('');
+                    nums = `<span class="num ${l.pk ? 'pk' : ''}">${LF.pct(pr[0], 0)}%</span><span class="num mid ${p.side === 'draw' ? 'pk' : ''}">X ${LF.pct(pr[1], 0)}%</span><span class="num ${r.pk ? 'pk' : ''}">${LF.pct(pr[2], 0)}%</span>`;
+                } else {
+                    const lp = l.pk ? p.prob : 100 - p.prob;
+                    segs = `<span class="${l.pk ? 'pk' : ''}" style="width:${lp}%"></span><span class="${r.pk ? 'pk' : ''}" style="width:${100 - lp}%"></span>`;
+                    nums = `<span class="num ${l.pk ? 'pk' : ''}">${LF.pct(lp)}%</span><span class="num ${r.pk ? 'pk' : ''}">${LF.pct(100 - lp)}%</span>`;
+                }
+                const oL = p['odds' + (L === 'home' ? 'Home' : 'Away')], oR = p['odds' + (R === 'home' ? 'Home' : 'Away')];
+                const tags = [
+                    p.prob >= 70 ? '<span class="tag fija">Fija</span>' : '',
+                    p.ev > 0 ? `<span class="tag ev">EV +${LF.pct(p.ev)}%</span>` : '',
+                    p.risk ? '<span class="tag risk">Riesgo</span>' : '',
+                    p.boost === 'higher' ? '<span class="tag ev">IA ▲</span>' : p.boost === 'lower' ? '<span class="tag risk">IA ▼</span>' : ''
+                ].join('');
+                const promo = LF.promoEnabled() ? `<a class="promo" href="${LF.promoUrl(p.home, p.away, p.pick, p.prob)}" download="promo_${esc(p.homeAbbr)}_${esc(p.awayAbbr)}.png" onclick="event.stopPropagation()">↓ Promo</a>` : '';
+                return `
+                <article class="match pnl rv" style="--d:${(n % 2) * .08 + Math.floor(n / 2) * .06}s" data-i="${p.i}" tabindex="0" role="button" aria-label="${esc(p.away)} en ${esc(p.home)}: análisis">
+                    <span class="shine"></span>
+                    <div class="m-top"><span class="m-no">${String(n + 1).padStart(2, '0')}</span>${tags}<span class="grow"></span>${promo}<span class="open">Análisis <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+                    <div class="teams">
+                        <div class="tm ${l.pk ? 'pick' : ''}">${img(l.logo, l.nm)}<div><div class="tm-ab">${esc(l.ab)}</div><div class="tm-nm">${esc(l.nm)}</div></div></div>
+                        <span class="at">${nba ? '@' : 'VS'}</span>
+                        <div class="tm r ${r.pk ? 'pick' : ''}">${img(r.logo, r.nm)}<div><div class="tm-ab">${esc(r.ab)}</div><div class="tm-nm">${esc(r.nm)}</div></div></div>
+                    </div>
+                    <div class="tug">${segs}</div>
+                    <div class="tug-nums">${nums}</div>
+                    <div class="odds"><span>Cuota<b>${oL ? oL.toFixed(2) : '—'}</b></span><span>Pick <b style="color:var(--acc)">${esc(p.side === 'draw' ? 'EMPATE' : p[p.side + 'Abbr'])}</b></span><span>Cuota<b>${oR ? oR.toFixed(2) : '—'}</b></span></div>
+                </article>`;
+            }).join('');
+            LF.reveal($('#board'));
+        }
+
+        function renderTicker() {
+            const items = preds.length
+                ? [...preds].sort((a, b) => b.prob - a.prob).map(p => `<span class="tk">${esc(p.awayAbbr)} <em>@</em> ${esc(p.homeAbbr)} <b>${esc(p.side === 'draw' ? 'X' : p[p.side + 'Abbr'])} ${LF.pct(p.prob)}%</b></span>`).join('')
+                : '<span class="tk">SIN PARTIDOS HOY</span>';
+            const track = $('#ticker');
+            track.innerHTML = items + items;
+            track.style.setProperty('--dur', Math.max(20, preds.length * 6) + 's');
+        }
+
+        $('#board').addEventListener('click', e => { const m = e.target.closest('.match'); if (m) openDrawer(+m.dataset.i); });
+        $('#board').addEventListener('keydown', e => { const m = e.target.closest('.match'); if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDrawer(+m.dataset.i); } });
+
+        // ---------- Drawer ----------
+        let lastFocus = null;
+        function openDrawer(i) {
+            const p = preds.find(x => x.i === i);
+            if (!p) return;
+            lastFocus = document.activeElement;
+            $('#drTitle').textContent = `${p.awayAbbr} @ ${p.homeAbbr}`;
+            const odds = [p.oddsAway && `<span>${esc(p.awayAbbr)}<b>${p.oddsAway.toFixed(2)}</b></span>`, p.oddsHome && `<span>${esc(p.homeAbbr)}<b>${p.oddsHome.toFixed(2)}</b></span>`].filter(Boolean).join('');
+            $('#drBody').innerHTML = `
+                <div class="dr-vs">
+                    <div>${img(p.awayLogo, p.away)}<div class="tm-ab" ${p.side === 'away' ? 'style="color:var(--acc)"' : ''}>${esc(p.awayAbbr)}</div><div class="tm-nm">${esc(p.away)}</div></div>
+                    <span class="at">@</span>
+                    <div>${img(p.homeLogo, p.home)}<div class="tm-ab" ${p.side === 'home' ? 'style="color:var(--acc)"' : ''}>${esc(p.homeAbbr)}</div><div class="tm-nm">${esc(p.home)}</div></div>
+                </div>
+                <div class="dr-pk pnl"><div><span class="lbl">Pick del modelo</span><div class="who" style="margin-top:8px">${esc(p.pick)}</div></div><span class="led" id="drLed">0</span></div>
+                ${odds ? `<div class="odds" style="border-top:0;margin-top:0;padding-top:0">${odds}</div>` : ''}
+                ${p.analysis ? `<div class="dr-sec"><span class="lbl">Análisis</span><p style="color:var(--dim)">${esc(p.analysis)}</p></div>` : ''}
+                <div class="dr-sec" id="drNews"><span class="lbl">Noticias e informe de lesiones</span><div class="dr-ld"><i></i>Cargando noticias…</div></div>`;
+            const d = $('#drawer');
+            d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            LF.countUp($('#drLed'), p.prob, 1, 900, v => LF.pct(v) + '%');
+            setTimeout(() => $('.dr-hd .sq').focus(), 60);
+            if (p.id) loadNews(p.id); else $('#drNews').remove();
+        }
+        async function loadNews(id) {
+            const data = await LF.news(id);
+            const el = $('#drNews');
+            if (!el) return;
+            if (!data.found || !data.news) { el.innerHTML = '<span class="lbl">Noticias</span><p style="color:var(--mute)">Sin noticias disponibles para este partido.</p>'; return; }
+            const n = data.news;
+            const pts = (n.key_points || []).map(x => `<li>${esc(x)}</li>`).join('');
+            const inj = (n.injuries || []).length ? `
+                <div class="dr-sec"><span class="lbl">Bajas</span><div class="tbl-wrap"><table class="tbl in"><thead><tr><th>Jugador</th><th>Equipo</th><th>Estado</th></tr></thead><tbody>
+                ${n.injuries.map((x, k) => `<tr style="--n:${k}"><td><b>${esc(x.player)}</b></td><td>${esc(LF.abbr(x.team))}</td><td><span class="res loss"><i></i>${esc(x.status)}</span></td></tr>`).join('')}
+                </tbody></table></div></div>` : '';
+            let fresh = '';
+            if (n.created_at) {
+                const h = Math.floor((Date.now() - new Date(n.created_at)) / 36e5);
+                fresh = `<div class="fresh">Actualizado hace ${h < 1 ? 'menos de 1 hora' : h + (h > 1 ? ' horas' : ' hora')}</div>`;
+            }
+            el.innerHTML = `<span class="lbl">Noticias</span><div class="dr-h">${esc(n.headline || 'Resumen')}</div>${pts ? `<ol class="pts">${pts}</ol>` : ''}${inj}${n.impact_assessment ? `<div class="dr-sec"><span class="lbl">Impacto</span><div class="impact">${esc(n.impact_assessment)}</div></div>` : ''}${fresh}`;
+        }
+        function closeDrawer() {
+            const d = $('#drawer');
+            d.classList.remove('open'); d.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            lastFocus?.focus();
+        }
+        $$('[data-close]').forEach(b => b.addEventListener('click', closeDrawer));
+        addEventListener('keydown', e => { if (e.key === 'Escape' && $('#drawer').classList.contains('open')) closeDrawer(); });
+
+        // ---------- HISTORIAL ----------
+        async function loadHistory() {
+            $('#histBox').innerHTML = '<div class="skel"></div>';
+            try {
+                hist = await LF.history();
+            } catch (e) {
+                console.error(e); hist = [];
+                $('#histBox').innerHTML = `<div class="empty"><div class="num">ERR</div><p>No se pudo cargar el historial.</p></div>`;
+                toast('Error cargando historial');
+                return;
+            }
+            limit = 40;
+            renderStats(); renderFilters(); renderHistory();
+        }
+
+        function renderStats() {
+            const s = LF.stats(hist);
+            LF.countUp($('#jRate'), s.rate, 1, 1400, v => LF.pct(v) + '<small>%</small>');
+            $('#jRateSub').textContent = `${s.wins + s.losses} partidos calificados`;
+            LF.countUp($('#jRec'), 1, 0, 1200, k => `${Math.round(s.wins * k)}-${Math.round(s.losses * k)}`);
+            $('#jPend').textContent = s.pending ? `${s.pending} pendientes` : 'Todo calificado';
+            $('#jStreak').textContent = s.streakType ? `${s.streakType === 'win' ? 'G' : 'P'}${s.streak}` : '—';
+            $('#jStreak').style.color = s.streakType === 'loss' ? 'var(--loss)' : '';
+            $('#jForm').innerHTML = s.form.slice().reverse().map((r, n) => `<i class="${r}" style="--n:${n}" title="${RES[r]}"></i>`).join('');
+            $('#histSub').textContent = `${LF.pct(s.rate)}% de acierto · ${s.wins}-${s.losses}`;
+        }
+
+        function renderFilters() {
+            const c = r => r === 'all' ? hist.length : hist.filter(h => h.result === r).length;
+            $('#filters').innerHTML = [['all', 'Todas'], ['win', 'Ganadas'], ['loss', 'Perdidas'], ['pending', 'Pendientes']]
+                .map(([k, l]) => `<button class="flt" data-f="${k}" aria-pressed="${k === filter}">${l}<b>${c(k)}</b></button>`).join('');
+        }
+        $('#filters').addEventListener('click', e => {
+            const b = e.target.closest('.flt'); if (!b) return;
+            filter = b.dataset.f; limit = 40;
+            $$('.flt').forEach(x => x.setAttribute('aria-pressed', x === b));
+            renderHistory();
+        });
+
+        function renderHistory() {
+            const list = filter === 'all' ? hist : hist.filter(h => h.result === filter);
+            if (!list.length) { $('#histBox').innerHTML = `<div class="empty"><div class="num">0</div><p>No hay registros.</p></div>`; return; }
+            const days = {};
+            list.slice(0, limit).forEach(h => (days[h.date] ||= []).push(h));
+            const nba = LF.state.sport === 'nba';
+            $('#histBox').innerHTML = Object.entries(days).map(([date, games], di) => {
+                const w = games.filter(g => g.result === 'win').length, l = games.filter(g => g.result === 'loss').length;
+                return `
+                <div class="day pnl rv" style="--d:${Math.min(di, 4) * .05}s">
+                    <div class="day-hd"><strong>${esc(LF.day(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</strong><span class="lbl">${games.length} partidos</span><span class="rec"><span class="w">${w}</span>-<span class="l">${l}</span></span></div>
+                    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Pick</th><th class="r">Prob.</th><th class="r hide-s">Marcador</th><th class="r">Resultado</th></tr></thead><tbody>
+                    ${games.map((h, k) => {
+                    const [L, R] = nba ? ['away', 'home'] : ['home', 'away'];
+                    const score = h.homeScore != null ? `${h[L + 'Score']}-${h[R + 'Score']}` : '—';
+                    return `<tr style="--n:${k}">
+                            <td><span class="mu">${img(h[L + 'Logo'])}<span class="${h.pick === h[L] ? 'w' : ''}">${esc(h[L + 'Abbr'])}</span><em>${nba ? '@' : 'vs'}</em><span class="${h.pick === h[R] ? 'w' : ''}">${esc(h[R + 'Abbr'])}</span>${img(h[R + 'Logo'])}</span></td>
+                            <td><b>${esc(LF.short(h.pick))}</b></td>
+                            <td class="r num" style="font-weight:800;font-size:18px">${LF.pct(h.prob)}%</td>
+                            <td class="r hide-s"><span class="score">${score}</span></td>
+                            <td class="r"><span class="res ${h.result}"><i></i>${RES[h.result]}</span></td></tr>`;
+                }).join('')}
+                    </tbody></table></div>
+                </div>`;
+            }).join('') + (list.length > limit ? `<button class="more" id="more">Ver más · ${list.length - limit}</button>` : '');
+            $('#more')?.addEventListener('click', () => { limit += 40; renderHistory(); });
+            LF.reveal($('#histBox'));
+        }
+
+        // ---------- APUESTAS ----------
+        async function loadReco() {
+            $('#recoBox').innerHTML = '<div class="skel" style="height:320px"></div>';
+            const { today, history: rh } = await LF.recommendations();
+            renderReco(today, rh);
+        }
+
+        function renderReco(data, rh) {
+            const recos = data.recommendations || [];
+            const bet = LF.betting();
+            const odds = Number(data.parlay_odds) || 0;
+            let html = '';
+            if (!recos.length) {
+                html = `<div class="empty"><div class="num">SIN FIJA</div><p>Hoy ningún partido llega al 70% de probabilidad. Mejor no forzar.</p></div>`;
+            } else {
+                const legs = recos.map((r, n) => `
+                    <div class="leg pnl rv" style="--d:${n * .1}s;--w:${r.win_probability}%">
+                        <span class="leg-n">${n + 1}</span>
+                        <div><div class="leg-pk">${esc(r.pick)}</div><div class="leg-mt">${esc(r.away_team)} @ ${esc(r.home_team)} · ${LF.pct(r.win_probability)}% · confianza ${esc(r.confidence || 'media')}</div>
+                        ${r.reason ? `<div class="leg-why">${esc(r.reason)}</div>` : ''}<div class="leg-bar"><i></i></div></div>
+                        <div class="leg-od"><span class="lbl">Cuota</span><span class="num">${r.odds ? Number(r.odds).toFixed(2) : '—'}</span></div>
+                    </div>`).join('');
+                const flaps = (odds > 0 ? odds.toFixed(2) : '—').split('').map((c, n) => `<span class="flap ${c === '.' ? 'dot' : ''}" style="--n:${n}">${c}</span>`).join('');
+                html = `
+                <div class="reco">
+                    <div class="legs">${legs}</div>
+                    <div class="slip">
+                        <div class="slip-hd"><strong>${recos.length > 1 ? 'Combinada' : 'Pick'}</strong><span class="lbl">${esc(LF.day(data.date || LF.todayBogota(), { day: 'numeric', month: 'short' }))}</span></div>
+                        <span class="lbl" style="display:block;margin-top:18px">${recos.length > 1 ? 'Cuota combinada' : 'Cuota'}</span>
+                        <div class="flaps" aria-label="Cuota ${odds.toFixed(2)}">${flaps}</div>
+                        <div class="slip-rows">${recos.map(r => `<div class="slip-row"><span>${esc(r.pick)}</span><b>${r.odds ? Number(r.odds).toFixed(2) : '?'}</b></div>`).join('')}</div>
+                        <label class="lbl" for="stake">Tu apuesta (${esc(bet.currency)})</label>
+                        <div class="stake"><span>${esc(bet.currency_symbol)}</span><input id="stake" type="number" inputmode="numeric" min="0" step="1000" value="${bet.default_stake}"></div>
+                        <div class="chips"><button data-add="10000">+10K</button><button data-add="50000">+50K</button><button data-mul="2">×2</button><button data-reset>Borrar</button></div>
+                        <div class="payout"><span class="lbl">Cobras</span><span class="num" id="pay">${LF.money(0)}</span></div>
+                        <div class="net">Ganancia neta <b id="net">${LF.money(0)}</b></div>
+                        <p class="note">Probabilidad de mercado sin margen. Apuesta con responsabilidad.</p>
+                    </div>
+                </div>
+                ${data.parlay_analysis || (data.reasoning && data.reasoning !== 'Selección automática.') ? `<div class="agent pnl rv"><span class="lbl">Análisis del agente${data.risk_level ? ' · riesgo ' + esc(data.risk_level) : ''}</span><p>${esc(data.parlay_analysis || data.reasoning)}</p></div>` : ''}`;
+            }
+            if (rh.length) {
+                const done = rh.filter(h => h.result === 'win' || h.result === 'loss');
+                const w = done.filter(h => h.result === 'win').length;
+                html += `
+                <div class="h2"><span class="slash"></span><h2>Combinadas anteriores</h2><span class="lbl">${w}-${done.length - w} · ${done.length ? LF.pct(w / done.length * 100) : 0}% acierto</span></div>
+                <div class="rh-form">${rh.slice().reverse().map((h, n) => `<i class="${h.result || 'pending'}" style="--n:${n}" title="${esc(h.date)}">${h.result === 'win' ? 'G' : h.result === 'loss' ? 'P' : '·'}</i>`).join('')}</div>
+                <div class="pnl rh"><div class="tbl-wrap"><table class="tbl in"><thead><tr><th>Fecha</th><th>Picks</th><th class="r">Cuota</th><th class="r">Resultado</th></tr></thead><tbody>
+                ${rh.map((h, n) => `<tr style="--n:${Math.min(n, 20)}"><td class="num" style="font-weight:800;font-size:17px;white-space:nowrap">${esc(LF.day(h.date, { day: 'numeric', month: 'short' }).toUpperCase())}</td><td>${(h.recommendations || []).map(r => esc(LF.short(r.pick || '?'))).join(' + ')}</td><td class="r num" style="font-weight:800;font-size:18px">×${h.parlay_odds ? Number(h.parlay_odds).toFixed(2) : '—'}</td><td class="r"><span class="res ${h.result || 'pending'}"><i></i>${RES[h.result] || RES.pending}</span></td></tr>`).join('')}
+                </tbody></table></div></div>`;
+            }
+            $('#recoBox').innerHTML = html;
+            LF.reveal($('#recoBox'));
+
+            const input = $('#stake');
+            if (!input) return;
+            const calc = (animate) => {
+                const stake = Math.max(0, parseFloat(input.value) || 0);
+                const pay = $('#pay');
+                if (animate) LF.countUp(pay, stake * odds, 0, 1200, LF.money);
+                else { pay.textContent = LF.money(stake * odds); pay.classList.remove('bump'); void pay.offsetWidth; pay.classList.add('bump'); }
+                $('#net').textContent = LF.money(Math.max(0, stake * odds - stake));
+            };
+            input.addEventListener('input', () => calc(false));
+            $('.chips').addEventListener('click', e => {
+                const b = e.target.closest('button'); if (!b) return;
+                const v = parseFloat(input.value) || 0;
+                input.value = b.dataset.add ? v + +b.dataset.add : b.dataset.mul ? v * +b.dataset.mul : 0;
+                calc(false);
+            });
+            calc(true);
+        }
+
+        // ---------- Arranque ----------
+        go(location.hash.slice(1) || 'hoy', false);
+        loadToday();
+        loadHistory();
+        LF.loadSettings(() => { $$('[data-sport]').forEach(x => x.setAttribute('aria-pressed', x.dataset.sport === 'nba')); loadToday(); loadHistory(); })
+            .then(() => { if (preds.length && LF.promoEnabled()) renderToday(predDate); moveBar(); });
+        document.fonts?.ready.then(moveBar);
+    </script>
 </body>
 
 </html>
