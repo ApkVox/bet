@@ -246,10 +246,13 @@ def get_history(days: int = 7) -> list[dict]:
                 break
             start += 1000
 
+        scores = game_scores(get_game_results(since=date_threshold))
         return [
             {
                 "date": row['date'],
                 "match": row['match_id'],
+                "home_score": scores.get((row['date'], row['home_team'], row['away_team'])),
+                "away_score": scores.get((row['date'], row['away_team'], row['home_team'])),
                 "home_team": row['home_team'],
                 "away_team": row['away_team'],
                 "predicted_winner": row['predicted_winner'],
@@ -409,10 +412,13 @@ def get_team_recent_results(team_name: str, limit: int = 5) -> list:
             .limit(limit)\
             .execute()
             
+        scores = game_scores(get_game_results(since=date_threshold))
         return [
             {
                 "date": row['date'],
                 "match": row['match_id'],
+                "home_score": scores.get((row['date'], row['home_team'], row['away_team'])),
+                "away_score": scores.get((row['date'], row['away_team'], row['home_team'])),
                 "predicted_winner": row['predicted_winner'],
                 "result": row['result']
             }
@@ -522,16 +528,17 @@ def save_game_results(games: list[dict]) -> bool:
         return False
 
 
-def get_game_results() -> list[dict]:
-    """Todos los marcadores guardados (paginado, PostgREST devuelve máx. 1000 por página)."""
+def get_game_results(since: Optional[str] = None) -> list[dict]:
+    """Marcadores guardados, todos o desde `since` (paginado, PostgREST devuelve máx. 1000 por página)."""
     client = _get_supabase()
     if not client: return []
     rows, start = [], 0
     try:
         while True:
-            page = client.table('nba_games')\
-                .select('date, home, away, home_score, away_score, ml_home, ml_away')\
-                .order('date').range(start, start + 999).execute().data
+            query = client.table('nba_games').select('date, home, away, home_score, away_score, ml_home, ml_away')
+            if since:
+                query = query.gte('date', since)
+            page = query.order('date').range(start, start + 999).execute().data
             rows += page
             if len(page) < 1000:
                 return rows
@@ -541,13 +548,28 @@ def get_game_results() -> list[dict]:
         return rows
 
 
+def _game_key(g: dict) -> str:
+    """match_id de la tabla predictions para una fila de nba_games."""
+    return f"{g['date']}_{g['away']}_{g['home']}".replace(" ", "_")
+
+
 def game_winners(games: list[dict], dates) -> dict:
     """{fecha: {match_id: ganador}} a partir de filas de nba_games, con el match_id de la tabla predictions."""
     out = {}
     for g in games:
         if g['date'] in dates:
             winner = g['home'] if g['home_score'] > g['away_score'] else g['away']
-            out.setdefault(g['date'], {})[f"{g['date']}_{g['away']}_{g['home']}".replace(" ", "_")] = winner
+            out.setdefault(g['date'], {})[_game_key(g)] = winner
+    return out
+
+
+def game_scores(games: list[dict]) -> dict:
+    """{(fecha, equipo, rival): puntos del equipo} a partir de filas de nba_games.
+    Va por equipos y no por match_id: los match_id viejos tienen otro formato ("A vs B")."""
+    out = {}
+    for g in games:
+        out[(g['date'], g['home'], g['away'])] = g['home_score']
+        out[(g['date'], g['away'], g['home'])] = g['away_score']
     return out
 
 

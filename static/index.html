@@ -671,15 +671,15 @@
                 return `
                 <div class="day pnl rv" style="--d:${Math.min(di, 4) * .05}s">
                     <div class="day-hd"><strong>${esc(LF.day(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</strong><span class="lbl">${games.length} partidos</span><span class="rec"><span class="w">${w}</span>-<span class="l">${l}</span></span></div>
-                    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Pick</th><th class="r">Prob.</th><th class="r hide-s">Marcador</th><th class="r">Resultado</th></tr></thead><tbody>
+                    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Partido</th><th class="hide-s">Pick</th><th class="r">Prob.</th><th class="r">Marcador</th><th class="r">Resultado</th></tr></thead><tbody>
                     ${games.map((h, k) => {
                     const [L, R] = nba ? ['away', 'home'] : ['home', 'away'];
                     const score = h.homeScore != null ? `${h[L + 'Score']}-${h[R + 'Score']}` : '—';
                     return `<tr style="--n:${k}">
                             <td><span class="mu">${img(h[L + 'Logo'])}<span class="${h.pick === h[L] ? 'w' : ''}">${esc(h[L + 'Abbr'])}</span><em>${nba ? '@' : 'vs'}</em><span class="${h.pick === h[R] ? 'w' : ''}">${esc(h[R + 'Abbr'])}</span>${img(h[R + 'Logo'])}</span></td>
-                            <td><b>${esc(LF.short(h.pick))}</b></td>
+                            <td class="hide-s"><b>${esc(LF.short(h.pick))}</b></td>
                             <td class="r num" style="font-weight:800;font-size:18px">${LF.pct(h.prob)}%</td>
-                            <td class="r hide-s"><span class="score">${score}</span></td>
+                            <td class="r"><span class="score">${score}</span></td>
                             <td class="r"><span class="res ${h.result}"><i></i>${RES[h.result]}</span></td></tr>`;
                 }).join('')}
                     </tbody></table></div>

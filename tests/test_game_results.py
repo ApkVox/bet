@@ -60,6 +60,12 @@ class TestResultsFromGames(unittest.TestCase):
             '2026-04-18_Atlanta_Hawks_New_York_Knicks': 'New York Knicks',
             '2026-04-18_Utah_Jazz_LA_Clippers': 'Utah Jazz'}})
 
+    def test_marcador_por_equipos(self):
+        games = [{'date': '2026-10-24', 'home': 'Chicago Bulls', 'away': 'Washington Wizards', 'home_score': 98, 'away_score': 104}]
+        scores = job.history_db.game_scores(games)
+        self.assertEqual(scores[('2026-10-24', 'Chicago Bulls', 'Washington Wizards')], 98)
+        self.assertEqual(scores[('2026-10-24', 'Washington Wizards', 'Chicago Bulls')], 104)
+
 
 if __name__ == '__main__':
     unittest.main()
