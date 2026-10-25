@@ -237,7 +237,7 @@ def get_history(days: int = 7) -> list[dict]:
         rows, start = [], 0
         while True:  # PostgREST devuelve máx. 1000 filas por página
             page = client.table('predictions')\
-                .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit')\
+                .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit, warning_level')\
                 .gte('date', date_threshold)\
                 .order('date', desc=True).order('match_id')\
                 .range(start, start + 999).execute().data
@@ -264,6 +264,8 @@ def get_history(days: int = 7) -> list[dict]:
                 "profit": row.get('profit', 0)
             }
             for row in rows
+            # BACKFILL = generadas después de jugarse el partido: no cuentan en el historial público
+            if row.get('warning_level') != 'BACKFILL'
         ]
     except Exception as e:
         print(f"[DB ERROR] get_history: {e}")
