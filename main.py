@@ -587,7 +587,7 @@ async def predict_football():
 
 
 @app.post("/history/refresh")
-async def refresh_history_scores():
+async def refresh_history_scores(_: None = Depends(require_admin)):
     """Fuerza la actualizaci├│n de marcadores y predicciones de hoy. (On-Demand Refresh)"""
     try:
         from src.Services.history_service import update_pending_predictions
@@ -729,7 +729,7 @@ async def get_today_news():
 
 
 @app.post("/api/news/refresh")
-async def refresh_news(background_tasks: BackgroundTasks):
+async def refresh_news(background_tasks: BackgroundTasks, _: None = Depends(require_admin)):
     """Busca noticias para los partidos NBA de hoy (local/dev). Requiere DEEPSEEK_API_KEY."""
     date_str = datetime.now(TZ_COLOMBIA).strftime('%Y-%m-%d')
     preds = history_db.get_predictions_by_date_light(date_str)

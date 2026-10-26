@@ -99,6 +99,4 @@ ALTER TABLE predictions           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE football_predictions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_news            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_recommendations ENABLE ROW LEVEL SECURITY;
-
--- Render usa la clave pública: los marcadores son datos públicos y el historial los necesita
-CREATE POLICY "lectura publica nba_games" ON nba_games FOR SELECT TO anon, authenticated USING (true);
+-- Sin políticas: solo la clave secreta (service_role) lee y escribe. Render, GitHub Actions y .env usan esa.
