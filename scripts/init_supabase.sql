@@ -99,3 +99,6 @@ ALTER TABLE predictions           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE football_predictions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_news            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_recommendations ENABLE ROW LEVEL SECURITY;
+
+-- Render usa la clave pública: los marcadores son datos públicos y el historial los necesita
+CREATE POLICY "lectura publica nba_games" ON nba_games FOR SELECT TO anon, authenticated USING (true);

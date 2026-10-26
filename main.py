@@ -53,6 +53,7 @@ def _keep_awake():
             urllib.request.urlopen(RENDER_EXTERNAL_URL, timeout=30).close()
         except Exception as e:
             print(f"[keep-awake] Ping fallido: {e}")
+        _run_history_update()  # marcadores y resultados al día aunque nadie abra la web
 
 # ===========================================
 # CONFIGURACI├ôN
@@ -164,7 +165,8 @@ async def startup_event():
 @app.get("/")
 async def serve_frontend():
     """Sirve la Single Page Application."""
-    return FileResponse('static/index.html')
+    # no-cache: el navegador revalida y no se queda con una versión vieja tras un despliegue
+    return FileResponse('static/index.html', headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/admin")

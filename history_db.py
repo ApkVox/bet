@@ -237,7 +237,7 @@ def get_history(days: int = 7) -> list[dict]:
         rows, start = [], 0
         while True:  # PostgREST devuelve máx. 1000 filas por página
             page = client.table('predictions')\
-                .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, ev_value, kelly_stake, result, profit, warning_level')\
+                .select('date, match_id, home_team, away_team, predicted_winner, prob_final, odds, odds_home, odds_away, ev_value, kelly_stake, result, profit, warning_level')\
                 .gte('date', date_threshold)\
                 .order('date', desc=True).order('match_id')\
                 .range(start, start + 999).execute().data
@@ -246,13 +246,18 @@ def get_history(days: int = 7) -> list[dict]:
                 break
             start += 1000
 
-        scores = game_scores(get_game_results(since=date_threshold))
+        games = get_game_results(since=date_threshold)
+        scores = game_scores(games)
+        lines = game_odds(games)
         return [
             {
                 "date": row['date'],
                 "match": row['match_id'],
                 "home_score": scores.get((row['date'], row['home_team'], row['away_team'])),
                 "away_score": scores.get((row['date'], row['away_team'], row['home_team'])),
+                # cuotas decimales del día de la predicción; si no se guardaron, las de nba_games
+                "odds_home": row.get('odds_home') or lines.get((row['date'], row['home_team'], row['away_team'])),
+                "odds_away": row.get('odds_away') or lines.get((row['date'], row['away_team'], row['home_team'])),
                 "home_team": row['home_team'],
                 "away_team": row['away_team'],
                 "predicted_winner": row['predicted_winner'],
@@ -414,13 +419,18 @@ def get_team_recent_results(team_name: str, limit: int = 5) -> list:
             .limit(limit)\
             .execute()
             
-        scores = game_scores(get_game_results(since=date_threshold))
+        games = get_game_results(since=date_threshold)
+        scores = game_scores(games)
+        lines = game_odds(games)
         return [
             {
                 "date": row['date'],
                 "match": row['match_id'],
                 "home_score": scores.get((row['date'], row['home_team'], row['away_team'])),
                 "away_score": scores.get((row['date'], row['away_team'], row['home_team'])),
+                # cuotas decimales del día de la predicción; si no se guardaron, las de nba_games
+                "odds_home": row.get('odds_home') or lines.get((row['date'], row['home_team'], row['away_team'])),
+                "odds_away": row.get('odds_away') or lines.get((row['date'], row['away_team'], row['home_team'])),
                 "predicted_winner": row['predicted_winner'],
                 "result": row['result']
             }
@@ -562,6 +572,21 @@ def game_winners(games: list[dict], dates) -> dict:
         if g['date'] in dates:
             winner = g['home'] if g['home_score'] > g['away_score'] else g['away']
             out.setdefault(g['date'], {})[_game_key(g)] = winner
+    return out
+
+
+def american_to_decimal(ml) -> Optional[float]:
+    if not ml:
+        return None
+    return round(1 + (ml / 100 if ml > 0 else 100 / -ml), 3)
+
+
+def game_odds(games: list[dict]) -> dict:
+    """{(fecha, equipo, rival): cuota decimal del equipo} a partir de las cuotas americanas de nba_games."""
+    out = {}
+    for g in games:
+        out[(g['date'], g['home'], g['away'])] = american_to_decimal(g.get('ml_home'))
+        out[(g['date'], g['away'], g['home'])] = american_to_decimal(g.get('ml_away'))
     return out
 
 

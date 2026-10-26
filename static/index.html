@@ -255,11 +255,21 @@
         .tbl tr { transition: background .2s; }
         .tbl tbody tr:hover { background: var(--panel-2); }
         .tbl .r { text-align: right; }
-        .mu { display: flex; align-items: center; gap: 8px; font: 800 20px/1 var(--f-d); letter-spacing: .03em; white-space: nowrap; }
-        .mu img { width: 26px; height: 26px; object-fit: contain; }
-        .mu em { font-style: normal; color: var(--mute); font-size: 14px; }
-        .mu .w { color: var(--acc); }
-        .score { font: 800 18px/1 var(--f-d); color: var(--dim); white-space: nowrap; }
+        /* Historial: una línea por equipo; la del pick va resaltada en todas las columnas */
+        .hx td.c { padding: 8px 0; }
+        .hx th.c { padding-left: 12px; padding-right: 12px; }
+        .ln { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; white-space: nowrap; font: 800 19px/1 var(--f-d); letter-spacing: .03em; color: var(--dim); }
+        .r .ln { justify-content: flex-end; }
+        .ln.pk { background: color-mix(in srgb, var(--acc) 13%, transparent); color: var(--ink); }
+        td:first-child .ln.pk { box-shadow: inset 3px 0 var(--acc); }
+        .ln img { width: 24px; height: 24px; object-fit: contain; }
+        .ln .at { width: 12px; font-size: 13px; }
+        .ln .nm { font: 600 14px/1 var(--f-b); letter-spacing: 0; color: var(--dim); }
+        .ln.pk .ab, .ln.pk .odd { color: var(--acc); }
+        .ln .tag { font-size: 11px; padding: 4px 8px 3px; }
+        .ln .win { color: var(--ink); }
+        .ln .lose { opacity: .55; }
+        .hx .pb { font: 900 22px/1 var(--f-d); }
         .res { display: inline-flex; align-items: center; gap: 8px; font: 800 14px/1 var(--f-d); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
         .res i { width: 10px; height: 10px; background: currentColor; box-shadow: 0 0 calc(var(--glow) * 10px) currentColor; }
         .res.win { color: var(--win); }
@@ -349,6 +359,14 @@
             .h2 { flex-wrap: wrap; }
             .h2 .lbl { margin-left: 0; width: 100%; }
             .tbl .hide-s { display: none; }
+            .tbl th, .tbl td { padding: 10px 6px; }
+            .tbl .res-t { display: none; }
+            .hx td.c { padding: 6px 0; }
+            .hx th.c { padding-left: 6px; padding-right: 6px; }
+            .ln { padding: 0 6px; gap: 5px; font-size: 16px; height: 30px; }
+            .ln img { width: 18px; height: 18px; }
+            .ln .nm, .ln .tag { display: none; }
+            .hx .pb { font-size: 17px; }
             .cell { padding: 16px 14px 14px; }
             .dr-pk .led { font-size: 56px; }
             #jRec { font-size: 38px; line-height: 1.9; }
@@ -441,7 +459,7 @@
 
     <div class="toasts" id="toasts"></div>
 
-    <script src="/static/js/core.js?v=20261025a"></script>
+    <script src="/static/js/core.js?v=20261025b"></script>
     <script>
         const $ = (s, r = document) => r.querySelector(s);
         const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -671,16 +689,19 @@
                 return `
                 <div class="day pnl rv" style="--d:${Math.min(di, 4) * .05}s">
                     <div class="day-hd"><strong>${esc(LF.day(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</strong><span class="lbl">${games.length} partidos</span><span class="rec"><span class="w">${w}</span>-<span class="l">${l}</span></span></div>
-                    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Partido</th><th class="hide-s">Pick</th><th class="r">Prob.</th><th class="r">Marcador</th><th class="r">Resultado</th></tr></thead><tbody>
+                    <div class="tbl-wrap"><table class="tbl hx"><thead><tr><th class="c">Equipos</th><th class="c r">Pts</th><th class="c r">Cuota</th><th class="r">Prob.<span class="hide-s"> pick</span></th><th class="r"><span class="hide-s">Resultado</span></th></tr></thead><tbody>
                     ${games.map((h, k) => {
                     const [L, R] = nba ? ['away', 'home'] : ['home', 'away'];
-                    const score = h.homeScore != null ? `${h[L + 'Score']}-${h[R + 'Score']}` : '—';
+                    const sides = [L, R], pk = x => h.pick === h[x] ? 'pk' : '';
+                    const played = h.homeScore != null && h.awayScore != null;
+                    const won = x => played && h[x + 'Score'] > h[(x === 'home' ? 'away' : 'home') + 'Score'];
+                    const col = f => sides.map(x => `<div class="ln ${pk(x)}">${f(x)}</div>`).join('');
                     return `<tr style="--n:${k}">
-                            <td><span class="mu">${img(h[L + 'Logo'])}<span class="${h.pick === h[L] ? 'w' : ''}">${esc(h[L + 'Abbr'])}</span><em>${nba ? '@' : 'vs'}</em><span class="${h.pick === h[R] ? 'w' : ''}">${esc(h[R + 'Abbr'])}</span>${img(h[R + 'Logo'])}</span></td>
-                            <td class="hide-s"><b>${esc(LF.short(h.pick))}</b></td>
-                            <td class="r num" style="font-weight:800;font-size:18px">${LF.pct(h.prob)}%</td>
-                            <td class="r"><span class="score">${score}</span></td>
-                            <td class="r"><span class="res ${h.result}"><i></i>${RES[h.result]}</span></td></tr>`;
+                            <td class="c">${col(x => `<span class="at">${nba && x === 'home' ? '@' : ''}</span>${img(h[x + 'Logo'])}<span class="ab">${esc(h[x + 'Abbr'])}</span><span class="nm">${esc(LF.short(h[x]))}</span>${pk(x) ? '<span class="tag fija">Pick</span>' : ''}`)}</td>
+                            <td class="c r">${col(x => played ? `<span class="${won(x) ? 'win' : 'lose'}">${h[x + 'Score']}</span>` : '—')}</td>
+                            <td class="c r">${col(x => `<span class="odd">${h['odds' + (x === 'home' ? 'Home' : 'Away')]?.toFixed(2) ?? '—'}</span>`)}</td>
+                            <td class="r"><span class="pb">${LF.pct(h.prob)}%</span>${h.pick === 'Empate' ? '<div class="lbl" style="margin-top:4px">Empate</div>' : ''}</td>
+                            <td class="r"><span class="res ${h.result}" title="${RES[h.result]}"><i></i><span class="res-t">${RES[h.result]}</span></span></td></tr>`;
                 }).join('')}
                     </tbody></table></div>
                 </div>`;

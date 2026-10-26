@@ -66,6 +66,13 @@ class TestResultsFromGames(unittest.TestCase):
         self.assertEqual(scores[('2026-10-24', 'Chicago Bulls', 'Washington Wizards')], 98)
         self.assertEqual(scores[('2026-10-24', 'Washington Wizards', 'Chicago Bulls')], 104)
 
+    def test_cuotas_americanas_a_decimales(self):
+        games = [{'date': '2026-10-24', 'home': 'Chicago Bulls', 'away': 'Washington Wizards', 'ml_home': -250, 'ml_away': 210}]
+        odds = job.history_db.game_odds(games)
+        self.assertEqual(odds[('2026-10-24', 'Chicago Bulls', 'Washington Wizards')], 1.4)
+        self.assertEqual(odds[('2026-10-24', 'Washington Wizards', 'Chicago Bulls')], 3.1)
+        self.assertIsNone(job.history_db.american_to_decimal(None))
+
 
 if __name__ == '__main__':
     unittest.main()

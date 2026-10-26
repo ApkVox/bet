@@ -88,6 +88,7 @@ const LF = (() => {
             date: h.date, home, away, pick, prob: Number(prob) || 0,
             result: r === 'win' || r === 'loss' ? r : 'pending',
             homeScore: h.home_score ?? null, awayScore: h.away_score ?? null, ev: Number(h.ev) || 0,
+            oddsHome: h.odds_home ? Number(h.odds_home) : null, oddsAway: h.odds_away ? Number(h.odds_away) : null,
             homeLogo: logo(home, h.home_logo), awayLogo: logo(away, h.away_logo),
             homeAbbr: abbr(home), awayAbbr: abbr(away)
         };

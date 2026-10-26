@@ -238,7 +238,8 @@ def sync_game_results(until: str = None, max_requests: int = 20, lookback_days: 
     """
     until = until or (datetime.now(TZ_COLOMBIA) - timedelta(days=1)).strftime("%Y-%m-%d")
     stored = history_db.get_game_results()
-    last = max([r['date'] for r in stored] + [elo.load_history()['date'].max()])
+    # el histórico local (OddsData) solo hace falta si nba_games está vacía
+    last = max(r['date'] for r in stored) if stored else elo.load_history()['date'].max()
     day = datetime.strptime(last[:10], "%Y-%m-%d") + timedelta(days=1)
     if lookback_days is not None:
         day = max(day, datetime.strptime(until, "%Y-%m-%d") - timedelta(days=lookback_days))

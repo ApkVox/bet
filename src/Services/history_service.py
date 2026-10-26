@@ -10,10 +10,11 @@ import history_db
 
 def update_pending_predictions():
     """
-    Califica las predicciones PENDING con los marcadores de nba_games (los guarda el job diario).
-    No consulta sbrscrape: para días pasados devuelve el marcador de otro partido entre los mismos
-    equipos (ver generate_daily_job.update_past_results).
+    Sincroniza nba_games y califica las predicciones PENDING con esos marcadores.
+    Sincroniza aquí y no solo en el job diario: el cron de GitHub Actions llega tarde o no llega.
     """
+    from generate_daily_job import sync_game_results
+    sync_game_results()  # sin días pendientes no hace peticiones
     print("[History Service] Checking for pending predictions...")
 
     pending_dates = set()
