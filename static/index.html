@@ -236,6 +236,9 @@
         .net { margin-top: 8px; font-weight: 600; opacity: .7; text-align: right; }
         .net b { color: var(--win); opacity: 1; }
         .note { margin-top: 18px; font-size: 13px; opacity: .55; }
+        .risk-box { margin-top: 18px; padding: 12px 14px; border-left: 4px solid var(--loss); background: color-mix(in srgb, var(--loss) 10%, transparent); }
+        .risk-box b { display: block; margin-top: 6px; font: 900 30px/1 var(--f-d); color: var(--loss); }
+        .risk-box p { margin: 6px 0 0; font-size: 13px; }
 
         .agent { margin-top: 18px; padding: 18px 20px; }
         .agent p { margin-top: 10px; color: var(--dim); max-width: 75ch; }
@@ -428,7 +431,7 @@
 
             <!-- APUESTAS -->
             <section class="sec" id="sec-apuestas">
-                <div class="h2"><span class="slash"></span><h2>La fija del día</h2><span class="lbl">Solo picks con 70% o más</span></div>
+                <div class="h2"><span class="slash"></span><h2>La fija del día</h2><span class="lbl">Un solo pick, con 75% o más</span></div>
                 <div id="recoBox"></div>
             </section>
 
@@ -527,8 +530,8 @@
         function renderToday(date) {
             $('#jDate').textContent = LF.day(date, { day: 'numeric', month: 'short' }).toUpperCase();
             LF.countUp($('#jGames'), preds.length, 0, 900);
-            const fijas = preds.filter(p => p.prob >= 70).length;
-            $('#jFijas').textContent = fijas ? `${fijas} con 70% o más` : 'Ninguno pasa del 70%';
+            const fijas = preds.filter(p => p.prob >= 75).length;
+            $('#jFijas').textContent = fijas ? `${fijas} con 75% o más` : 'Ninguno llega al 75%';
             renderTicker();
 
             if (!preds.length) {
@@ -552,7 +555,7 @@
                 }
                 const oL = p['odds' + (L === 'home' ? 'Home' : 'Away')], oR = p['odds' + (R === 'home' ? 'Home' : 'Away')];
                 const tags = [
-                    p.prob >= 70 ? '<span class="tag fija">Fija</span>' : '',
+                    p.prob >= 75 ? '<span class="tag fija">Fija</span>' : '',
                     p.ev > 0 ? `<span class="tag ev">EV +${LF.pct(p.ev)}%</span>` : '',
                     p.risk ? '<span class="tag risk">Riesgo</span>' : '',
                     p.boost === 'higher' ? '<span class="tag ev">IA ▲</span>' : p.boost === 'lower' ? '<span class="tag risk">IA ▼</span>' : ''
@@ -723,7 +726,7 @@
             const odds = Number(data.parlay_odds) || 0;
             let html = '';
             if (!recos.length) {
-                html = `<div class="empty"><div class="num">SIN FIJA</div><p>Hoy ningún partido llega al 70% de probabilidad. Mejor no forzar.</p></div>`;
+                html = `<div class="empty"><div class="num">SIN FIJA</div><p>Hoy ningún partido llega al 75% de probabilidad. Mejor no forzar.</p></div>`;
             } else {
                 const legs = recos.map((r, n) => `
                     <div class="leg pnl rv" style="--d:${n * .1}s;--w:${r.win_probability}%">
@@ -732,6 +735,7 @@
                         ${r.reason ? `<div class="leg-why">${esc(r.reason)}</div>` : ''}<div class="leg-bar"><i></i></div></div>
                         <div class="leg-od"><span class="lbl">Cuota</span><span class="num">${r.odds ? Number(r.odds).toFixed(2) : '—'}</span></div>
                     </div>`).join('');
+                const pWin = recos.reduce((p, r) => p * (Number(r.win_probability) || 0) / 100, 1) * 100;
                 const flaps = (odds > 0 ? odds.toFixed(2) : '—').split('').map((c, n) => `<span class="flap ${c === '.' ? 'dot' : ''}" style="--n:${n}">${c}</span>`).join('');
                 html = `
                 <div class="reco">
@@ -746,6 +750,7 @@
                         <div class="chips"><button data-add="10000">+10K</button><button data-add="50000">+50K</button><button data-mul="2">×2</button><button data-reset>Borrar</button></div>
                         <div class="payout"><span class="lbl">Cobras</span><span class="num" id="pay">${LF.money(0)}</span></div>
                         <div class="net">Ganancia neta <b id="net">${LF.money(0)}</b></div>
+                        <div class="risk-box"><span class="lbl">Probabilidad de perder</span><b class="num">${LF.pct(100 - pWin)}%</b><p>De cada 100 días como hoy, se pierde en ${Math.round(100 - pWin)}. Ningún pick es seguro: apuesta solo lo que puedas perder.</p></div>
                         <p class="note">Probabilidad de mercado sin margen. Apuesta con responsabilidad.</p>
                     </div>
                 </div>

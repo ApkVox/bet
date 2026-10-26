@@ -16,9 +16,11 @@ MODEL = "deepseek-chat"
 #   3 favoritos sin filtro -> combinada acierta 50% (cuota 2.03); real ene-may 2026: 45%.
 #   2 picks con prob >= 70% -> combinada acierta 70% (cuota 1.38), hay combinada el 68% de los días;
 #   si solo 1 pick llega al 70% se recomienda solo (acierta 77%). Ninguna regla tiene ROI > 0 (vig).
+# Oct 2026 (806 días, 2022-10 -> 2026-10): 1 pick >= 75% acierta 86% (cuota 1.13, ROI -2.8%, peor racha 3)
+#   frente a 72% de 2 picks >= 70% (ROI -4.8%). Se eligió perder menos veces.
 # El modelo propio no mejora el acierto a igual prob. de mercado: el filtro usa solo las cuotas.
-MIN_PROB = 70.0
-MAX_LEGS = 2
+MIN_PROB = 75.0
+MAX_LEGS = 1
 
 
 def _pick_odds(pred: dict):
